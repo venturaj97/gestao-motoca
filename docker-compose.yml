@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    container_name: gestao_motoca_db
+    environment:
+      POSTGRES_DB: gestao_motoca
+      POSTGRES_USER: motoca
+      POSTGRES_PASSWORD: motoca123
+    ports:
+      - "5432:5432"
+    volumes:
+      - gestao_motoca_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U motoca -d gestao_motoca"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: gestao_motoca_api
+    env_file:
+      - ./.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+
+volumes:
+  gestao_motoca_pgdata:
