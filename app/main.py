@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from app.database.base import Base
 from app.database.session import engine
 
+from app.routers.usuarios import router as usuarios_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # garante que os models foram importados (registrados no Base)
@@ -20,3 +22,5 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/saude")
 def verificar_saude():
     return {"status": "ok"}
+
+app.include_router(usuarios_router)
