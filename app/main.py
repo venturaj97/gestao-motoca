@@ -5,6 +5,7 @@ from app.database.base import Base
 from app.database.session import engine
 
 from app.routers.usuarios import router as usuarios_router
+from app.routers.motos import router as motos_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,3 +25,4 @@ def verificar_saude():
     return {"status": "ok"}
 
 app.include_router(usuarios_router)
+app.include_router(motos_router)
