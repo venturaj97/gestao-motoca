@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, HTTPException, status , Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, distinct
-
+from app.schemas.moto import MotoUsuarioCriar, MotoUsuarioResposta
 from app.database.session import get_db
+from app.services.moto_service import listar_motos_do_usuario
+
+from app.services.moto_service import criar_moto_usuario
 from app.models.moto_modelo import MotoModelo
 from app.models.moto_versao import MotoVersao
 
@@ -45,3 +48,22 @@ def listar_anos_por_modelo(
     ).scalars().all()
 
     return {"modelo_id": modelo_id, "anos": anos}
+
+@router.post("/minha", response_model=MotoUsuarioResposta, status_code=status.HTTP_201_CREATED)
+def cadastrar_minha_moto(dados: MotoUsuarioCriar, db: Session = Depends(get_db)):
+    try:
+        moto = criar_moto_usuario(db, dados)
+        return moto
+    except ValueError as e:
+        if str(e) == "versao_nao_encontrada":
+            raise HTTPException(status_code=404, detail="Versao nao encontrada")
+        raise
+    
+
+
+@router.get("/minha")
+def listar_minhas_motos(
+    usuario_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db)
+):
+    return {"usuario_id": usuario_id, "motos": listar_motos_do_usuario(db, usuario_id)}

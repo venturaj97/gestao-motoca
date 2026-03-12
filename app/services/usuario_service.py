@@ -12,10 +12,6 @@ def criar_usuario(db: Session, dados: UsuarioCriar) -> Usuario:
     if existe:
         raise ValueError("email_ja_cadastrado")
 
-    print("DEBUG senha:", repr(dados.senha))
-    print("DEBUG len chars:", len(dados.senha))
-    print("DEBUG len bytes:", len(dados.senha.encode("utf-8")))
-
     senha_bytes = dados.senha.encode("utf-8")
     if len(senha_bytes) > 72:
         raise ValueError("senha_maior_que_72_bytes")
