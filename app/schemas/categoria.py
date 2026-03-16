@@ -1,0 +1,16 @@
+from pydantic import BaseModel, Field
+
+
+class CategoriaResposta(BaseModel):
+    id: int
+    nome: str
+    tipo: str
+    ativo: bool
+
+    class Config:
+        from_attributes = True
+
+
+class CategoriaCriar(BaseModel):
+    nome: str = Field(min_length=2, max_length=100)
+    tipo: str

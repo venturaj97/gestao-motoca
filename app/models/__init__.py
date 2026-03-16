@@ -2,5 +2,6 @@ from .usuario import Usuario
 from .moto_modelo import MotoModelo
 from .moto_versao import MotoVersao
 from .moto_usuario import MotoUsuario
+from .categoria import Categoria
 
-__all__ = ["Usuario", "MotoModelo", "MotoVersao", "MotoUsuario"]
+__all__ = ["Usuario", "MotoModelo", "MotoVersao", "MotoUsuario", "Categoria"]
