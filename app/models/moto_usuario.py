@@ -1,5 +1,5 @@
-from sqlalchemy import String, Integer, DateTime, func, ForeignKey, CheckConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Integer, DateTime, func, ForeignKey, CheckConstraint, Column
+from sqlalchemy.orm import relationship
 
 from app.database.base import Base
 
@@ -16,27 +16,26 @@ class MotoUsuario(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id = Column(Integer, primary_key=True)
 
-    usuario_id: Mapped[int] = mapped_column(
+    usuario_id = Column(Integer,
         ForeignKey("usuarios.id", ondelete="CASCADE"),
         nullable=False
     )
 
-    moto_versao_id: Mapped[int | None] = mapped_column(
+    moto_versao_id = Column(Integer,
         ForeignKey("motos_versoes.id"),
         nullable=True
     )
 
-    marca_manual: Mapped[str | None] = mapped_column(String(80), nullable=True)
-    modelo_manual: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    ano_manual: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    marca_manual = Column(String(80), nullable=True)
+    modelo_manual = Column(String(120), nullable=True)
+    ano_manual = Column(Integer, nullable=True)
 
-    km_atual: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    cor: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    km_atual = Column(Integer, nullable=False, default=0)
+    cor = Column(String(40), nullable=True)
 
-    data_cadastro: Mapped["DateTime"] = mapped_column(
-        DateTime(timezone=True),
+    data_cadastro = Column(DateTime(timezone=True),
         server_default=func.now(),
         nullable=False
     )
