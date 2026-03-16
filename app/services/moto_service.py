@@ -1,10 +1,37 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, distinct
 
 from app.models.moto_modelo import MotoModelo
 from app.models.moto_usuario import MotoUsuario
 from app.models.moto_versao import MotoVersao
 from app.schemas.moto import MotoUsuarioCriar
+
+
+def listar_marcas(db: Session) -> list[str]:
+    marcas = db.execute(
+        select(distinct(MotoModelo.marca)).where(MotoModelo.ativo == True)  # noqa: E712
+    ).scalars().all()
+    return sorted(marcas)
+
+
+def listar_modelos_por_marca(db: Session, marca: str) -> list[dict]:
+    modelos = db.execute(
+        select(MotoModelo)
+        .where(MotoModelo.ativo == True)  # noqa: E712
+        .where(MotoModelo.marca.ilike(marca))
+        .order_by(MotoModelo.modelo)
+    ).scalars().all()
+    return [{"id": m.id, "marca": m.marca, "modelo": m.modelo, "cilindrada_cc": m.cilindrada_cc} for m in modelos]
+
+
+def listar_anos_por_modelo(db: Session, modelo_id: int) -> list[int]:
+    return db.execute(
+        select(MotoVersao.ano)
+        .where(MotoVersao.moto_modelo_id == modelo_id)
+        .where(MotoVersao.ativo == True)  # noqa: E712
+        .order_by(MotoVersao.ano.desc())
+    ).scalars().all()
+
 
 
 def criar_moto_usuario(db: Session, dados: MotoUsuarioCriar) -> MotoUsuario:

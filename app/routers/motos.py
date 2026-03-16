@@ -1,69 +1,53 @@
-from fastapi import APIRouter, HTTPException, status , Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import select, distinct
-from app.schemas.moto import MotoUsuarioCriar, MotoUsuarioResposta
-from app.database.session import get_db
-from app.services.moto_service import listar_motos_do_usuario
 
-from app.services.moto_service import criar_moto_usuario
-from app.models.moto_modelo import MotoModelo
-from app.models.moto_versao import MotoVersao
+from app.database.session import get_db
+from app.schemas.moto import MotoUsuarioCriar, MotoUsuarioResposta
+from app.services.moto_service import (
+    listar_marcas,
+    listar_modelos_por_marca,
+    listar_anos_por_modelo,
+    criar_moto_usuario,
+    listar_motos_do_usuario,
+)
 
 router = APIRouter(prefix="/motos", tags=["motos"])
 
 
 @router.get("/marcas")
-def listar_marcas(db: Session = Depends(get_db)):
-    marcas = db.execute(
-        select(distinct(MotoModelo.marca)).where(MotoModelo.ativo == True)  # noqa: E712
-    ).scalars().all()
-    return {"marcas": sorted(marcas)}
+def rota_listar_marcas(db: Session = Depends(get_db)):
+    return {"marcas": listar_marcas(db)}
 
 
 @router.get("/modelos")
-def listar_modelos_por_marca(
+def rota_listar_modelos_por_marca(
     marca: str = Query(..., min_length=2),
     db: Session = Depends(get_db),
 ):
-    modelos = db.execute(
-        select(MotoModelo)
-        .where(MotoModelo.ativo == True)  # noqa: E712
-        .where(MotoModelo.marca.ilike(marca))
-        .order_by(MotoModelo.modelo)
-    ).scalars().all()
-
-    return [{"id": m.id, "marca": m.marca, "modelo": m.modelo, "cilindrada_cc": m.cilindrada_cc} for m in modelos]
+    return listar_modelos_por_marca(db, marca)
 
 
 @router.get("/anos")
-def listar_anos_por_modelo(
+def rota_listar_anos_por_modelo(
     modelo_id: int,
     db: Session = Depends(get_db),
 ):
-    anos = db.execute(
-        select(MotoVersao.ano)
-        .where(MotoVersao.moto_modelo_id == modelo_id)
-        .where(MotoVersao.ativo == True)  # noqa: E712
-        .order_by(MotoVersao.ano.desc())
-    ).scalars().all()
+    return {"modelo_id": modelo_id, "anos": listar_anos_por_modelo(db, modelo_id)}
 
-    return {"modelo_id": modelo_id, "anos": anos}
 
 @router.post("/minha", response_model=MotoUsuarioResposta, status_code=status.HTTP_201_CREATED)
-def cadastrar_minha_moto(dados: MotoUsuarioCriar, db: Session = Depends(get_db)):
+def rota_cadastrar_minha_moto(dados: MotoUsuarioCriar, db: Session = Depends(get_db)):
     try:
-        moto = criar_moto_usuario(db, dados)
-        return moto
+        return criar_moto_usuario(db, dados)
     except ValueError as e:
         if str(e) == "versao_nao_encontrada":
             raise HTTPException(status_code=404, detail="Versao nao encontrada")
         raise
-    
 
 
 @router.get("/minha")
-def listar_minhas_motos(
+def rota_listar_minhas_motos(
     usuario_id: int = Query(..., ge=1),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return {"usuario_id": usuario_id, "motos": listar_motos_do_usuario(db, usuario_id)}

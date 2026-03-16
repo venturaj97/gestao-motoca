@@ -8,8 +8,6 @@ def gerar_hash_senha(senha: str) -> str:
         senha = str(senha)
 
     b = senha.encode("utf-8")
-    print("DEBUG security senha repr:", repr(senha))
-    print("DEBUG security len bytes:", len(b))
 
     if len(b) > 72:
         raise ValueError("senha_maior_que_72_bytes")

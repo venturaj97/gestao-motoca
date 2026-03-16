@@ -10,8 +10,6 @@ router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
 @router.post("", response_model=UsuarioResposta, status_code=status.HTTP_201_CREATED)
 def rota_criar_usuario(dados: UsuarioCriar, db: Session = Depends(get_db)):
-    print("DEBUG ROTA /usuarios FOI CHAMADA")
-
     try:
         usuario = criar_usuario(db, dados)
         return usuario
