@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -11,7 +11,7 @@ class LancamentoCriar(BaseModel):
     tipo: str
     valor: Decimal = Field(gt=0, decimal_places=2)
     descricao: Optional[str] = Field(default=None, max_length=255)
-    data_lancamento: Optional[date] = None
+    data_lancamento: Optional[datetime] = None
     moto_usuario_id: Optional[int] = None
 
 
@@ -23,7 +23,7 @@ class LancamentoResposta(BaseModel):
     tipo: str
     valor: Decimal
     descricao: Optional[str]
-    data_lancamento: date
+    data_lancamento: datetime
     data_criacao: datetime
 
     class Config:
