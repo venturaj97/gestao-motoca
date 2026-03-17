@@ -5,6 +5,7 @@ from .moto_usuario import MotoUsuario
 from .categoria import Categoria
 from .lancamento import Lancamento
 from .abastecimento import Abastecimento
+from .manutencao import Manutencao
 
 __all__ = [
     "Usuario",
@@ -14,4 +15,5 @@ __all__ = [
     "Categoria",
     "Lancamento",
     "Abastecimento",
+    "Manutencao",
 ]

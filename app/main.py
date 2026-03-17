@@ -9,6 +9,7 @@ from app.routers.motos import router as motos_router
 from app.routers.categorias import router as categorias_router
 from app.routers.lancamentos import router as lancamentos_router
 from app.routers.abastecimentos import router as abastecimentos_router
+from app.routers.manutencoes import router as manutencoes_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,6 +20,7 @@ async def lifespan(app: FastAPI):
     from app.models.categoria import Categoria  # noqa: F401
     from app.models.lancamento import Lancamento  # noqa: F401
     from app.models.abastecimento import Abastecimento  # noqa: F401
+    from app.models.manutencao import Manutencao  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     yield
@@ -35,3 +37,4 @@ app.include_router(motos_router)
 app.include_router(categorias_router)
 app.include_router(lancamentos_router)
 app.include_router(abastecimentos_router)
+app.include_router(manutencoes_router)
