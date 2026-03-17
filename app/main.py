@@ -7,6 +7,7 @@ from app.database.session import engine
 from app.routers.usuarios import router as usuarios_router
 from app.routers.motos import router as motos_router
 from app.routers.categorias import router as categorias_router
+from app.routers.lancamentos import router as lancamentos_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,6 +15,8 @@ async def lifespan(app: FastAPI):
     from app.models.usuario import Usuario  # noqa: F401
     from app.models.moto_catalogo import MotoCatalogo  # noqa: F401
     from app.models.moto_usuario import MotoUsuario  # noqa: F401
+    from app.models.categoria import Categoria  # noqa: F401
+    from app.models.lancamento import Lancamento  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     yield
@@ -28,3 +31,4 @@ def verificar_saude():
 app.include_router(usuarios_router)
 app.include_router(motos_router)
 app.include_router(categorias_router)
+app.include_router(lancamentos_router)
