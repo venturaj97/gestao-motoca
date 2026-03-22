@@ -1,12 +1,59 @@
 from datetime import date
 from typing import Optional
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 
 from app.models.categoria import Categoria
 from app.models.lancamento import Lancamento
+from app.models.moto_usuario import MotoUsuario
 from app.schemas.lancamento import LancamentoCriar
+
+
+def _resolver_moto_do_lancamento(
+    db: Session,
+    usuario_id: int,
+    moto_usuario_id_opcional: Optional[int],
+) -> int:
+    """
+    Regra: precisa existir moto cadastrada; com 1 moto ativa e sem id no body, usa ela;
+    com 2+ motos ativas e sem id, obriga informar qual moto.
+    """
+    if moto_usuario_id_opcional is not None:
+        moto = db.execute(
+            select(MotoUsuario).where(
+                MotoUsuario.id == moto_usuario_id_opcional,
+                MotoUsuario.usuario_id == usuario_id,
+            )
+        ).scalar_one_or_none()
+        if not moto:
+            raise ValueError("moto_nao_encontrada_ou_nao_sua")
+        return moto.id
+
+    qtd_total = db.execute(
+        select(func.count()).select_from(MotoUsuario).where(MotoUsuario.usuario_id == usuario_id)
+    ).scalar_one()
+    if qtd_total == 0:
+        raise ValueError("usuario_sem_moto")
+
+    qtd_ativas = db.execute(
+        select(func.count())
+        .select_from(MotoUsuario)
+        .where(MotoUsuario.usuario_id == usuario_id, MotoUsuario.ativa == True)  # noqa: E712
+    ).scalar_one()
+    if qtd_ativas == 0:
+        raise ValueError("nenhuma_moto_ativa")
+
+    if qtd_ativas == 1:
+        unica = db.execute(
+            select(MotoUsuario).where(
+                MotoUsuario.usuario_id == usuario_id,
+                MotoUsuario.ativa == True,  # noqa: E712
+            )
+        ).scalar_one()
+        return unica.id
+
+    raise ValueError("moto_obrigatoria_informar")
 
 
 def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
@@ -31,10 +78,12 @@ def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
     if tipo != categoria.tipo:
         raise ValueError("tipo_incompativel_com_categoria")
 
+    moto_id = _resolver_moto_do_lancamento(db, dados.usuario_id, dados.moto_usuario_id)
+
     lancamento = Lancamento(
         usuario_id=dados.usuario_id,
         categoria_id=dados.categoria_id,
-        moto_usuario_id=dados.moto_usuario_id,
+        moto_usuario_id=moto_id,
         tipo=tipo,
         valor=dados.valor,
         descricao=dados.descricao,

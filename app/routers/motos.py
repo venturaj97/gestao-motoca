@@ -2,11 +2,12 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.schemas.moto import MotoUsuarioCriar, MotoUsuarioResposta
+from app.schemas.moto import MotoUsuarioAtivaAlterar, MotoUsuarioCriar, MotoUsuarioResposta
 from app.services.moto_service import (
     listar_marcas,
     listar_modelos_por_marca,
     listar_anos_por_modelo,
+    alterar_ativa_moto_usuario,
     criar_moto_usuario,
     listar_motos_do_usuario,
 )
@@ -43,6 +44,16 @@ def rota_cadastrar_minha_moto(dados: MotoUsuarioCriar, db: Session = Depends(get
         if str(e) == "versao_nao_encontrada":
             raise HTTPException(status_code=404, detail="Versao nao encontrada")
         raise
+
+
+@router.patch("/minha/ativa", response_model=MotoUsuarioResposta)
+def rota_alterar_ativa_moto(dados: MotoUsuarioAtivaAlterar, db: Session = Depends(get_db)):
+    try:
+        return alterar_ativa_moto_usuario(db, dados)
+    except ValueError as e:
+        if str(e) == "moto_nao_encontrada_ou_nao_sua":
+            raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
+        raise HTTPException(status_code=400, detail="Erro desconhecido")
 
 
 @router.get("/minha")

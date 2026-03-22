@@ -24,6 +24,13 @@ class MotoUsuarioResposta(BaseModel):
     ano_manual: Optional[int]
     km_atual: int
     cor: Optional[str]
+    ativa: bool = True
 
     class Config:
         from_attributes = True
+
+
+class MotoUsuarioAtivaAlterar(BaseModel):
+    usuario_id: int = Field(ge=1)
+    moto_usuario_id: int = Field(ge=1)
+    ativa: bool

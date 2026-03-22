@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, DateTime, func, ForeignKey, CheckConstraint, Column
+from sqlalchemy import String, Integer, DateTime, func, ForeignKey, CheckConstraint, Column, Boolean
 from sqlalchemy.orm import relationship
 
 from app.database.base import Base
@@ -34,6 +34,9 @@ class MotoUsuario(Base):
 
     km_atual = Column(Integer, nullable=False, default=0)
     cor = Column(String(40), nullable=True)
+
+    # Varias motos podem estar ativas ao mesmo tempo; novas entram ativas por padrao
+    ativa = Column(Boolean, nullable=False, server_default="true", default=True)
 
     data_cadastro = Column(DateTime(timezone=True),
         server_default=func.now(),

@@ -39,7 +39,7 @@ def criar_manutencao(db: Session, dados: ManutencaoCriar) -> Manutencao:
 
     manutencao = Manutencao(
         usuario_id=dados.usuario_id,
-        moto_usuario_id=dados.moto_usuario_id,
+        moto_usuario_id=lancamento.moto_usuario_id,
         lancamento_id=lancamento.id,
         valor_total=dados.valor_total,
         km_atual=dados.km_atual,

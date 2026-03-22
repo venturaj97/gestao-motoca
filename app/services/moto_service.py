@@ -4,7 +4,7 @@ from sqlalchemy import select, distinct
 from app.models.moto_modelo import MotoModelo
 from app.models.moto_usuario import MotoUsuario
 from app.models.moto_versao import MotoVersao
-from app.schemas.moto import MotoUsuarioCriar
+from app.schemas.moto import MotoUsuarioAtivaAlterar, MotoUsuarioCriar
 
 
 def listar_marcas(db: Session) -> list[str]:
@@ -53,12 +53,29 @@ def criar_moto_usuario(db: Session, dados: MotoUsuarioCriar) -> MotoUsuario:
         ano_manual=dados.ano_manual,
         km_atual=dados.km_atual,
         cor=dados.cor,
+        ativa=True,
     )
 
     db.add(moto)
     db.commit()
     db.refresh(moto)
 
+    return moto
+
+
+def alterar_ativa_moto_usuario(db: Session, dados: MotoUsuarioAtivaAlterar) -> MotoUsuario:
+    moto = db.execute(
+        select(MotoUsuario).where(
+            MotoUsuario.id == dados.moto_usuario_id,
+            MotoUsuario.usuario_id == dados.usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not moto:
+        raise ValueError("moto_nao_encontrada_ou_nao_sua")
+
+    moto.ativa = dados.ativa
+    db.commit()
+    db.refresh(moto)
     return moto
 
 
@@ -86,6 +103,7 @@ def listar_motos_do_usuario(db: Session, usuario_id: int):
                 "moto_versao_id": moto_usuario.moto_versao_id,
                 "km_atual": moto_usuario.km_atual,
                 "cor": moto_usuario.cor,
+                "ativa": moto_usuario.ativa,
             })
         else:
             resultado.append({
@@ -98,6 +116,7 @@ def listar_motos_do_usuario(db: Session, usuario_id: int):
                 "moto_versao_id": None,
                 "km_atual": moto_usuario.km_atual,
                 "cor": moto_usuario.cor,
+                "ativa": moto_usuario.ativa,
             })
 
     return resultado

@@ -21,6 +21,10 @@ def rota_criar_manutencao(dados: ManutencaoCriar, db: Session = Depends(get_db))
             "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
             "categoria_inativa": (422, "Categoria esta inativa"),
             "categoria_nao_e_despesa": (422, "Categoria da manutencao deve ser DESPESA"),
+            "usuario_sem_moto": (422, "Cadastre uma moto antes de registrar"),
+            "nenhuma_moto_ativa": (422, "Nenhuma moto ativa: ative uma moto ou informe qual moto"),
+            "moto_obrigatoria_informar": (422, "Informe qual moto (voce tem mais de uma moto ativa)"),
+            "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
         }
         codigo, detalhe = erros.get(str(e), (400, "Erro desconhecido"))
         raise HTTPException(status_code=codigo, detail=detalhe)

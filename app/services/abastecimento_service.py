@@ -33,7 +33,7 @@ def criar_abastecimento(db: Session, dados: AbastecimentoCriar) -> Abastecimento
     if categoria.tipo != "DESPESA":
         raise ValueError("categoria_nao_e_despesa")
 
-    # cria lancamento de despesa vinculada ao abastecimento
+    # cria lancamento de despesa vinculada ao abastecimento (resolver de moto dentro de criar_lancamento)
     lancamento_dados = LancamentoCriar(
         usuario_id=dados.usuario_id,
         categoria_id=dados.categoria_id,
@@ -50,7 +50,7 @@ def criar_abastecimento(db: Session, dados: AbastecimentoCriar) -> Abastecimento
 
     abastecimento = Abastecimento(
         usuario_id=dados.usuario_id,
-        moto_usuario_id=dados.moto_usuario_id,
+        moto_usuario_id=lancamento.moto_usuario_id,
         lancamento_id=lancamento.id,
         litros=dados.litros,
         valor_total=dados.valor_total,
