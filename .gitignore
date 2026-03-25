@@ -206,6 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-
+.prompt/
 promptv1.txt
 promptv2.txt
+prompty3.txt
+promptv4.txt
+prompty4.txt
