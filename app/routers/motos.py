@@ -2,13 +2,20 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.schemas.moto import MotoUsuarioAtivaAlterar, MotoUsuarioCriar, MotoUsuarioResposta
+from app.schemas.moto import (
+    MotoUsuarioAtivaAlterar,
+    MotoUsuarioAtualizar,
+    MotoUsuarioCriar,
+    MotoUsuarioResposta,
+)
 from app.services.moto_service import (
     listar_marcas,
     listar_modelos_por_marca,
     listar_anos_por_modelo,
     alterar_ativa_moto_usuario,
+    atualizar_moto_usuario,
     criar_moto_usuario,
+    excluir_moto_usuario,
     listar_motos_do_usuario,
 )
 
@@ -53,6 +60,39 @@ def rota_alterar_ativa_moto(dados: MotoUsuarioAtivaAlterar, db: Session = Depend
     except ValueError as e:
         if str(e) == "moto_nao_encontrada_ou_nao_sua":
             raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
+        raise HTTPException(status_code=400, detail="Erro desconhecido")
+
+
+@router.put("/minha/{moto_usuario_id}", response_model=MotoUsuarioResposta)
+def rota_atualizar_minha_moto(
+    moto_usuario_id: int,
+    dados: MotoUsuarioAtualizar,
+    db: Session = Depends(get_db),
+):
+    try:
+        return atualizar_moto_usuario(db, moto_usuario_id, dados)
+    except ValueError as e:
+        if str(e) == "moto_nao_encontrada_ou_nao_sua":
+            raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
+        raise HTTPException(status_code=400, detail="Erro desconhecido")
+
+
+@router.delete("/minha/{moto_usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
+def rota_excluir_minha_moto(
+    moto_usuario_id: int,
+    usuario_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    try:
+        excluir_moto_usuario(db, moto_usuario_id, usuario_id)
+    except ValueError as e:
+        if str(e) == "moto_nao_encontrada_ou_nao_sua":
+            raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
+        if str(e) == "moto_possui_registros":
+            raise HTTPException(
+                status_code=409,
+                detail="Nao e possivel excluir: existem lancamentos, abastecimentos ou manutencoes nesta moto",
+            )
         raise HTTPException(status_code=400, detail="Erro desconhecido")
 
 

@@ -34,3 +34,16 @@ class MotoUsuarioAtivaAlterar(BaseModel):
     usuario_id: int = Field(ge=1)
     moto_usuario_id: int = Field(ge=1)
     ativa: bool
+
+
+class MotoUsuarioAtualizar(BaseModel):
+    """Campos opcionais; envie apenas o que deseja alterar."""
+    usuario_id: int = Field(ge=1)
+
+    km_atual: Optional[int] = Field(default=None, ge=0)
+    cor: Optional[str] = Field(default=None, max_length=40)
+    ativa: Optional[bool] = None
+
+    marca_manual: Optional[str] = Field(default=None, max_length=80)
+    modelo_manual: Optional[str] = Field(default=None, max_length=120)
+    ano_manual: Optional[int] = None

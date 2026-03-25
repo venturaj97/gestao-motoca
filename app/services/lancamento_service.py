@@ -1,11 +1,14 @@
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.abastecimento import Abastecimento
 from app.models.categoria import Categoria
 from app.models.lancamento import Lancamento
+from app.models.manutencao import Manutencao
 from app.models.moto_usuario import MotoUsuario
 from app.schemas.lancamento import LancamentoCriar
 
@@ -120,3 +123,87 @@ def listar_lancamentos(
         stmt = stmt.where(Lancamento.data_lancamento <= data_fim)
 
     return db.execute(stmt).scalars().all()
+
+
+def atualizar_lancamento(
+    db: Session,
+    lancamento_id: int,
+    dados: LancamentoCriar,
+) -> Lancamento:
+    lancamento = db.execute(
+        select(Lancamento).where(
+            Lancamento.id == lancamento_id,
+            Lancamento.usuario_id == dados.usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not lancamento:
+        raise ValueError("lancamento_nao_encontrado")
+
+    abastecimento = db.execute(
+        select(Abastecimento).where(Abastecimento.lancamento_id == lancamento_id)
+    ).scalar_one_or_none()
+    manutencao = db.execute(
+        select(Manutencao).where(Manutencao.lancamento_id == lancamento_id)
+    ).scalar_one_or_none()
+
+    tipo = dados.tipo.upper()
+    if tipo not in ["GANHO", "DESPESA"]:
+        raise ValueError("tipo_invalido")
+
+    if abastecimento or manutencao:
+        if tipo != "DESPESA":
+            raise ValueError("lancamento_vinculado_apenas_despesa")
+
+    categoria = db.execute(
+        select(Categoria).where(Categoria.id == dados.categoria_id)
+    ).scalar_one_or_none()
+    if not categoria:
+        raise ValueError("categoria_nao_encontrada")
+    if not categoria.ativo:
+        raise ValueError("categoria_inativa")
+    if tipo != categoria.tipo:
+        raise ValueError("tipo_incompativel_com_categoria")
+
+    if abastecimento or manutencao:
+        if categoria.tipo != "DESPESA":
+            raise ValueError("lancamento_vinculado_apenas_despesa")
+
+    moto_id = _resolver_moto_do_lancamento(db, dados.usuario_id, dados.moto_usuario_id)
+
+    lancamento.categoria_id = dados.categoria_id
+    lancamento.moto_usuario_id = moto_id
+    lancamento.tipo = tipo
+    lancamento.valor = dados.valor
+    lancamento.descricao = dados.descricao
+    lancamento.data_lancamento = dados.data_lancamento or date.today()
+
+    if abastecimento:
+        abastecimento.usuario_id = dados.usuario_id
+        abastecimento.moto_usuario_id = moto_id
+        abastecimento.valor_total = dados.valor
+        abastecimento.valor_litro = dados.valor / Decimal(abastecimento.litros)
+        abastecimento.data_abastecimento = lancamento.data_lancamento
+
+    if manutencao:
+        manutencao.usuario_id = dados.usuario_id
+        manutencao.moto_usuario_id = moto_id
+        manutencao.valor_total = dados.valor
+        manutencao.data_manutencao = lancamento.data_lancamento
+
+    db.commit()
+    db.refresh(lancamento)
+    return lancamento
+
+
+def excluir_lancamento(db: Session, lancamento_id: int, usuario_id: int) -> None:
+    lancamento = db.execute(
+        select(Lancamento).where(
+            Lancamento.id == lancamento_id,
+            Lancamento.usuario_id == usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not lancamento:
+        raise ValueError("lancamento_nao_encontrado")
+
+    db.delete(lancamento)
+    db.commit()
