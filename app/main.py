@@ -5,6 +5,7 @@ from app.database.base import Base
 from app.database.session import engine
 
 from app.routers.usuarios import router as usuarios_router
+from app.routers.auth import router as auth_router
 from app.routers.motos import router as motos_router
 from app.routers.categorias import router as categorias_router
 from app.routers.lancamentos import router as lancamentos_router
@@ -34,6 +35,7 @@ def verificar_saude():
     return {"status": "ok"}
 
 app.include_router(usuarios_router)
+app.include_router(auth_router)
 app.include_router(motos_router)
 app.include_router(categorias_router)
 app.include_router(lancamentos_router)

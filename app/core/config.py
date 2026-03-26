@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     )
     wdapi_token: str = Field(default="", validation_alias="WDAPI_TOKEN")
     wdapi_timeout_segundos: int = Field(default=10, validation_alias="WDAPI_TIMEOUT_SEGUNDOS")
+    auth_secret_key: str = Field(
+        default="troque-esta-chave-em-producao",
+        validation_alias="AUTH_SECRET_KEY",
+    )
+    auth_algorithm: str = Field(default="HS256", validation_alias="AUTH_ALGORITHM")
+    auth_token_exp_minutos: int = Field(default=1440, validation_alias="AUTH_TOKEN_EXP_MINUTOS")
 
     @property
     def database_url(self) -> str:
