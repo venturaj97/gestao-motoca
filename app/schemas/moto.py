@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Any, Optional
 
 
 class MotoUsuarioCriar(BaseModel):
@@ -47,3 +47,11 @@ class MotoUsuarioAtualizar(BaseModel):
     marca_manual: Optional[str] = Field(default=None, max_length=80)
     modelo_manual: Optional[str] = Field(default=None, max_length=120)
     ano_manual: Optional[int] = None
+
+
+class ConsultaPlacaResposta(BaseModel):
+    placa_consultada: str
+    extra_disponivel: bool
+    fipe_disponivel: bool
+    fipe_melhor_correspondencia: Optional[dict[str, Any]] = None
+    dados: dict[str, Any]

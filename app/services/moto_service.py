@@ -1,6 +1,13 @@
+import json
+import re
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select, distinct
 
+from app.core.config import settings
 from app.models.abastecimento import Abastecimento
 from app.models.lancamento import Lancamento
 from app.models.manutencao import Manutencao
@@ -8,6 +15,15 @@ from app.models.moto_modelo import MotoModelo
 from app.models.moto_usuario import MotoUsuario
 from app.models.moto_versao import MotoVersao
 from app.schemas.moto import MotoUsuarioAtivaAlterar, MotoUsuarioAtualizar, MotoUsuarioCriar
+
+PLACA_RE = re.compile(r"^[A-Z]{3}(?:[0-9]{4}|[0-9][A-Z][0-9]{2})$")
+
+
+class ConsultaPlacaErro(Exception):
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)
 
 
 def listar_marcas(db: Session) -> list[str]:
@@ -199,3 +215,89 @@ def excluir_moto_usuario(db: Session, moto_usuario_id: int, usuario_id: int) -> 
 
     db.delete(moto)
     db.commit()
+
+
+def _normalizar_placa(placa: str) -> str:
+    placa_normalizada = placa.strip().upper().replace("-", "")
+    if not PLACA_RE.match(placa_normalizada):
+        raise ConsultaPlacaErro(401, "Placa Invalida favor usar o formato AAA0X00 ou AAA9999")
+    return placa_normalizada
+
+
+def _selecionar_melhor_fipe(payload: dict[str, Any]) -> dict[str, Any] | None:
+    fipe = payload.get("fipe")
+    if not isinstance(fipe, dict):
+        return None
+
+    dados_fipe = fipe.get("dados")
+    if not isinstance(dados_fipe, list):
+        return None
+
+    candidatos = [item for item in dados_fipe if isinstance(item, dict)]
+    if not candidatos:
+        return None
+
+    def _score(item: dict[str, Any]) -> int:
+        try:
+            return int(item.get("score", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    return max(candidatos, key=_score)
+
+
+def consultar_dados_veiculo_por_placa(placa: str) -> dict[str, Any]:
+    placa_normalizada = _normalizar_placa(placa)
+
+    token = settings.wdapi_token.strip()
+    if not token:
+        raise ConsultaPlacaErro(402, "Token invalido")
+
+    base_url = settings.wdapi_base_url.rstrip("/")
+    url = f"{base_url}/{placa_normalizada}/{token}"
+    request = Request(
+        url=url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "gestao-motoca/1.0",
+        },
+    )
+
+    try:
+        with urlopen(request, timeout=settings.wdapi_timeout_segundos) as response:
+            conteudo = response.read().decode("utf-8")
+            payload = json.loads(conteudo)
+    except HTTPError as e:
+        detalhe_padrao = {
+            400: "URL incorreta!",
+            401: "Placa Invalida favor usar o formato AAA0X00 ou AAA9999",
+            402: "Token invalido",
+            406: "Sem resultados!",
+            429: "Limite de consultas atingido!",
+        }.get(e.code, "Falha ao consultar API externa de placa")
+
+        detalhe = detalhe_padrao
+        try:
+            corpo = e.read().decode("utf-8")
+            payload_erro = json.loads(corpo)
+            if isinstance(payload_erro, dict) and isinstance(payload_erro.get("message"), str):
+                detalhe = payload_erro["message"]
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            pass
+
+        if e.code in (400, 401, 402, 406, 429):
+            raise ConsultaPlacaErro(e.code, detalhe)
+        raise ConsultaPlacaErro(502, detalhe)
+    except (URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError):
+        raise ConsultaPlacaErro(502, "Falha ao consultar API externa de placa")
+
+    extra = payload.get("extra")
+    melhor_fipe = _selecionar_melhor_fipe(payload)
+
+    return {
+        "placa_consultada": placa_normalizada,
+        "extra_disponivel": isinstance(extra, dict) and len(extra) > 0,
+        "fipe_disponivel": melhor_fipe is not None,
+        "fipe_melhor_correspondencia": melhor_fipe,
+        "dados": payload,
+    }

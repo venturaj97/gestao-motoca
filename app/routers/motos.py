@@ -3,12 +3,15 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.schemas.moto import (
+    ConsultaPlacaResposta,
     MotoUsuarioAtivaAlterar,
     MotoUsuarioAtualizar,
     MotoUsuarioCriar,
     MotoUsuarioResposta,
 )
 from app.services.moto_service import (
+    ConsultaPlacaErro,
+    consultar_dados_veiculo_por_placa,
     listar_marcas,
     listar_modelos_por_marca,
     listar_anos_por_modelo,
@@ -41,6 +44,14 @@ def rota_listar_anos_por_modelo(
     db: Session = Depends(get_db),
 ):
     return {"modelo_id": modelo_id, "anos": listar_anos_por_modelo(db, modelo_id)}
+
+
+@router.get("/consulta-placa/{placa}", response_model=ConsultaPlacaResposta)
+def rota_consultar_veiculo_por_placa(placa: str):
+    try:
+        return consultar_dados_veiculo_por_placa(placa)
+    except ConsultaPlacaErro as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
 
 
 @router.post("/minha", response_model=MotoUsuarioResposta, status_code=status.HTTP_201_CREATED)
