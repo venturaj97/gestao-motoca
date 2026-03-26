@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.schemas.manutencao import ManutencaoCriar, ManutencaoResposta
-from app.services.manutencao_service import criar_manutencao, listar_manutencoes
+from app.services.manutencao_service import (
+    atualizar_manutencao,
+    criar_manutencao,
+    excluir_manutencao,
+    listar_manutencoes,
+)
 
 
 router = APIRouter(prefix="/manutencoes", tags=["manutencoes"])
@@ -46,3 +51,41 @@ def rota_listar_manutencoes(
         moto_usuario_id=moto_usuario_id,
     )
 
+
+@router.put("/{manutencao_id}", response_model=ManutencaoResposta)
+def rota_atualizar_manutencao(
+    manutencao_id: int,
+    dados: ManutencaoCriar,
+    db: Session = Depends(get_db),
+):
+    try:
+        return atualizar_manutencao(db, manutencao_id, dados)
+    except ValueError as e:
+        erros = {
+            "manutencao_nao_encontrada": (404, "Manutencao nao encontrada"),
+            "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
+            "categoria_inativa": (422, "Categoria esta inativa"),
+            "categoria_nao_e_despesa": (422, "Categoria da manutencao deve ser DESPESA"),
+            "usuario_sem_moto": (422, "Cadastre uma moto antes de registrar"),
+            "nenhuma_moto_ativa": (422, "Nenhuma moto ativa: ative uma moto ou informe qual moto"),
+            "moto_obrigatoria_informar": (422, "Informe qual moto (voce tem mais de uma moto ativa)"),
+            "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
+            "lancamento_nao_encontrado": (404, "Lancamento nao encontrado"),
+            "tipo_incompativel_com_categoria": (422, "Tipo do lancamento nao corresponde ao tipo da categoria"),
+        }
+        codigo, detalhe = erros.get(str(e), (400, "Erro desconhecido"))
+        raise HTTPException(status_code=codigo, detail=detalhe)
+
+
+@router.delete("/{manutencao_id}", status_code=status.HTTP_204_NO_CONTENT)
+def rota_excluir_manutencao(
+    manutencao_id: int,
+    usuario_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    try:
+        excluir_manutencao(db, manutencao_id, usuario_id)
+    except ValueError as e:
+        if str(e) == "manutencao_nao_encontrada":
+            raise HTTPException(status_code=404, detail="Manutencao nao encontrada")
+        raise HTTPException(status_code=400, detail="Erro desconhecido")
