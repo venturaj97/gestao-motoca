@@ -22,6 +22,8 @@ class MotoUsuarioResposta(BaseModel):
     marca_manual: Optional[str]
     modelo_manual: Optional[str]
     ano_manual: Optional[int]
+    placa: Optional[str]
+    origem_dados: str
     km_atual: int
     cor: Optional[str]
     ativa: bool = True
@@ -55,3 +57,10 @@ class ConsultaPlacaResposta(BaseModel):
     fipe_disponivel: bool
     fipe_melhor_correspondencia: Optional[dict[str, Any]] = None
     dados: dict[str, Any]
+
+
+class MotoUsuarioCriarPorPlaca(BaseModel):
+    usuario_id: int = Field(ge=1)
+    placa: str = Field(min_length=7, max_length=8)
+    km_atual: int = Field(default=0, ge=0)
+    cor: Optional[str] = Field(default=None, max_length=40)

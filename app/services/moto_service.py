@@ -4,17 +4,24 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from sqlalchemy.orm import Session
 from sqlalchemy import func, select, distinct
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.abastecimento import Abastecimento
 from app.models.lancamento import Lancamento
 from app.models.manutencao import Manutencao
+from app.models.moto_consulta_wdapi import MotoConsultaWDAPI
 from app.models.moto_modelo import MotoModelo
 from app.models.moto_usuario import MotoUsuario
 from app.models.moto_versao import MotoVersao
-from app.schemas.moto import MotoUsuarioAtivaAlterar, MotoUsuarioAtualizar, MotoUsuarioCriar
+from app.schemas.moto import (
+    MotoUsuarioAtivaAlterar,
+    MotoUsuarioAtualizar,
+    MotoUsuarioCriar,
+    MotoUsuarioCriarPorPlaca,
+)
 
 PLACA_RE = re.compile(r"^[A-Z]{3}(?:[0-9]{4}|[0-9][A-Z][0-9]{2})$")
 
@@ -24,6 +31,15 @@ class ConsultaPlacaErro(Exception):
         self.status_code = status_code
         self.detail = detail
         super().__init__(detail)
+
+
+def _parse_int(valor: Any) -> int | None:
+    if valor is None:
+        return None
+    try:
+        return int(str(valor).strip())
+    except (TypeError, ValueError):
+        return None
 
 
 def listar_marcas(db: Session) -> list[str]:
@@ -70,6 +86,7 @@ def criar_moto_usuario(db: Session, dados: MotoUsuarioCriar) -> MotoUsuario:
         marca_manual=dados.marca_manual,
         modelo_manual=dados.modelo_manual,
         ano_manual=dados.ano_manual,
+        origem_dados="CATALOGO" if dados.moto_versao_id else "MANUAL",
         km_atual=dados.km_atual,
         cor=dados.cor,
         ativa=True,
@@ -116,23 +133,28 @@ def listar_motos_do_usuario(db: Session, usuario_id: int):
                 "id": moto_usuario.id,
                 "usuario_id": moto_usuario.usuario_id,
                 "origem": "catalogo",
+                "origem_dados": moto_usuario.origem_dados,
                 "marca": modelo.marca,
                 "modelo": modelo.modelo,
                 "ano": versao.ano,
                 "moto_versao_id": moto_usuario.moto_versao_id,
+                "placa": moto_usuario.placa,
                 "km_atual": moto_usuario.km_atual,
                 "cor": moto_usuario.cor,
                 "ativa": moto_usuario.ativa,
             })
         else:
+            origem = "wdapi" if moto_usuario.origem_dados == "WDAPI" else "manual"
             resultado.append({
                 "id": moto_usuario.id,
                 "usuario_id": moto_usuario.usuario_id,
-                "origem": "manual",
+                "origem": origem,
+                "origem_dados": moto_usuario.origem_dados,
                 "marca": moto_usuario.marca_manual,
                 "modelo": moto_usuario.modelo_manual,
                 "ano": moto_usuario.ano_manual,
                 "moto_versao_id": None,
+                "placa": moto_usuario.placa,
                 "km_atual": moto_usuario.km_atual,
                 "cor": moto_usuario.cor,
                 "ativa": moto_usuario.ativa,
@@ -246,6 +268,49 @@ def _selecionar_melhor_fipe(payload: dict[str, Any]) -> dict[str, Any] | None:
     return max(candidatos, key=_score)
 
 
+def _montar_resposta_consulta(placa_normalizada: str, payload: dict[str, Any]) -> dict[str, Any]:
+    extra = payload.get("extra")
+    melhor_fipe = _selecionar_melhor_fipe(payload)
+    return {
+        "placa_consultada": placa_normalizada,
+        "extra_disponivel": isinstance(extra, dict) and len(extra) > 0,
+        "fipe_disponivel": melhor_fipe is not None,
+        "fipe_melhor_correspondencia": melhor_fipe,
+        "dados": payload,
+    }
+
+
+def _salvar_cache_consulta_wdapi(
+    db: Session,
+    placa_normalizada: str,
+    payload: dict[str, Any],
+) -> None:
+    melhor_fipe = _selecionar_melhor_fipe(payload)
+    registro = db.execute(
+        select(MotoConsultaWDAPI).where(MotoConsultaWDAPI.placa_consultada == placa_normalizada)
+    ).scalar_one_or_none()
+
+    if not registro:
+        registro = MotoConsultaWDAPI(placa_consultada=placa_normalizada, dados_json=payload)
+        db.add(registro)
+
+    registro.marca = payload.get("marca") or payload.get("MARCA")
+    registro.modelo = payload.get("modelo") or payload.get("MODELO")
+    registro.ano_fabricacao = _parse_int(payload.get("ano"))
+    registro.ano_modelo = _parse_int(payload.get("anoModelo"))
+    registro.cor = payload.get("cor") or payload.get("COR")
+    registro.municipio = payload.get("municipio")
+    registro.uf = payload.get("uf")
+    registro.situacao = payload.get("situacao")
+    registro.origem = payload.get("origem")
+    registro.fipe_melhor_score = _parse_int((melhor_fipe or {}).get("score"))
+    registro.dados_json = payload
+    registro.extra_json = payload.get("extra") if isinstance(payload.get("extra"), dict) else None
+    registro.fipe_json = payload.get("fipe") if isinstance(payload.get("fipe"), dict) else None
+
+    db.commit()
+
+
 def consultar_dados_veiculo_por_placa(placa: str) -> dict[str, Any]:
     placa_normalizada = _normalizar_placa(placa)
 
@@ -291,13 +356,65 @@ def consultar_dados_veiculo_por_placa(placa: str) -> dict[str, Any]:
     except (URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError):
         raise ConsultaPlacaErro(502, "Falha ao consultar API externa de placa")
 
-    extra = payload.get("extra")
-    melhor_fipe = _selecionar_melhor_fipe(payload)
+    return _montar_resposta_consulta(placa_normalizada, payload)
 
-    return {
-        "placa_consultada": placa_normalizada,
-        "extra_disponivel": isinstance(extra, dict) and len(extra) > 0,
-        "fipe_disponivel": melhor_fipe is not None,
-        "fipe_melhor_correspondencia": melhor_fipe,
-        "dados": payload,
-    }
+
+def consultar_dados_veiculo_por_placa_com_cache(db: Session, placa: str) -> dict[str, Any]:
+    placa_normalizada = _normalizar_placa(placa)
+    cache = db.execute(
+        select(MotoConsultaWDAPI).where(MotoConsultaWDAPI.placa_consultada == placa_normalizada)
+    ).scalar_one_or_none()
+
+    if cache:
+        return _montar_resposta_consulta(placa_normalizada, cache.dados_json)
+
+    resultado = consultar_dados_veiculo_por_placa(placa_normalizada)
+    _salvar_cache_consulta_wdapi(db, placa_normalizada, resultado["dados"])
+    return resultado
+
+
+def criar_moto_usuario_por_placa(db: Session, dados: MotoUsuarioCriarPorPlaca) -> MotoUsuario:
+    placa_normalizada = _normalizar_placa(dados.placa)
+
+    ja_existe = db.execute(
+        select(MotoUsuario).where(
+            MotoUsuario.usuario_id == dados.usuario_id,
+            MotoUsuario.placa == placa_normalizada,
+        )
+    ).scalar_one_or_none()
+    if ja_existe:
+        raise ValueError("placa_ja_cadastrada_usuario")
+
+    consulta = consultar_dados_veiculo_por_placa_com_cache(db, placa_normalizada)
+    payload = consulta["dados"]
+
+    marca = payload.get("marca") or payload.get("MARCA")
+    modelo = payload.get("modelo") or payload.get("MODELO")
+    ano_modelo = _parse_int(payload.get("anoModelo")) or _parse_int(payload.get("ano"))
+    cor_api = payload.get("cor") or payload.get("COR")
+
+    if not marca or not modelo:
+        raise ValueError("dados_placa_incompletos")
+
+    moto = MotoUsuario(
+        usuario_id=dados.usuario_id,
+        moto_versao_id=None,
+        marca_manual=str(marca).strip(),
+        modelo_manual=str(modelo).strip(),
+        ano_manual=ano_modelo,
+        placa=placa_normalizada,
+        origem_dados="WDAPI",
+        km_atual=dados.km_atual,
+        cor=dados.cor or cor_api,
+        ativa=True,
+    )
+
+    db.add(moto)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("placa_ja_cadastrada_usuario")
+
+    db.refresh(moto)
+    return moto

@@ -7,17 +7,19 @@ from app.schemas.moto import (
     MotoUsuarioAtivaAlterar,
     MotoUsuarioAtualizar,
     MotoUsuarioCriar,
+    MotoUsuarioCriarPorPlaca,
     MotoUsuarioResposta,
 )
 from app.services.moto_service import (
     ConsultaPlacaErro,
-    consultar_dados_veiculo_por_placa,
+    consultar_dados_veiculo_por_placa_com_cache,
     listar_marcas,
     listar_modelos_por_marca,
     listar_anos_por_modelo,
     alterar_ativa_moto_usuario,
     atualizar_moto_usuario,
     criar_moto_usuario,
+    criar_moto_usuario_por_placa,
     excluir_moto_usuario,
     listar_motos_do_usuario,
 )
@@ -47,9 +49,9 @@ def rota_listar_anos_por_modelo(
 
 
 @router.get("/consulta-placa/{placa}", response_model=ConsultaPlacaResposta)
-def rota_consultar_veiculo_por_placa(placa: str):
+def rota_consultar_veiculo_por_placa(placa: str, db: Session = Depends(get_db)):
     try:
-        return consultar_dados_veiculo_por_placa(placa)
+        return consultar_dados_veiculo_por_placa_com_cache(db, placa)
     except ConsultaPlacaErro as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
@@ -62,6 +64,23 @@ def rota_cadastrar_minha_moto(dados: MotoUsuarioCriar, db: Session = Depends(get
         if str(e) == "versao_nao_encontrada":
             raise HTTPException(status_code=404, detail="Versao nao encontrada")
         raise
+
+
+@router.post("/minha/placa", response_model=MotoUsuarioResposta, status_code=status.HTTP_201_CREATED)
+def rota_cadastrar_minha_moto_por_placa(
+    dados: MotoUsuarioCriarPorPlaca,
+    db: Session = Depends(get_db),
+):
+    try:
+        return criar_moto_usuario_por_placa(db, dados)
+    except ConsultaPlacaErro as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    except ValueError as e:
+        if str(e) == "placa_ja_cadastrada_usuario":
+            raise HTTPException(status_code=409, detail="Placa ja cadastrada para este usuario")
+        if str(e) == "dados_placa_incompletos":
+            raise HTTPException(status_code=422, detail="Dados insuficientes retornados para cadastrar a moto")
+        raise HTTPException(status_code=400, detail="Erro desconhecido")
 
 
 @router.patch("/minha/ativa", response_model=MotoUsuarioResposta)

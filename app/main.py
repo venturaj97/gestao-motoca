@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI):
     from app.models.usuario import Usuario  # noqa: F401
     from app.models.moto_catalogo import MotoCatalogo  # noqa: F401
     from app.models.moto_usuario import MotoUsuario  # noqa: F401
+    from app.models.moto_consulta_wdapi import MotoConsultaWDAPI  # noqa: F401
     from app.models.categoria import Categoria  # noqa: F401
     from app.models.lancamento import Lancamento  # noqa: F401
     from app.models.abastecimento import Abastecimento  # noqa: F401

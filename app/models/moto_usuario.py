@@ -1,4 +1,14 @@
-from sqlalchemy import String, Integer, DateTime, func, ForeignKey, CheckConstraint, Column, Boolean
+from sqlalchemy import (
+    String,
+    Integer,
+    DateTime,
+    func,
+    ForeignKey,
+    CheckConstraint,
+    Column,
+    Boolean,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.database.base import Base
@@ -14,6 +24,11 @@ class MotoUsuario(Base):
             "(moto_versao_id IS NULL AND marca_manual IS NOT NULL AND modelo_manual IS NOT NULL)",
             name="ck_origem_moto"
         ),
+        CheckConstraint(
+            "origem_dados IN ('MANUAL', 'CATALOGO', 'WDAPI')",
+            name="ck_motos_usuario_origem_dados",
+        ),
+        UniqueConstraint("usuario_id", "placa", name="uq_motos_usuario_usuario_placa"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -31,6 +46,8 @@ class MotoUsuario(Base):
     marca_manual = Column(String(80), nullable=True)
     modelo_manual = Column(String(120), nullable=True)
     ano_manual = Column(Integer, nullable=True)
+    placa = Column(String(7), nullable=True, index=True)
+    origem_dados = Column(String(20), nullable=False, server_default="MANUAL", default="MANUAL")
 
     km_atual = Column(Integer, nullable=False, default=0)
     cor = Column(String(40), nullable=True)
