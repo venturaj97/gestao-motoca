@@ -18,6 +18,7 @@ class VisaoMesResposta(BaseModel):
     ganho: IndicadorResumoResposta
     despesa: IndicadorResumoResposta
     saldo_mes: Decimal
+    resumo_executivo: list[str]
 
     metas_ativas: list[MetaResposta]
     alertas_mensais: list[MetaAlertaResposta]

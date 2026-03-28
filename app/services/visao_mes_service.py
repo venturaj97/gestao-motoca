@@ -25,6 +25,51 @@ def _data_referencia_para_mes(inicio: date, fim: date) -> date:
     return hoje
 
 
+def _montar_resumo_executivo(
+    ganho: dict,
+    despesa: dict,
+    saldo_mes: Decimal,
+    alertas_mensais: list[dict],
+) -> list[str]:
+    mensagens: list[str] = []
+
+    total_ganho = Decimal(ganho["total_periodo"])
+    total_despesa = Decimal(despesa["total_periodo"])
+
+    if saldo_mes > 0:
+        mensagens.append(f"Saldo positivo no mes: R$ {saldo_mes:.2f}.")
+    elif saldo_mes < 0:
+        mensagens.append(f"Saldo negativo no mes: R$ {abs(saldo_mes):.2f}.")
+    else:
+        mensagens.append("Saldo do mes esta zerado.")
+
+    if total_ganho > 0:
+        relacao = (total_despesa / total_ganho) * Decimal("100")
+        mensagens.append(f"Despesas representam {relacao:.1f}% dos ganhos do mes.")
+    else:
+        mensagens.append("Ainda nao ha ganhos registrados no mes para comparar despesas.")
+
+    melhor_ganho = ganho.get("melhor_dia_semana")
+    if melhor_ganho:
+        mensagens.append(
+            f"Melhor dia de ganho: {melhor_ganho['dia_semana']} (R$ {Decimal(melhor_ganho['total']):.2f})."
+        )
+
+    melhor_despesa = despesa.get("melhor_dia_semana")
+    if melhor_despesa:
+        mensagens.append(
+            f"Dia com maior despesa: {melhor_despesa['dia_semana']} (R$ {Decimal(melhor_despesa['total']):.2f})."
+        )
+
+    qtd_alertas_criticos = sum(1 for alerta in alertas_mensais if alerta["status"] in {"estourada", "atencao"})
+    if qtd_alertas_criticos > 0:
+        mensagens.append(f"Voce possui {qtd_alertas_criticos} alerta(s) mensal(is) que exigem atencao.")
+    else:
+        mensagens.append("Nao ha alertas mensais criticos no momento.")
+
+    return mensagens
+
+
 def obter_visao_mes(
     db: Session,
     usuario_id: int,
@@ -63,6 +108,7 @@ def obter_visao_mes(
         and alerta["periodo_inicio"] == inicio
         and alerta["periodo_fim"] == fim
     ]
+    resumo_executivo = _montar_resumo_executivo(ganho, despesa, saldo_mes, alertas_mensais)
 
     return {
         "ano": ano,
@@ -73,6 +119,7 @@ def obter_visao_mes(
         "ganho": ganho,
         "despesa": despesa,
         "saldo_mes": saldo_mes,
+        "resumo_executivo": resumo_executivo,
         "metas_ativas": metas_ativas,
         "alertas_mensais": alertas_mensais,
     }
