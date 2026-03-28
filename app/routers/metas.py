@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
+from app.routers._errors import raise_mapped_error
 from app.schemas.meta import MetaAlertaResposta, MetaAtualizar, MetaCriar, MetaResposta
 from app.services.meta_service import (
     atualizar_meta,
@@ -22,8 +23,7 @@ def _tratar_erro_meta(e: ValueError) -> None:
         "periodo_invalido": (422, "Periodo deve ser SEMANAL ou MENSAL"),
         "meta_nao_encontrada": (404, "Meta nao encontrada"),
     }
-    codigo, detalhe = erros.get(str(e), (400, "Erro desconhecido"))
-    raise HTTPException(status_code=codigo, detail=detalhe)
+    raise_mapped_error(e, erros)
 
 
 @router.post("", response_model=MetaResposta, status_code=status.HTTP_201_CREATED)

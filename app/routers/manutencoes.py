@@ -1,12 +1,13 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
+from app.routers._errors import raise_mapped_error
 from app.schemas.manutencao import ManutencaoCriar, ManutencaoResposta
 from app.services.manutencao_service import (
     atualizar_manutencao,
@@ -17,6 +18,19 @@ from app.services.manutencao_service import (
 
 
 router = APIRouter(prefix="/manutencoes", tags=["manutencoes"])
+
+ERROS_MANUTENCAO = {
+    "manutencao_nao_encontrada": (404, "Manutencao nao encontrada"),
+    "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
+    "categoria_inativa": (422, "Categoria esta inativa"),
+    "categoria_nao_e_despesa": (422, "Categoria da manutencao deve ser DESPESA"),
+    "usuario_sem_moto": (422, "Cadastre uma moto antes de registrar"),
+    "nenhuma_moto_ativa": (422, "Nenhuma moto ativa: ative uma moto ou informe qual moto"),
+    "moto_obrigatoria_informar": (422, "Informe qual moto (voce tem mais de uma moto ativa)"),
+    "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
+    "lancamento_nao_encontrado": (404, "Lancamento nao encontrado"),
+    "tipo_incompativel_com_categoria": (422, "Tipo do lancamento nao corresponde ao tipo da categoria"),
+}
 
 
 @router.post("", response_model=ManutencaoResposta, status_code=status.HTTP_201_CREATED)
@@ -29,17 +43,7 @@ def rota_criar_manutencao(
         dados_com_usuario = dados.model_copy(update={"usuario_id": usuario.id})
         return criar_manutencao(db, dados_com_usuario)
     except ValueError as e:
-        erros = {
-            "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
-            "categoria_inativa": (422, "Categoria esta inativa"),
-            "categoria_nao_e_despesa": (422, "Categoria da manutencao deve ser DESPESA"),
-            "usuario_sem_moto": (422, "Cadastre uma moto antes de registrar"),
-            "nenhuma_moto_ativa": (422, "Nenhuma moto ativa: ative uma moto ou informe qual moto"),
-            "moto_obrigatoria_informar": (422, "Informe qual moto (voce tem mais de uma moto ativa)"),
-            "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
-        }
-        codigo, detalhe = erros.get(str(e), (400, "Erro desconhecido"))
-        raise HTTPException(status_code=codigo, detail=detalhe)
+        raise_mapped_error(e, ERROS_MANUTENCAO)
 
 
 @router.get("", response_model=list[ManutencaoResposta])
@@ -70,20 +74,7 @@ def rota_atualizar_manutencao(
         dados_com_usuario = dados.model_copy(update={"usuario_id": usuario.id})
         return atualizar_manutencao(db, manutencao_id, dados_com_usuario)
     except ValueError as e:
-        erros = {
-            "manutencao_nao_encontrada": (404, "Manutencao nao encontrada"),
-            "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
-            "categoria_inativa": (422, "Categoria esta inativa"),
-            "categoria_nao_e_despesa": (422, "Categoria da manutencao deve ser DESPESA"),
-            "usuario_sem_moto": (422, "Cadastre uma moto antes de registrar"),
-            "nenhuma_moto_ativa": (422, "Nenhuma moto ativa: ative uma moto ou informe qual moto"),
-            "moto_obrigatoria_informar": (422, "Informe qual moto (voce tem mais de uma moto ativa)"),
-            "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
-            "lancamento_nao_encontrado": (404, "Lancamento nao encontrado"),
-            "tipo_incompativel_com_categoria": (422, "Tipo do lancamento nao corresponde ao tipo da categoria"),
-        }
-        codigo, detalhe = erros.get(str(e), (400, "Erro desconhecido"))
-        raise HTTPException(status_code=codigo, detail=detalhe)
+        raise_mapped_error(e, ERROS_MANUTENCAO)
 
 
 @router.delete("/{manutencao_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -95,6 +86,4 @@ def rota_excluir_manutencao(
     try:
         excluir_manutencao(db, manutencao_id, usuario.id)
     except ValueError as e:
-        if str(e) == "manutencao_nao_encontrada":
-            raise HTTPException(status_code=404, detail="Manutencao nao encontrada")
-        raise HTTPException(status_code=400, detail="Erro desconhecido")
+        raise_mapped_error(e, ERROS_MANUTENCAO)

@@ -1,12 +1,13 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
+from app.routers._errors import raise_mapped_error
 from app.schemas.indicador import IndicadorResumoResposta
 from app.services.indicador_service import obter_indicadores_resumo
 
@@ -36,5 +37,4 @@ def rota_indicadores_resumo(
             "tipo_invalido": (422, "Tipo deve ser GANHO ou DESPESA"),
             "intervalo_invalido": (422, "data_inicio nao pode ser maior que data_fim"),
         }
-        codigo, detalhe = erros.get(str(e), (400, "Erro desconhecido"))
-        raise HTTPException(status_code=codigo, detail=detalhe)
+        raise_mapped_error(e, erros)

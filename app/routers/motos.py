@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
+from app.routers._errors import raise_mapped_error
 from app.schemas.moto import (
     ConsultaPlacaResposta,
     MotoUsuarioAtivaAlterar,
@@ -27,6 +28,17 @@ from app.services.moto_service import (
 )
 
 router = APIRouter(prefix="/motos", tags=["motos"])
+
+ERROS_MOTO = {
+    "versao_nao_encontrada": (404, "Versao nao encontrada"),
+    "placa_ja_cadastrada_usuario": (409, "Placa ja cadastrada para este usuario"),
+    "dados_placa_incompletos": (422, "Dados insuficientes retornados para cadastrar a moto"),
+    "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
+    "moto_possui_registros": (
+        409,
+        "Nao e possivel excluir: existem lancamentos, abastecimentos ou manutencoes nesta moto",
+    ),
+}
 
 
 @router.get("/marcas")
@@ -73,9 +85,7 @@ def rota_cadastrar_minha_moto(
         dados_com_usuario = dados.model_copy(update={"usuario_id": usuario.id})
         return criar_moto_usuario(db, dados_com_usuario)
     except ValueError as e:
-        if str(e) == "versao_nao_encontrada":
-            raise HTTPException(status_code=404, detail="Versao nao encontrada")
-        raise
+        raise_mapped_error(e, ERROS_MOTO)
 
 
 @router.post("/minha/placa", response_model=MotoUsuarioResposta, status_code=status.HTTP_201_CREATED)
@@ -89,11 +99,7 @@ def rota_cadastrar_minha_moto_por_placa(
     except ConsultaPlacaErro as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     except ValueError as e:
-        if str(e) == "placa_ja_cadastrada_usuario":
-            raise HTTPException(status_code=409, detail="Placa ja cadastrada para este usuario")
-        if str(e) == "dados_placa_incompletos":
-            raise HTTPException(status_code=422, detail="Dados insuficientes retornados para cadastrar a moto")
-        raise HTTPException(status_code=400, detail="Erro desconhecido")
+        raise_mapped_error(e, ERROS_MOTO)
 
 
 @router.patch("/minha/ativa", response_model=MotoUsuarioResposta)
@@ -105,9 +111,7 @@ def rota_alterar_ativa_moto(
     try:
         return alterar_ativa_moto_usuario(db, usuario.id, dados.moto_usuario_id, dados.ativa)
     except ValueError as e:
-        if str(e) == "moto_nao_encontrada_ou_nao_sua":
-            raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
-        raise HTTPException(status_code=400, detail="Erro desconhecido")
+        raise_mapped_error(e, ERROS_MOTO)
 
 
 @router.put("/minha/{moto_usuario_id}", response_model=MotoUsuarioResposta)
@@ -120,9 +124,7 @@ def rota_atualizar_minha_moto(
     try:
         return atualizar_moto_usuario(db, usuario.id, moto_usuario_id, dados)
     except ValueError as e:
-        if str(e) == "moto_nao_encontrada_ou_nao_sua":
-            raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
-        raise HTTPException(status_code=400, detail="Erro desconhecido")
+        raise_mapped_error(e, ERROS_MOTO)
 
 
 @router.delete("/minha/{moto_usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -134,14 +136,7 @@ def rota_excluir_minha_moto(
     try:
         excluir_moto_usuario(db, moto_usuario_id, usuario.id)
     except ValueError as e:
-        if str(e) == "moto_nao_encontrada_ou_nao_sua":
-            raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
-        if str(e) == "moto_possui_registros":
-            raise HTTPException(
-                status_code=409,
-                detail="Nao e possivel excluir: existem lancamentos, abastecimentos ou manutencoes nesta moto",
-            )
-        raise HTTPException(status_code=400, detail="Erro desconhecido")
+        raise_mapped_error(e, ERROS_MOTO)
 
 
 @router.get("/minha")

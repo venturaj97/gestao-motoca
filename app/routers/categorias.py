@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.routers._errors import raise_mapped_error
 from app.schemas.categoria import CategoriaResposta, CategoriaCriar
 from app.services.categoria_service import listar_categorias, criar_categoria
 
@@ -18,8 +19,10 @@ def rota_criar_categoria(dados: CategoriaCriar, db: Session = Depends(get_db)):
     try:
         return criar_categoria(db, dados)
     except ValueError as e:
-        if str(e) == "tipo_invalido":
-            raise HTTPException(status_code=422, detail="Tipo deve ser GANHO ou DESPESA")
-        if str(e) == "categoria_ja_existe":
-            raise HTTPException(status_code=409, detail="Categoria ja existe")
-        raise
+        raise_mapped_error(
+            e,
+            {
+                "tipo_invalido": (422, "Tipo deve ser GANHO ou DESPESA"),
+                "categoria_ja_existe": (409, "Categoria ja existe"),
+            },
+        )

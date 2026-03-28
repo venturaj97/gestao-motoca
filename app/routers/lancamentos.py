@@ -1,12 +1,13 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
+from app.routers._errors import raise_mapped_error
 from app.schemas.lancamento import LancamentoCriar, LancamentoResposta
 from app.services.lancamento_service import (
     atualizar_lancamento,
@@ -51,8 +52,7 @@ def _erros_lancamento_valor(e: ValueError) -> None:
             "Este lancamento esta vinculado a abastecimento ou manutencao: mantenha tipo DESPESA e categoria de despesa",
         ),
     }
-    codigo, detalhe = erros.get(str(e), (400, "Erro desconhecido"))
-    raise HTTPException(status_code=codigo, detail=detalhe)
+    raise_mapped_error(e, erros)
 
 
 @router.post("", response_model=LancamentoResposta, status_code=status.HTTP_201_CREATED)
@@ -91,9 +91,7 @@ def rota_excluir_lancamento(
     try:
         excluir_lancamento(db, lancamento_id, usuario.id)
     except ValueError as e:
-        if str(e) == "lancamento_nao_encontrado":
-            raise HTTPException(status_code=404, detail="Lancamento nao encontrado")
-        raise HTTPException(status_code=400, detail="Erro desconhecido")
+        _erros_lancamento_valor(e)
 
 
 @router.get("", response_model=list[LancamentoResposta])
