@@ -77,6 +77,16 @@ Esta versao ainda esta evoluindo e pode mudar estrutura de endpoints, regras e m
 3. Acessar documentacao Swagger:
    - `http://localhost:8000/docs`
 
+## Migrations com Alembic
+
+- Aplicar todas as migrations:
+  - `.venv/bin/alembic upgrade head`
+- Criar nova migration (apos alterar models):
+  - `.venv/bin/alembic revision --autogenerate -m "descricao_da_mudanca"`
+- Em banco ja existente que foi criado sem Alembic:
+  - `.venv/bin/alembic stamp head`
+  - Depois disso, seguir apenas com migrations.
+
 ---
 
 Se voce chegou agora no projeto: considere esta base como MVP tecnico em evolucao.

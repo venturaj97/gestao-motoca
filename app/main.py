@@ -1,9 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from app.database.base import Base
-from app.database.session import engine
-
 from app.routers.usuarios import router as usuarios_router
 from app.routers.auth import router as auth_router
 from app.routers.motos import router as motos_router
@@ -14,19 +11,8 @@ from app.routers.manutencoes import router as manutencoes_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # garante que os models foram importados (registrados no Base)
-    from app.models.usuario import Usuario  # noqa: F401
-    from app.models.moto_catalogo import MotoCatalogo  # noqa: F401
-    from app.models.moto_usuario import MotoUsuario  # noqa: F401
-    from app.models.moto_consulta_wdapi import MotoConsultaWDAPI  # noqa: F401
-    from app.models.categoria import Categoria  # noqa: F401
-    from app.models.lancamento import Lancamento  # noqa: F401
-    from app.models.abastecimento import Abastecimento  # noqa: F401
-    from app.models.manutencao import Manutencao  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
+    # schema passa a ser controlado por Alembic (migrations)
     yield
-    # aqui entraria shutdown, se precisar
 
 app = FastAPI(lifespan=lifespan)
 

@@ -24,6 +24,23 @@ def _erros_lancamento_valor(e: ValueError) -> None:
         "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
         "categoria_inativa": (422, "Categoria esta inativa"),
         "tipo_incompativel_com_categoria": (422, "Tipo do lancamento nao corresponde ao tipo da categoria"),
+        "periodicidade_ganho_obrigatoria": (
+            422,
+            "Para lancamento de GANHO, informe periodicidade_ganho: DIARIO, SEMANAL ou CORRIDA",
+        ),
+        "periodicidade_ganho_invalida": (422, "periodicidade_ganho invalida"),
+        "dados_corrida_obrigatorios": (
+            422,
+            "Para GANHO por CORRIDA, informe minutos_corrida e km_corrida",
+        ),
+        "dados_corrida_nao_permitidos": (
+            422,
+            "minutos_corrida e km_corrida so podem ser informados quando periodicidade_ganho for CORRIDA",
+        ),
+        "campos_ganho_nao_permitidos_para_despesa": (
+            422,
+            "Campos de ganho nao sao permitidos quando tipo for DESPESA",
+        ),
         "usuario_sem_moto": (422, "Cadastre uma moto antes de registrar"),
         "nenhuma_moto_ativa": (422, "Nenhuma moto ativa: ative uma moto ou informe qual moto no lancamento"),
         "moto_obrigatoria_informar": (422, "Informe qual moto (voce tem mais de uma moto ativa)"),

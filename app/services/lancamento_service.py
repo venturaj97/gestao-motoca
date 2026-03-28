@@ -12,6 +12,35 @@ from app.models.manutencao import Manutencao
 from app.models.moto_usuario import MotoUsuario
 from app.schemas.lancamento import LancamentoCriar
 
+PERIODICIDADES_GANHO = {"DIARIO", "SEMANAL", "CORRIDA"}
+
+
+def _resolver_campos_ganho(dados: LancamentoCriar, tipo: str) -> tuple[Optional[str], Optional[int], Optional[Decimal]]:
+    periodicidade = dados.periodicidade_ganho.upper() if dados.periodicidade_ganho else None
+    minutos = dados.minutos_corrida
+    km = dados.km_corrida
+
+    if tipo == "DESPESA":
+        if periodicidade or minutos is not None or km is not None:
+            raise ValueError("campos_ganho_nao_permitidos_para_despesa")
+        return None, None, None
+
+    # GANHO
+    if not periodicidade:
+        raise ValueError("periodicidade_ganho_obrigatoria")
+
+    if periodicidade not in PERIODICIDADES_GANHO:
+        raise ValueError("periodicidade_ganho_invalida")
+
+    if periodicidade == "CORRIDA":
+        if minutos is None or km is None:
+            raise ValueError("dados_corrida_obrigatorios")
+        return periodicidade, minutos, km
+
+    if minutos is not None or km is not None:
+        raise ValueError("dados_corrida_nao_permitidos")
+    return periodicidade, None, None
+
 
 def _resolver_moto_do_lancamento(
     db: Session,
@@ -81,6 +110,8 @@ def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
     if tipo != categoria.tipo:
         raise ValueError("tipo_incompativel_com_categoria")
 
+    periodicidade_ganho, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+
     moto_id = _resolver_moto_do_lancamento(db, dados.usuario_id, dados.moto_usuario_id)
 
     lancamento = Lancamento(
@@ -90,6 +121,9 @@ def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
         tipo=tipo,
         valor=dados.valor,
         descricao=dados.descricao,
+        periodicidade_ganho=periodicidade_ganho,
+        minutos_corrida=minutos_corrida,
+        km_corrida=km_corrida,
         data_lancamento=dados.data_lancamento or date.today(),
     )
 
@@ -168,6 +202,8 @@ def atualizar_lancamento(
         if categoria.tipo != "DESPESA":
             raise ValueError("lancamento_vinculado_apenas_despesa")
 
+    periodicidade_ganho, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+
     moto_id = _resolver_moto_do_lancamento(db, dados.usuario_id, dados.moto_usuario_id)
 
     lancamento.categoria_id = dados.categoria_id
@@ -175,6 +211,9 @@ def atualizar_lancamento(
     lancamento.tipo = tipo
     lancamento.valor = dados.valor
     lancamento.descricao = dados.descricao
+    lancamento.periodicidade_ganho = periodicidade_ganho
+    lancamento.minutos_corrida = minutos_corrida
+    lancamento.km_corrida = km_corrida
     lancamento.data_lancamento = dados.data_lancamento or date.today()
 
     if abastecimento:
