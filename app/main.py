@@ -9,6 +9,8 @@ from app.routers.lancamentos import router as lancamentos_router
 from app.routers.abastecimentos import router as abastecimentos_router
 from app.routers.manutencoes import router as manutencoes_router
 from app.routers.indicadores import router as indicadores_router
+from app.routers.metas import router as metas_router
+from app.routers.visao_mes import router as visao_mes_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,3 +31,5 @@ app.include_router(lancamentos_router)
 app.include_router(abastecimentos_router)
 app.include_router(manutencoes_router)
 app.include_router(indicadores_router)
+app.include_router(metas_router)
+app.include_router(visao_mes_router)

@@ -7,6 +7,7 @@ from .categoria import Categoria
 from .lancamento import Lancamento
 from .abastecimento import Abastecimento
 from .manutencao import Manutencao
+from .meta import Meta
 
 __all__ = [
     "Usuario",
@@ -18,4 +19,5 @@ __all__ = [
     "Lancamento",
     "Abastecimento",
     "Manutencao",
+    "Meta",
 ]
