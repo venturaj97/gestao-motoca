@@ -24,18 +24,18 @@ def _erros_lancamento_valor(e: ValueError) -> None:
         "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
         "categoria_inativa": (422, "Categoria esta inativa"),
         "tipo_incompativel_com_categoria": (422, "Tipo do lancamento nao corresponde ao tipo da categoria"),
-        "periodicidade_ganho_obrigatoria": (
+        "periodo_obrigatorio": (
             422,
-            "Para lancamento de GANHO, informe periodicidade_ganho: DIARIO, SEMANAL ou CORRIDA",
+            "Para lancamento de GANHO, informe periodo: DIARIO, SEMANAL ou CORRIDA",
         ),
-        "periodicidade_ganho_invalida": (422, "periodicidade_ganho invalida"),
+        "periodo_invalido": (422, "periodo invalido"),
         "dados_corrida_obrigatorios": (
             422,
             "Para GANHO por CORRIDA, informe minutos_corrida e km_corrida",
         ),
         "dados_corrida_nao_permitidos": (
             422,
-            "minutos_corrida e km_corrida so podem ser informados quando periodicidade_ganho for CORRIDA",
+            "minutos_corrida e km_corrida so podem ser informados quando periodo for CORRIDA",
         ),
         "campos_ganho_nao_permitidos_para_despesa": (
             422,

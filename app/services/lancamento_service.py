@@ -12,34 +12,47 @@ from app.models.manutencao import Manutencao
 from app.models.moto_usuario import MotoUsuario
 from app.schemas.lancamento import LancamentoCriar
 
-PERIODICIDADES_GANHO = {"DIARIO", "SEMANAL", "CORRIDA"}
+PERIODOS_GANHO = {"DIARIO", "SEMANAL", "CORRIDA"}
+DIAS_SEMANA = ["SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA", "SABADO", "DOMINGO"]
+
+
+def _dia_semana_por_data(data_ref: date) -> str:
+    # date.weekday(): 0 = segunda ... 6 = domingo
+    return DIAS_SEMANA[data_ref.weekday()]
 
 
 def _resolver_campos_ganho(dados: LancamentoCriar, tipo: str) -> tuple[Optional[str], Optional[int], Optional[Decimal]]:
-    periodicidade = dados.periodicidade_ganho.upper() if dados.periodicidade_ganho else None
+    periodo = dados.periodo.upper() if dados.periodo else None
     minutos = dados.minutos_corrida
     km = dados.km_corrida
 
     if tipo == "DESPESA":
-        if periodicidade or minutos is not None or km is not None:
+        if periodo or minutos is not None or km is not None:
             raise ValueError("campos_ganho_nao_permitidos_para_despesa")
         return None, None, None
 
     # GANHO
-    if not periodicidade:
-        raise ValueError("periodicidade_ganho_obrigatoria")
+    if not periodo:
+        raise ValueError("periodo_obrigatorio")
 
-    if periodicidade not in PERIODICIDADES_GANHO:
-        raise ValueError("periodicidade_ganho_invalida")
+    if periodo not in PERIODOS_GANHO:
+        raise ValueError("periodo_invalido")
 
-    if periodicidade == "CORRIDA":
+    if periodo == "CORRIDA":
         if minutos is None or km is None:
             raise ValueError("dados_corrida_obrigatorios")
-        return periodicidade, minutos, km
+        return periodo, minutos, km
 
     if minutos is not None or km is not None:
         raise ValueError("dados_corrida_nao_permitidos")
-    return periodicidade, None, None
+    return periodo, None, None
+
+
+def _resolver_dia_semana(tipo: str, periodo: Optional[str], data_ref: date) -> Optional[str]:
+    # Para GANHO semanal, nao ha um unico dia representativo.
+    if tipo == "GANHO" and periodo == "SEMANAL":
+        return None
+    return _dia_semana_por_data(data_ref)
 
 
 def _resolver_moto_do_lancamento(
@@ -110,7 +123,10 @@ def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
     if tipo != categoria.tipo:
         raise ValueError("tipo_incompativel_com_categoria")
 
-    periodicidade_ganho, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+    periodo, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+
+    data_ref = dados.data_lancamento or date.today()
+    dia_semana = _resolver_dia_semana(tipo, periodo, data_ref)
 
     moto_id = _resolver_moto_do_lancamento(db, dados.usuario_id, dados.moto_usuario_id)
 
@@ -121,10 +137,11 @@ def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
         tipo=tipo,
         valor=dados.valor,
         descricao=dados.descricao,
-        periodicidade_ganho=periodicidade_ganho,
+        dia_semana=dia_semana,
+        periodo=periodo,
         minutos_corrida=minutos_corrida,
         km_corrida=km_corrida,
-        data_lancamento=dados.data_lancamento or date.today(),
+        data_lancamento=data_ref,
     )
 
     db.add(lancamento)
@@ -202,7 +219,10 @@ def atualizar_lancamento(
         if categoria.tipo != "DESPESA":
             raise ValueError("lancamento_vinculado_apenas_despesa")
 
-    periodicidade_ganho, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+    periodo, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+
+    data_ref = dados.data_lancamento or date.today()
+    dia_semana = _resolver_dia_semana(tipo, periodo, data_ref)
 
     moto_id = _resolver_moto_do_lancamento(db, dados.usuario_id, dados.moto_usuario_id)
 
@@ -211,10 +231,11 @@ def atualizar_lancamento(
     lancamento.tipo = tipo
     lancamento.valor = dados.valor
     lancamento.descricao = dados.descricao
-    lancamento.periodicidade_ganho = periodicidade_ganho
+    lancamento.dia_semana = dia_semana
+    lancamento.periodo = periodo
     lancamento.minutos_corrida = minutos_corrida
     lancamento.km_corrida = km_corrida
-    lancamento.data_lancamento = dados.data_lancamento or date.today()
+    lancamento.data_lancamento = data_ref
 
     if abastecimento:
         abastecimento.usuario_id = dados.usuario_id
