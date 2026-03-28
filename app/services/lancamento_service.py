@@ -101,7 +101,7 @@ def _resolver_moto_do_lancamento(
     raise ValueError("moto_obrigatoria_informar")
 
 
-def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
+def criar_lancamento(db: Session, dados: LancamentoCriar, auto_commit: bool = True) -> Lancamento:
     tipo = dados.tipo.upper()
 
     # valida tipo
@@ -145,8 +145,11 @@ def criar_lancamento(db: Session, dados: LancamentoCriar) -> Lancamento:
     )
 
     db.add(lancamento)
-    db.commit()
-    db.refresh(lancamento)
+    if auto_commit:
+        db.commit()
+        db.refresh(lancamento)
+    else:
+        db.flush()
 
     return lancamento
 
@@ -180,6 +183,7 @@ def atualizar_lancamento(
     db: Session,
     lancamento_id: int,
     dados: LancamentoCriar,
+    auto_commit: bool = True,
 ) -> Lancamento:
     lancamento = db.execute(
         select(Lancamento).where(
@@ -250,12 +254,15 @@ def atualizar_lancamento(
         manutencao.valor_total = dados.valor
         manutencao.data_manutencao = lancamento.data_lancamento
 
-    db.commit()
-    db.refresh(lancamento)
+    if auto_commit:
+        db.commit()
+        db.refresh(lancamento)
+    else:
+        db.flush()
     return lancamento
 
 
-def excluir_lancamento(db: Session, lancamento_id: int, usuario_id: int) -> None:
+def excluir_lancamento(db: Session, lancamento_id: int, usuario_id: int, auto_commit: bool = True) -> None:
     lancamento = db.execute(
         select(Lancamento).where(
             Lancamento.id == lancamento_id,
@@ -266,4 +273,7 @@ def excluir_lancamento(db: Session, lancamento_id: int, usuario_id: int) -> None
         raise ValueError("lancamento_nao_encontrado")
 
     db.delete(lancamento)
-    db.commit()
+    if auto_commit:
+        db.commit()
+    else:
+        db.flush()

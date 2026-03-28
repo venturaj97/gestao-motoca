@@ -39,25 +39,28 @@ def criar_manutencao(db: Session, dados: ManutencaoCriar) -> Manutencao:
         moto_usuario_id=dados.moto_usuario_id,
     )
 
-    lancamento = criar_lancamento(db, lancamento_dados)
+    try:
+        lancamento = criar_lancamento(db, lancamento_dados, auto_commit=False)
 
-    manutencao = Manutencao(
-        usuario_id=dados.usuario_id,
-        moto_usuario_id=lancamento.moto_usuario_id,
-        lancamento_id=lancamento.id,
-        valor_total=dados.valor_total,
-        km_atual=dados.km_atual,
-        data_manutencao=lancamento.data_lancamento,
-        descricao_servico=dados.descricao_servico,
-        oficina=dados.oficina,
-        tipo_servico=dados.tipo_servico,
-    )
+        manutencao = Manutencao(
+            usuario_id=dados.usuario_id,
+            moto_usuario_id=lancamento.moto_usuario_id,
+            lancamento_id=lancamento.id,
+            valor_total=dados.valor_total,
+            km_atual=dados.km_atual,
+            data_manutencao=lancamento.data_lancamento,
+            descricao_servico=dados.descricao_servico,
+            oficina=dados.oficina,
+            tipo_servico=dados.tipo_servico,
+        )
 
-    db.add(manutencao)
-    db.commit()
-    db.refresh(manutencao)
-
-    return manutencao
+        db.add(manutencao)
+        db.commit()
+        db.refresh(manutencao)
+        return manutencao
+    except Exception:
+        db.rollback()
+        raise
 
 
 def listar_manutencoes(
@@ -122,20 +125,24 @@ def atualizar_manutencao(
         moto_usuario_id=dados.moto_usuario_id,
     )
 
-    lancamento = atualizar_lancamento(db, manutencao.lancamento_id, lancamento_dados)
+    try:
+        lancamento = atualizar_lancamento(db, manutencao.lancamento_id, lancamento_dados, auto_commit=False)
 
-    manutencao.usuario_id = dados.usuario_id
-    manutencao.moto_usuario_id = lancamento.moto_usuario_id
-    manutencao.valor_total = dados.valor_total
-    manutencao.km_atual = dados.km_atual
-    manutencao.data_manutencao = lancamento.data_lancamento
-    manutencao.descricao_servico = dados.descricao_servico
-    manutencao.oficina = dados.oficina
-    manutencao.tipo_servico = dados.tipo_servico
+        manutencao.usuario_id = dados.usuario_id
+        manutencao.moto_usuario_id = lancamento.moto_usuario_id
+        manutencao.valor_total = dados.valor_total
+        manutencao.km_atual = dados.km_atual
+        manutencao.data_manutencao = lancamento.data_lancamento
+        manutencao.descricao_servico = dados.descricao_servico
+        manutencao.oficina = dados.oficina
+        manutencao.tipo_servico = dados.tipo_servico
 
-    db.commit()
-    db.refresh(manutencao)
-    return manutencao
+        db.commit()
+        db.refresh(manutencao)
+        return manutencao
+    except Exception:
+        db.rollback()
+        raise
 
 
 def excluir_manutencao(db: Session, manutencao_id: int, usuario_id: int) -> None:
@@ -148,4 +155,9 @@ def excluir_manutencao(db: Session, manutencao_id: int, usuario_id: int) -> None
     if not manutencao:
         raise ValueError("manutencao_nao_encontrada")
 
-    excluir_lancamento(db, manutencao.lancamento_id, usuario_id)
+    try:
+        excluir_lancamento(db, manutencao.lancamento_id, usuario_id, auto_commit=False)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
