@@ -23,6 +23,13 @@ class IndicadorPeriodoGanhoItem(BaseModel):
     quantidade: int
 
 
+class IndicadorCategoriaItem(BaseModel):
+    categoria_id: int
+    categoria_nome: str
+    total: Decimal
+    quantidade: int
+
+
 class IndicadorResumoResposta(BaseModel):
     tipo: str
     data_inicio: Optional[date]
@@ -30,7 +37,11 @@ class IndicadorResumoResposta(BaseModel):
     moto_usuario_id: Optional[int]
 
     total_periodo: Decimal
+    quantidade_lancamentos: int
+    ticket_medio: Decimal
     melhor_dia_semana: Optional[IndicadorDiaSemanaItem]
+    pior_dia_semana: Optional[IndicadorDiaSemanaItem]
     resumo_dia_semana: list[IndicadorDiaSemanaItem]
     calendario_periodo: list[IndicadorCalendarioItem]
     ganhos_por_periodo: list[IndicadorPeriodoGanhoItem]
+    despesas_por_categoria: list[IndicadorCategoriaItem]
