@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class AbastecimentoCriar(BaseModel):
-    usuario_id: int
+    usuario_id: Optional[int] = Field(default=None, ge=1)
     moto_usuario_id: Optional[int] = Field(default=None, ge=1)
     categoria_id: int
 
@@ -40,4 +40,3 @@ class AbastecimentoResposta(BaseModel):
 
     class Config:
         from_attributes = True
-

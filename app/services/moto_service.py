@@ -17,7 +17,6 @@ from app.models.moto_modelo import MotoModelo
 from app.models.moto_usuario import MotoUsuario
 from app.models.moto_versao import MotoVersao
 from app.schemas.moto import (
-    MotoUsuarioAtivaAlterar,
     MotoUsuarioAtualizar,
     MotoUsuarioCriar,
     MotoUsuarioCriarPorPlaca,
@@ -70,6 +69,8 @@ def listar_anos_por_modelo(db: Session, modelo_id: int) -> list[int]:
 
 
 def criar_moto_usuario(db: Session, dados: MotoUsuarioCriar) -> MotoUsuario:
+    if dados.usuario_id is None:
+        raise ValueError("usuario_obrigatorio")
 
     # valida se escolheu versao existente
     if dados.moto_versao_id:
@@ -99,17 +100,22 @@ def criar_moto_usuario(db: Session, dados: MotoUsuarioCriar) -> MotoUsuario:
     return moto
 
 
-def alterar_ativa_moto_usuario(db: Session, dados: MotoUsuarioAtivaAlterar) -> MotoUsuario:
+def alterar_ativa_moto_usuario(
+    db: Session,
+    usuario_id: int,
+    moto_usuario_id: int,
+    ativa: bool,
+) -> MotoUsuario:
     moto = db.execute(
         select(MotoUsuario).where(
-            MotoUsuario.id == dados.moto_usuario_id,
-            MotoUsuario.usuario_id == dados.usuario_id,
+            MotoUsuario.id == moto_usuario_id,
+            MotoUsuario.usuario_id == usuario_id,
         )
     ).scalar_one_or_none()
     if not moto:
         raise ValueError("moto_nao_encontrada_ou_nao_sua")
 
-    moto.ativa = dados.ativa
+    moto.ativa = ativa
     db.commit()
     db.refresh(moto)
     return moto
@@ -165,13 +171,14 @@ def listar_motos_do_usuario(db: Session, usuario_id: int):
 
 def atualizar_moto_usuario(
     db: Session,
+    usuario_id: int,
     moto_usuario_id: int,
     dados: MotoUsuarioAtualizar,
 ) -> MotoUsuario:
     moto = db.execute(
         select(MotoUsuario).where(
             MotoUsuario.id == moto_usuario_id,
-            MotoUsuario.usuario_id == dados.usuario_id,
+            MotoUsuario.usuario_id == usuario_id,
         )
     ).scalar_one_or_none()
     if not moto:
@@ -373,12 +380,16 @@ def consultar_dados_veiculo_por_placa_com_cache(db: Session, placa: str) -> dict
     return resultado
 
 
-def criar_moto_usuario_por_placa(db: Session, dados: MotoUsuarioCriarPorPlaca) -> MotoUsuario:
+def criar_moto_usuario_por_placa(
+    db: Session,
+    usuario_id: int,
+    dados: MotoUsuarioCriarPorPlaca,
+) -> MotoUsuario:
     placa_normalizada = _normalizar_placa(dados.placa)
 
     ja_existe = db.execute(
         select(MotoUsuario).where(
-            MotoUsuario.usuario_id == dados.usuario_id,
+            MotoUsuario.usuario_id == usuario_id,
             MotoUsuario.placa == placa_normalizada,
         )
     ).scalar_one_or_none()
@@ -397,7 +408,7 @@ def criar_moto_usuario_por_placa(db: Session, dados: MotoUsuarioCriarPorPlaca) -
         raise ValueError("dados_placa_incompletos")
 
     moto = MotoUsuario(
-        usuario_id=dados.usuario_id,
+        usuario_id=usuario_id,
         moto_versao_id=None,
         marca_manual=str(marca).strip(),
         modelo_manual=str(modelo).strip(),

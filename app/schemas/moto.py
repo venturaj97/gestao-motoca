@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 
 class MotoUsuarioCriar(BaseModel):
-    usuario_id: int
+    usuario_id: Optional[int] = Field(default=None, ge=1)
 
     moto_versao_id: Optional[int] = None
 
@@ -33,15 +33,12 @@ class MotoUsuarioResposta(BaseModel):
 
 
 class MotoUsuarioAtivaAlterar(BaseModel):
-    usuario_id: int = Field(ge=1)
     moto_usuario_id: int = Field(ge=1)
     ativa: bool
 
 
 class MotoUsuarioAtualizar(BaseModel):
     """Campos opcionais; envie apenas o que deseja alterar."""
-    usuario_id: int = Field(ge=1)
-
     km_atual: Optional[int] = Field(default=None, ge=0)
     cor: Optional[str] = Field(default=None, max_length=40)
     ativa: Optional[bool] = None
@@ -60,7 +57,6 @@ class ConsultaPlacaResposta(BaseModel):
 
 
 class MotoUsuarioCriarPorPlaca(BaseModel):
-    usuario_id: int = Field(ge=1)
     placa: str = Field(min_length=7, max_length=8)
     km_atual: int = Field(default=0, ge=0)
     cor: Optional[str] = Field(default=None, max_length=40)

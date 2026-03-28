@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.dependencies import get_usuario_logado
+from app.models.usuario import Usuario
 from app.schemas.lancamento import LancamentoCriar, LancamentoResposta
 from app.services.lancamento_service import (
     atualizar_lancamento,
@@ -37,9 +39,14 @@ def _erros_lancamento_valor(e: ValueError) -> None:
 
 
 @router.post("", response_model=LancamentoResposta, status_code=status.HTTP_201_CREATED)
-def rota_criar_lancamento(dados: LancamentoCriar, db: Session = Depends(get_db)):
+def rota_criar_lancamento(
+    dados: LancamentoCriar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
     try:
-        return criar_lancamento(db, dados)
+        dados_com_usuario = dados.model_copy(update={"usuario_id": usuario.id})
+        return criar_lancamento(db, dados_com_usuario)
     except ValueError as e:
         _erros_lancamento_valor(e)
 
@@ -49,9 +56,11 @@ def rota_atualizar_lancamento(
     lancamento_id: int,
     dados: LancamentoCriar,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
     try:
-        return atualizar_lancamento(db, lancamento_id, dados)
+        dados_com_usuario = dados.model_copy(update={"usuario_id": usuario.id})
+        return atualizar_lancamento(db, lancamento_id, dados_com_usuario)
     except ValueError as e:
         _erros_lancamento_valor(e)
 
@@ -59,11 +68,11 @@ def rota_atualizar_lancamento(
 @router.delete("/{lancamento_id}", status_code=status.HTTP_204_NO_CONTENT)
 def rota_excluir_lancamento(
     lancamento_id: int,
-    usuario_id: int = Query(..., ge=1),
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
     try:
-        excluir_lancamento(db, lancamento_id, usuario_id)
+        excluir_lancamento(db, lancamento_id, usuario.id)
     except ValueError as e:
         if str(e) == "lancamento_nao_encontrado":
             raise HTTPException(status_code=404, detail="Lancamento nao encontrado")
@@ -72,10 +81,10 @@ def rota_excluir_lancamento(
 
 @router.get("", response_model=list[LancamentoResposta])
 def rota_listar_lancamentos(
-    usuario_id: int = Query(..., ge=1),
     tipo: Optional[str] = Query(default=None),
     data_inicio: Optional[date] = Query(default=None),
     data_fim: Optional[date] = Query(default=None),
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
-    return listar_lancamentos(db, usuario_id, tipo, data_inicio, data_fim)
+    return listar_lancamentos(db, usuario.id, tipo, data_inicio, data_fim)

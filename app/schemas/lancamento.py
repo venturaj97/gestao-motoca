@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class LancamentoCriar(BaseModel):
-    usuario_id: int
+    usuario_id: Optional[int] = Field(default=None, ge=1)
     categoria_id: int
     tipo: str
     valor: Decimal = Field(gt=0, decimal_places=2)

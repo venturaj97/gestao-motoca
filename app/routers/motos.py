@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.dependencies import get_usuario_logado
+from app.models.usuario import Usuario
 from app.schemas.moto import (
     ConsultaPlacaResposta,
     MotoUsuarioAtivaAlterar,
@@ -49,7 +51,12 @@ def rota_listar_anos_por_modelo(
 
 
 @router.get("/consulta-placa/{placa}", response_model=ConsultaPlacaResposta)
-def rota_consultar_veiculo_por_placa(placa: str, db: Session = Depends(get_db)):
+def rota_consultar_veiculo_por_placa(
+    placa: str,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    _ = usuario
     try:
         return consultar_dados_veiculo_por_placa_com_cache(db, placa)
     except ConsultaPlacaErro as e:
@@ -57,9 +64,14 @@ def rota_consultar_veiculo_por_placa(placa: str, db: Session = Depends(get_db)):
 
 
 @router.post("/minha", response_model=MotoUsuarioResposta, status_code=status.HTTP_201_CREATED)
-def rota_cadastrar_minha_moto(dados: MotoUsuarioCriar, db: Session = Depends(get_db)):
+def rota_cadastrar_minha_moto(
+    dados: MotoUsuarioCriar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
     try:
-        return criar_moto_usuario(db, dados)
+        dados_com_usuario = dados.model_copy(update={"usuario_id": usuario.id})
+        return criar_moto_usuario(db, dados_com_usuario)
     except ValueError as e:
         if str(e) == "versao_nao_encontrada":
             raise HTTPException(status_code=404, detail="Versao nao encontrada")
@@ -70,9 +82,10 @@ def rota_cadastrar_minha_moto(dados: MotoUsuarioCriar, db: Session = Depends(get
 def rota_cadastrar_minha_moto_por_placa(
     dados: MotoUsuarioCriarPorPlaca,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
     try:
-        return criar_moto_usuario_por_placa(db, dados)
+        return criar_moto_usuario_por_placa(db, usuario.id, dados)
     except ConsultaPlacaErro as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     except ValueError as e:
@@ -84,9 +97,13 @@ def rota_cadastrar_minha_moto_por_placa(
 
 
 @router.patch("/minha/ativa", response_model=MotoUsuarioResposta)
-def rota_alterar_ativa_moto(dados: MotoUsuarioAtivaAlterar, db: Session = Depends(get_db)):
+def rota_alterar_ativa_moto(
+    dados: MotoUsuarioAtivaAlterar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
     try:
-        return alterar_ativa_moto_usuario(db, dados)
+        return alterar_ativa_moto_usuario(db, usuario.id, dados.moto_usuario_id, dados.ativa)
     except ValueError as e:
         if str(e) == "moto_nao_encontrada_ou_nao_sua":
             raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
@@ -98,9 +115,10 @@ def rota_atualizar_minha_moto(
     moto_usuario_id: int,
     dados: MotoUsuarioAtualizar,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
     try:
-        return atualizar_moto_usuario(db, moto_usuario_id, dados)
+        return atualizar_moto_usuario(db, usuario.id, moto_usuario_id, dados)
     except ValueError as e:
         if str(e) == "moto_nao_encontrada_ou_nao_sua":
             raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
@@ -110,11 +128,11 @@ def rota_atualizar_minha_moto(
 @router.delete("/minha/{moto_usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
 def rota_excluir_minha_moto(
     moto_usuario_id: int,
-    usuario_id: int = Query(..., ge=1),
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
     try:
-        excluir_moto_usuario(db, moto_usuario_id, usuario_id)
+        excluir_moto_usuario(db, moto_usuario_id, usuario.id)
     except ValueError as e:
         if str(e) == "moto_nao_encontrada_ou_nao_sua":
             raise HTTPException(status_code=404, detail="Moto nao encontrada ou nao pertence ao usuario")
@@ -128,7 +146,7 @@ def rota_excluir_minha_moto(
 
 @router.get("/minha")
 def rota_listar_minhas_motos(
-    usuario_id: int = Query(..., ge=1),
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
-    return {"usuario_id": usuario_id, "motos": listar_motos_do_usuario(db, usuario_id)}
+    return {"usuario_id": usuario.id, "motos": listar_motos_do_usuario(db, usuario.id)}

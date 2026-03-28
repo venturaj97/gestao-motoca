@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.dependencies import get_usuario_logado
+from app.models.usuario import Usuario
 from app.schemas.abastecimento import AbastecimentoCriar, AbastecimentoResposta
 from app.services.abastecimento_service import (
     criar_abastecimento,
@@ -19,9 +21,11 @@ router = APIRouter(prefix="/abastecimentos", tags=["abastecimentos"])
 def rota_criar_abastecimento(
     dados: AbastecimentoCriar,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
     try:
-        return criar_abastecimento(db, dados)
+        dados_com_usuario = dados.model_copy(update={"usuario_id": usuario.id})
+        return criar_abastecimento(db, dados_com_usuario)
     except ValueError as e:
         erros = {
             "categoria_nao_encontrada": (404, "Categoria nao encontrada"),
@@ -39,17 +43,16 @@ def rota_criar_abastecimento(
 
 @router.get("", response_model=list[AbastecimentoResposta])
 def rota_listar_abastecimentos(
-    usuario_id: int = Query(..., ge=1),
     data_inicio: Optional[date] = Query(default=None),
     data_fim: Optional[date] = Query(default=None),
     moto_usuario_id: Optional[int] = Query(default=None, ge=1),
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
     return listar_abastecimentos(
         db,
-        usuario_id=usuario_id,
+        usuario_id=usuario.id,
         data_inicio=data_inicio,
         data_fim=data_fim,
         moto_usuario_id=moto_usuario_id,
     )
-
