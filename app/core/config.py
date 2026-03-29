@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     )
     auth_algorithm: str = Field(default="HS256", validation_alias="AUTH_ALGORITHM")
     auth_token_exp_minutos: int = Field(default=1440, validation_alias="AUTH_TOKEN_EXP_MINUTOS")
+    cors_allowed_origins: str = Field(
+        default="http://localhost:5173,http://127.0.0.1:5173",
+        validation_alias="CORS_ALLOWED_ORIGINS",
+    )
 
     @property
     def database_url(self) -> str:
@@ -31,5 +35,9 @@ class Settings(BaseSettings):
             f"postgresql+psycopg://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
 settings = Settings()
