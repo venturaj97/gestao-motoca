@@ -58,13 +58,14 @@ def listar_modelos_por_marca(db: Session, marca: str) -> list[dict]:
     return [{"id": m.id, "marca": m.marca, "modelo": m.modelo, "cilindrada_cc": m.cilindrada_cc} for m in modelos]
 
 
-def listar_anos_por_modelo(db: Session, modelo_id: int) -> list[int]:
-    return db.execute(
-        select(MotoVersao.ano)
+def listar_anos_por_modelo(db: Session, modelo_id: int) -> list[dict]:
+    versoes = db.execute(
+        select(MotoVersao)
         .where(MotoVersao.moto_modelo_id == modelo_id)
         .where(MotoVersao.ativo == True)  # noqa: E712
         .order_by(MotoVersao.ano.desc())
     ).scalars().all()
+    return [{"id": v.id, "ano": v.ano} for v in versoes]
 
 
 
