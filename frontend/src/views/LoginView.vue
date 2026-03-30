@@ -45,7 +45,7 @@ async function handleLogin() {
     <header class="w-full flex justify-center pt-12 pb-8">
       <div class="flex flex-col items-center">
         <div class="w-16 h-16 bg-primary-container flex items-center justify-center mb-4">
-          <span class="material-symbols-outlined text-on-primary-fixed text-4xl">local_shipping</span>
+          <span class="material-symbols-outlined text-on-primary-fixed text-4xl">two_wheeler</span>
         </div>
         <h1 class="font-headline font-bold text-primary-fixed tracking-widest text-sm uppercase">
           GESTÃO MOTOCA
