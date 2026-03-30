@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useMotoStore } from '@/stores/moto'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const motoStore = useMotoStore()
 
 function logout() {
   authStore.logout()
+  motoStore.limpar()
   router.push({ name: 'login' })
 }
 </script>
