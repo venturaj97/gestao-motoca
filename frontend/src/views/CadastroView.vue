@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { criarUsuario } from '@/api/auth'
+import { criarUsuario, login } from '@/api/auth'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const nome = ref('')
 const email = ref('')
@@ -12,21 +14,43 @@ const erro = ref('')
 const carregando = ref(false)
 const sucesso = ref(false)
 
+// Validação de formato de email
+function emailValido(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)
+}
+
 async function handleCadastro() {
   erro.value = ''
-  if (!nome.value || !email.value || !senha.value) {
+
+  if (!nome.value.trim() || !email.value.trim() || !senha.value) {
     erro.value = 'Preencha todos os campos.'
+    return
+  }
+  if (!emailValido(email.value)) {
+    erro.value = 'Informe um e-mail válido (ex: nome@dominio.com).'
     return
   }
   if (senha.value.length < 6) {
     erro.value = 'A senha deve ter pelo menos 6 caracteres.'
     return
   }
+
   try {
     carregando.value = true
-    await criarUsuario({ nome: nome.value, email: email.value, senha: senha.value })
+
+    // 1. Cria a conta
+    await criarUsuario({ nome: nome.value.trim(), email: email.value.trim(), senha: senha.value })
+
+    // 2. Faz login automático com as mesmas credenciais
+    const resposta = await login({ email: email.value.trim(), senha: senha.value })
+    authStore.salvarToken(resposta.access_token)
+    await authStore.carregarUsuario()
+
     sucesso.value = true
-    setTimeout(() => router.push({ name: 'login' }), 1500)
+
+    // 3. Redireciona para o dashboard
+    setTimeout(() => router.push({ name: 'dashboard' }), 800)
+
   } catch (e: any) {
     const status = e?.response?.status
     const detail = e?.response?.data?.detail
