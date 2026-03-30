@@ -17,16 +17,31 @@ const erro = ref('')
 const dadosConsulta = ref<ConsultaPlacaResposta | null>(null)
 
 // ── Computed ─────────────────────────────────────────────────
-const placaFormatada = computed(() => {
-  const v = placa.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
-  if (v.length <= 3) return v
-  return v.slice(0, 3) + '-' + v.slice(3, 7)
+
+// Detecta o tipo pelo 5º caractere (index 4)
+// Letra = Mercosul (KVU8F92) | Número = Antigo (KVU8592)
+const tipoPlaca = computed(() => {
+  const raw = placa.value
+  if (raw.length >= 5) {
+    return /[A-Z]/.test(raw[4]) ? 'mercosul' : 'antigo'
+  }
+  return 'indefinido'
 })
 
+// Exibe o traço APENAS se for formato antigo (5º char é número)
+const placaFormatada = computed(() => {
+  const raw = placa.value
+  if (tipoPlaca.value === 'antigo' && raw.length > 3) {
+    return raw.slice(0, 3) + '-' + raw.slice(3)
+  }
+  return raw
+})
+
+// Validação completa: regex oficial de placa brasileira
+// Mercosul: AAA0A00 | Antigo: AAA0000
 const placaValida = computed(() => {
-  const raw = placa.value.replace(/[^A-Za-z0-9]/g, '')
-  // Mercosul: AAA0A00 (7 chars) ou padrão antigo: AAA0000 (7 chars)
-  return raw.length === 7
+  const raw = placa.value
+  return /^[A-Z]{3}[0-9]([A-Z][0-9]{2}|[0-9]{3})$/.test(raw)
 })
 
 // Nome do veículo a partir dos dados da consulta
@@ -40,19 +55,59 @@ const nomeVeiculo = computed(() => {
 })
 
 // ── Handlers ─────────────────────────────────────────────────
-function handleInput(e: Event) {
-  const raw = (e.target as HTMLInputElement).value
-    .replace(/[^A-Za-z0-9]/g, '')  // remove tudo que não for letra ou número
-    .toUpperCase()
-    .slice(0, 7)
-  placa.value = raw
+
+// Regras por posição:
+//  0,1,2 → LETRA
+//  3     → DÍGITO
+//  4     → livre (letra = Mercosul | dígito = Antigo)
+//  5,6   → DÍGITO
+function charValidoNaPosicao(ch: string, pos: number): boolean {
+  const isLetter = /[A-Z]/.test(ch)
+  const isDigit  = /[0-9]/.test(ch)
+  if (pos <= 2)  return isLetter
+  if (pos === 3) return isDigit
+  if (pos === 4) return isLetter || isDigit  // determina o formato
+  return isDigit  // pos 5 e 6
 }
 
-// Bloqueia digitação de especiais (traço, ponto, espaço etc) direto no teclado
+function handleInput(e: Event) {
+  const raw = (e.target as HTMLInputElement).value
+    .replace(/[^A-Za-z0-9]/g, '')
+    .toUpperCase()
+
+  // Constrói a placa validando cada posição
+  let validado = ''
+  for (let i = 0; i < raw.length && i < 7; i++) {
+    if (charValidoNaPosicao(raw[i], i)) {
+      validado += raw[i]
+    } else {
+      break  // para no primeiro char inválido para aquela posição
+    }
+  }
+  placa.value = validado
+}
+
 function handleKeydown(e: KeyboardEvent) {
-  const allowed = /^[A-Za-z0-9]$/.test(e.key)
-  const control = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key)
-  if (!allowed && !control) {
+  const isAlphanumeric = /^[A-Za-z0-9]$/.test(e.key)
+  const isControl = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key)
+
+  // Bloqueia caracteres especiais
+  if (!isAlphanumeric && !isControl) {
+    e.preventDefault()
+    return
+  }
+
+  if (!isAlphanumeric) return  // deixa teclas de controle passarem
+
+  // Já tem 7 chars reais
+  if (placa.value.length >= 7) {
+    e.preventDefault()
+    return
+  }
+
+  // Valida o char pela posição atual
+  const pos = placa.value.length
+  if (!charValidoNaPosicao(e.key.toUpperCase(), pos)) {
     e.preventDefault()
   }
 }
@@ -183,26 +238,37 @@ function voltar() {
             <div class="absolute -top-3 -left-3 w-5 h-5 border-t-2 border-l-2 border-primary-container opacity-40"></div>
             <div class="absolute -bottom-3 -right-3 w-5 h-5 border-b-2 border-r-2 border-primary-container opacity-40"></div>
 
-            <!-- Placa estilo Mercosul -->
-            <div class="bg-[#d4d4d4] p-1.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]">
+            <!-- Container da placa — muda visual por tipo -->
+            <div class="bg-[#d4d4d4] p-1.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] transition-all">
               <div class="bg-white border-[3px] border-black flex flex-col">
-                <!-- Header azul Mercosul -->
-                <div class="bg-[#003399] h-7 flex items-center justify-between px-3">
+
+                <!-- Header Mercosul (azul) -->
+                <div
+                  v-if="tipoPlaca !== 'antigo'"
+                  class="bg-[#003399] h-7 flex items-center justify-between px-3 transition-all"
+                >
                   <div class="flex items-center gap-1">
                     <div class="w-3 h-2 bg-green-500 opacity-80 rounded-sm"></div>
                     <div class="w-3 h-2 bg-yellow-400 opacity-80 rounded-sm"></div>
                   </div>
-                  <span class="text-white font-headline font-bold text-[10px] tracking-widest">
-                    BRASIL
-                  </span>
+                  <span class="text-white font-headline font-bold text-[10px] tracking-widest">BRASIL</span>
                   <div class="w-6"></div>
                 </div>
-              <!-- Input da placa -->
+
+                <!-- Header Antigo (cinza) -->
+                <div
+                  v-else
+                  class="bg-[#d8d8d8] h-7 flex items-center justify-center border-b border-zinc-400 transition-all"
+                >
+                  <span class="font-headline font-bold text-black text-[9px] tracking-widest">RJ · RIO DE JANEIRO</span>
+                </div>
+
+                <!-- Input da placa -->
                 <div class="py-4 px-2 flex items-center justify-center">
                   <input
                     type="text"
                     :value="placaFormatada"
-                    maxlength="7"
+                    :maxlength="tipoPlaca === 'antigo' ? 8 : 7"
                     placeholder="Digite a placa"
                     autocomplete="off"
                     autocorrect="off"
@@ -214,21 +280,22 @@ function voltar() {
                     @input="handleInput"
                     @keydown="handleKeydown"
                     @keyup.enter="consultar"
-                    @paste.prevent="(e) => {
+                    @paste.prevent="(e: any) => {
                       const txt = e.clipboardData?.getData('text') ?? ''
-                      const clean = txt.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7)
-                      placa = clean
+                      placa.value = txt.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7)
                     }"
                   />
                 </div>
               </div>
             </div>
 
-            <!-- Aviso: sem traço -->
-            <div class="flex items-center gap-2 mt-2 px-1">
+            <!-- Indicador de formato detectado -->
+            <div class="flex items-center gap-2 mt-2 px-1 h-5">
               <span class="material-symbols-outlined text-primary-container text-sm">info</span>
               <p class="font-label text-[10px] tracking-wide text-on-surface-variant">
-                Apenas letras e números — sem traço, ponto ou espaço.
+                <template v-if="tipoPlaca === 'mercosul'">Mercosul detectado — formato correto ✅</template>
+                <template v-else-if="tipoPlaca === 'antigo'">Placa antiga detectada — formato correto ✅</template>
+                <template v-else>Apenas letras e números — sem traço, ponto ou espaço.</template>
               </p>
             </div>
 
@@ -262,7 +329,7 @@ function voltar() {
                     <div class="h-[2px] w-3 bg-primary-container"></div>
                     <span class="font-label text-[9px] tracking-widest text-primary-container uppercase font-bold">MERCOSUL</span>
                   </div>
-                  <p class="font-label text-[8px] text-on-surface-variant text-center">3 letras · 1 nº · 1 letra · 2 nº</p>
+                  <p class="font-label text-[8px] text-on-surface-variant text-center">4 letras · 3 números</p>
                 </div>
 
                 <!-- Separador -->
@@ -275,7 +342,7 @@ function voltar() {
                   <div class="w-full bg-[#d4d4d4] p-1 shadow-inner">
                     <div class="bg-white border-[2px] border-black">
                       <div class="bg-[#e0e0e0] h-5 flex items-center justify-center border-b border-zinc-300">
-                        <span class="font-headline font-bold text-black text-[7px] tracking-widest">AM · MANAUS</span>
+                        <span class="font-headline font-bold text-black text-[7px] tracking-widest">RJ · RIO DE JANEIRO</span>
                       </div>
                       <div class="py-1.5 px-1 text-center">
                         <span class="font-headline font-black text-black tracking-tighter text-xl">
