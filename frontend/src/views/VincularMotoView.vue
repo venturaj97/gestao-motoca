@@ -42,10 +42,19 @@ const nomeVeiculo = computed(() => {
 // ── Handlers ─────────────────────────────────────────────────
 function handleInput(e: Event) {
   const raw = (e.target as HTMLInputElement).value
-    .replace(/[^A-Za-z0-9]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '')  // remove tudo que não for letra ou número
     .toUpperCase()
     .slice(0, 7)
   placa.value = raw
+}
+
+// Bloqueia digitação de especiais (traço, ponto, espaço etc) direto no teclado
+function handleKeydown(e: KeyboardEvent) {
+  const allowed = /^[A-Za-z0-9]$/.test(e.key)
+  const control = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key)
+  if (!allowed && !control) {
+    e.preventDefault()
+  }
 }
 
 async function consultar() {
@@ -188,23 +197,103 @@ function voltar() {
                   </span>
                   <div class="w-6"></div>
                 </div>
-                <!-- Input da placa -->
+              <!-- Input da placa -->
                 <div class="py-4 px-2 flex items-center justify-center">
                   <input
                     type="text"
                     :value="placaFormatada"
-                    maxlength="8"
-                    placeholder="ABC-1234"
+                    maxlength="7"
+                    placeholder="Digite a placa"
                     autocomplete="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    inputmode="text"
                     class="w-full bg-transparent border-none text-center font-headline text-6xl
                            font-bold text-black tracking-tighter focus:ring-0 focus:outline-none
-                           uppercase placeholder:text-zinc-300"
+                           uppercase placeholder:text-zinc-300 placeholder:text-3xl"
                     @input="handleInput"
+                    @keydown="handleKeydown"
                     @keyup.enter="consultar"
+                    @paste.prevent="(e) => {
+                      const txt = e.clipboardData?.getData('text') ?? ''
+                      const clean = txt.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7)
+                      placa = clean
+                    }"
                   />
                 </div>
               </div>
             </div>
+
+            <!-- Aviso: sem traço -->
+            <div class="flex items-center gap-2 mt-2 px-1">
+              <span class="material-symbols-outlined text-primary-container text-sm">info</span>
+              <p class="font-label text-[10px] tracking-wide text-on-surface-variant">
+                Apenas letras e números — sem traço, ponto ou espaço.
+              </p>
+            </div>
+
+            <!-- Exemplos decorativos de placa (não clicáveis) -->
+            <div class="mt-5">
+              <p class="font-label text-[9px] tracking-[0.2em] text-on-surface-variant uppercase mb-3">
+                FORMATOS DE PLACA ACEITOS
+              </p>
+              <div class="flex gap-3">
+
+                <!-- Placa Mercosul -->
+                <div class="flex-1 flex flex-col items-center gap-1.5">
+                  <div class="w-full bg-[#d4d4d4] p-1 shadow-inner">
+                    <div class="bg-white border-[2px] border-black">
+                      <div class="bg-[#003399] h-5 flex items-center justify-between px-2">
+                        <div class="flex items-center gap-0.5">
+                          <div class="w-2 h-1.5 bg-green-500 opacity-80 rounded-sm"></div>
+                          <div class="w-2 h-1.5 bg-yellow-400 opacity-80 rounded-sm"></div>
+                        </div>
+                        <span class="text-white font-headline font-bold text-[7px] tracking-widest">BRASIL</span>
+                        <div class="w-4"></div>
+                      </div>
+                      <div class="py-1.5 px-1 text-center">
+                        <span class="font-headline font-black text-black tracking-tighter text-xl">
+                          KVU8F92
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div class="h-[2px] w-3 bg-primary-container"></div>
+                    <span class="font-label text-[9px] tracking-widest text-primary-container uppercase font-bold">MERCOSUL</span>
+                  </div>
+                  <p class="font-label text-[8px] text-on-surface-variant text-center">3 letras · 1 nº · 1 letra · 2 nº</p>
+                </div>
+
+                <!-- Separador -->
+                <div class="flex items-center">
+                  <span class="text-outline-variant font-label text-xs">ou</span>
+                </div>
+
+                <!-- Placa Antiga -->
+                <div class="flex-1 flex flex-col items-center gap-1.5">
+                  <div class="w-full bg-[#d4d4d4] p-1 shadow-inner">
+                    <div class="bg-white border-[2px] border-black">
+                      <div class="bg-[#e0e0e0] h-5 flex items-center justify-center border-b border-zinc-300">
+                        <span class="font-headline font-bold text-black text-[7px] tracking-widest">AM · MANAUS</span>
+                      </div>
+                      <div class="py-1.5 px-1 text-center">
+                        <span class="font-headline font-black text-black tracking-tighter text-xl">
+                          KVU·8592
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div class="h-[2px] w-3 bg-on-surface-variant"></div>
+                    <span class="font-label text-[9px] tracking-widest text-on-surface-variant uppercase font-bold">ANTIGO</span>
+                  </div>
+                  <p class="font-label text-[8px] text-on-surface-variant text-center">3 letras · 4 números</p>
+                </div>
+
+              </div>
+            </div>
+
           </div>
 
           <!-- Erro -->

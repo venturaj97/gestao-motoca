@@ -11,6 +11,7 @@ const email = ref('')
 const senha = ref('')
 const erro = ref('')
 const carregando = ref(false)
+const mostrarSenha = ref(false)
 
 async function handleLogin() {
   erro.value = ''
@@ -80,9 +81,9 @@ async function handleLogin() {
                 type="email"
                 placeholder="operador@gestaomotoca.com"
                 autocomplete="email"
-                class="tactical-input py-4 px-0"
+                class="tactical-input py-4 px-4 pr-10"
               />
-              <div class="absolute right-0 top-4 text-outline group-focus-within:text-primary-fixed transition-colors">
+              <div class="absolute right-0 top-4 text-outline group-focus-within:text-primary-fixed transition-colors pointer-events-none">
                 <span class="material-symbols-outlined">alternate_email</span>
               </div>
             </div>
@@ -96,14 +97,21 @@ async function handleLogin() {
             <div class="relative">
               <input
                 v-model="senha"
-                type="password"
+                :type="mostrarSenha ? 'text' : 'password'"
                 placeholder="••••••••"
                 autocomplete="current-password"
-                class="tactical-input py-4 px-0"
+                class="tactical-input py-4 px-4 pr-10"
               />
-              <div class="absolute right-0 top-4 text-outline group-focus-within:text-primary-fixed transition-colors">
-                <span class="material-symbols-outlined">lock</span>
-              </div>
+              <button
+                type="button"
+                tabindex="-1"
+                class="absolute right-0 top-4 text-outline hover:text-primary-fixed transition-colors"
+                @click="mostrarSenha = !mostrarSenha"
+              >
+                <span class="material-symbols-outlined">
+                  {{ mostrarSenha ? 'visibility_off' : 'visibility' }}
+                </span>
+              </button>
             </div>
           </div>
 
