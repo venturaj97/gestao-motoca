@@ -25,6 +25,9 @@ const kmCorrida     = ref('')
 const dataLancamento = ref(new Date().toISOString().slice(0, 10))
 const mostrarDescricao = ref(false)
 
+const hoje = new Date().toISOString().slice(0, 10)
+const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
 const categorias    = ref<CategoriaResposta[]>([])
 const carregando    = ref(false)
 const enviando      = ref(false)
@@ -306,12 +309,46 @@ onMounted(carregar)
         </div>
 
         <!-- Data -->
-        <div>
+        <div class="space-y-3">
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-            DATA
+            DATA DO LANÇAMENTO
           </label>
-          <input v-model="dataLancamento" type="date"
-            class="tactical-input py-3 text-base" />
+          
+          <!-- Seleção Rápida -->
+          <div class="grid grid-cols-2 gap-2">
+            <button 
+              type="button"
+              class="h-10 font-label text-[10px] font-bold tracking-widest uppercase transition-all border-b-2"
+              :class="dataLancamento === hoje 
+                ? 'bg-primary-container text-on-primary-fixed border-primary-container' 
+                : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
+              @click="dataLancamento = hoje"
+            >
+              HOJE
+            </button>
+            <button 
+              type="button"
+              class="h-10 font-label text-[10px] font-bold tracking-widest uppercase transition-all border-b-2"
+              :class="dataLancamento === ontem 
+                ? 'bg-primary-container text-on-primary-fixed border-primary-container' 
+                : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
+              @click="dataLancamento = ontem"
+            >
+              ONTEM
+            </button>
+          </div>
+
+          <!-- Input Customizado com Ícone -->
+          <div class="relative group">
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary-container transition-colors">
+              <span class="material-symbols-outlined text-lg">calendar_month</span>
+            </div>
+            <input 
+              v-model="dataLancamento" 
+              type="date"
+              class="tactical-input pl-12 py-4 text-lg font-bold tracking-tight uppercase" 
+            />
+          </div>
         </div>
 
         <!-- Erro -->
