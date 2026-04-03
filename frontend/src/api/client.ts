@@ -1,10 +1,11 @@
 import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
 
 const api = axios.create({
   baseURL: 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
+    // Evita que o navegador sirva 304 em requisições POST
+    'Cache-Control': 'no-store',
   },
 })
 
@@ -17,13 +18,13 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Redireciona para login se 401
+// Redireciona para login se 401 — mas NÃO na própria tela de login,
+// senão o catch do handleLogin() nunca consegue exibir o erro.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
       localStorage.removeItem('access_token')
-      // Evita import circular usando window.location
       window.location.href = '/login'
     }
     return Promise.reject(error)
