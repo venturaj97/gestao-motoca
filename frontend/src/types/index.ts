@@ -89,7 +89,7 @@ export interface CategoriaResposta {
   id: number
   nome: string
   tipo: TipoLancamento
-  ativa: boolean
+  ativo: boolean
 }
 
 // === LANÇAMENTO ===
