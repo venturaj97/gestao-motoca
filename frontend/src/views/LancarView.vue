@@ -331,7 +331,9 @@ onMounted(carregar)
               type="button"
               class="h-10 font-label text-[10px] font-bold tracking-widest uppercase transition-all border-b-2"
               :class="dataLancamento === hoje 
-                ? 'bg-primary-container text-on-primary-fixed border-primary-container' 
+                ? (tipo === 'DESPESA'
+                  ? 'bg-secondary text-on-secondary border-secondary'
+                  : 'bg-primary-container text-on-primary-fixed border-primary-container') 
                 : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
               @click="dataLancamento = hoje"
             >
@@ -341,7 +343,9 @@ onMounted(carregar)
               type="button"
               class="h-10 font-label text-[10px] font-bold tracking-widest uppercase transition-all border-b-2"
               :class="dataLancamento === ontem 
-                ? 'bg-primary-container text-on-primary-fixed border-primary-container' 
+                ? (tipo === 'DESPESA'
+                  ? 'bg-secondary text-on-secondary border-secondary'
+                  : 'bg-primary-container text-on-primary-fixed border-primary-container') 
                 : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
               @click="dataLancamento = ontem"
             >
