@@ -12,7 +12,7 @@ from app.models.manutencao import Manutencao
 from app.models.moto_usuario import MotoUsuario
 from app.schemas.lancamento import LancamentoCriar
 
-PERIODOS_GANHO = {"DIARIO", "SEMANAL", "CORRIDA"}
+PERIODOS_GANHO = {"DIARIO", "CORRIDA"}
 DIAS_SEMANA = ["SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA", "SABADO", "DOMINGO"]
 
 
