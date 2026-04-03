@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 import { useMotoStore } from '@/stores/moto'
@@ -81,7 +81,17 @@ const ehCorrida = computed(() =>
   periodo.value === 'CORRIDA'
 )
 
+const corridaPermitida = computed(() =>
+  tipo.value === 'GANHO' && categoriasSelecionadas.value.length === 1
+)
+
 const motoId = computed(() => motoStore.motoAtiva?.id)
+
+watch([tipo, categoriasSelecionadas], () => {
+  if (tipo.value === 'GANHO' && periodo.value === 'CORRIDA' && !corridaPermitida.value) {
+    periodo.value = 'DIARIO'
+  }
+})
 
 // ── Carregar categorias ─────────────────────────────────────────
 async function carregar() {
@@ -139,6 +149,10 @@ async function handleSubmit() {
   // Validação de Período (apenas para Ganho)
   if (tipo.value === 'GANHO' && !periodo.value) {
     erro.value = 'Selecione o período do ganho.'
+    return
+  }
+  if (tipo.value === 'GANHO' && periodo.value === 'CORRIDA' && !corridaPermitida.value) {
+    erro.value = 'Para lançamento por corrida, selecione apenas uma categoria.'
     return
   }
 
@@ -361,6 +375,7 @@ onMounted(carregar)
                       inputmode="decimal"
                       placeholder="0,00"
                       class="tactical-input pl-8 py-2 text-sm font-bold"
+                      :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
                       @input="formatarValorCategoriaInput(cat.id, $event)"
                     />
                   </div>
@@ -386,9 +401,12 @@ onMounted(carregar)
             PERÍODO
           </label>
           <div class="grid grid-cols-2 gap-2">
-            <button v-for="p in ['DIARIO', 'CORRIDA']" :key="p"
+            <button
+              v-for="p in ['DIARIO', 'CORRIDA']"
+              :key="p"
               type="button"
-              class="h-10 font-label text-[10px] font-bold tracking-wider uppercase transition-all border-b-2"
+              :disabled="p === 'CORRIDA' && !corridaPermitida"
+              class="h-10 font-label text-[10px] font-bold tracking-wider uppercase transition-all border-b-2 disabled:opacity-40 disabled:cursor-not-allowed"
               :class="periodo === p
                 ? 'bg-primary-container text-on-primary-fixed border-primary-container'
                 : 'bg-surface-container text-on-surface-variant border-transparent hover:border-primary-container'"
@@ -397,6 +415,9 @@ onMounted(carregar)
               {{ p === 'DIARIO' ? 'DIÁRIO' : 'CORRIDA' }}
             </button>
           </div>
+          <p v-if="!corridaPermitida" class="font-label text-[9px] text-on-surface-variant mt-2">
+            Corrida fica disponível apenas com 1 categoria selecionada.
+          </p>
         </div>
 
         <!-- Campos de corrida -->
@@ -407,7 +428,7 @@ onMounted(carregar)
             </label>
             <input v-model="minutosCorrida" type="number" min="0"
               placeholder="Ex: 45"
-              class="tactical-input py-3 text-lg" />
+              class="tactical-input py-3 text-lg focus:!border-primary-container" />
           </div>
           <div>
             <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
@@ -415,7 +436,7 @@ onMounted(carregar)
             </label>
             <input v-model="kmCorrida" type="number" min="0" step="0.1"
               placeholder="Ex: 8.5"
-              class="tactical-input py-3 text-lg" />
+              class="tactical-input py-3 text-lg focus:!border-primary-container" />
           </div>
         </div>
 
@@ -424,7 +445,8 @@ onMounted(carregar)
           <div v-if="!mostrarDescricao">
             <button
               type="button"
-              class="flex items-center gap-2 font-label text-[10px] font-bold tracking-widest text-on-surface-variant hover:text-primary-container uppercase transition-colors"
+              class="flex items-center gap-2 font-label text-[10px] font-bold tracking-widest text-on-surface-variant uppercase transition-colors"
+              :class="tipo === 'DESPESA' ? 'hover:text-secondary' : 'hover:text-primary-container'"
               @click="mostrarDescricao = true"
             >
               <span class="material-symbols-outlined text-lg">add</span>
@@ -438,7 +460,9 @@ onMounted(carregar)
             <div class="relative">
               <input v-model="descricao" type="text"
                 placeholder="Ex: Corrida aeroporto"
-                class="tactical-input py-3 pr-10" />
+                class="tactical-input py-3 pr-10"
+                :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
+              />
               <button
                 type="button"
                 class="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-error transition-colors"
@@ -486,13 +510,17 @@ onMounted(carregar)
 
           <!-- Input Customizado com Ícone -->
           <div class="relative group">
-            <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary-container transition-colors">
+            <div
+              class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-on-surface-variant transition-colors"
+              :class="tipo === 'DESPESA' ? 'group-focus-within:text-secondary' : 'group-focus-within:text-primary-container'"
+            >
               <span class="material-symbols-outlined text-lg">calendar_month</span>
             </div>
             <input 
               v-model="dataLancamento" 
               type="date"
-              class="tactical-input pl-12 py-4 text-lg font-bold tracking-tight uppercase" 
+              class="tactical-input pl-12 py-4 text-lg font-bold tracking-tight uppercase"
+              :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
             />
           </div>
         </div>
@@ -505,8 +533,13 @@ onMounted(carregar)
         </div>
 
         <!-- Sucesso -->
-        <div v-if="sucesso"
-          class="flex items-center gap-3 bg-primary-container/20 text-primary-container text-sm font-label px-4 py-3 border-l-4 border-primary-container">
+        <div
+          v-if="sucesso"
+          class="flex items-center gap-3 text-sm font-label px-4 py-3 border-l-4"
+          :class="tipo === 'DESPESA'
+            ? 'bg-secondary/15 text-secondary border-secondary'
+            : 'bg-primary-container/20 text-primary-container border-primary-container'"
+        >
           <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
           Lançamentos registrados! Pode lançar outros.
         </div>
