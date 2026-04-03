@@ -24,6 +24,7 @@ const carregando = ref(false)
 const enviando   = ref(false)
 const erro       = ref('')
 const sucesso    = ref(false)
+const perguntarNovaManutencao = ref(false)
 
 const motoId = ref(motoStore.motoAtiva?.id)
 
@@ -77,12 +78,29 @@ async function handleSubmit() {
     if (kmAtual.value && motoStore.motoAtiva) {
       motoStore.motoAtiva.km_atual = parseInt(kmAtual.value)
     }
-    setTimeout(() => router.push({ name: 'dashboard' }), 1200)
+    perguntarNovaManutencao.value = true
   } catch {
     erro.value = 'Erro ao registrar manutenção. Tente novamente.'
   } finally {
     enviando.value = false
   }
+}
+
+function prepararNovaManutencao() {
+  valorTotal.value = ''
+  kmAtual.value = ''
+  descricaoServico.value = ''
+  oficina.value = ''
+  tipoServico.value = ''
+  dataManutencao.value = new Date().toISOString().slice(0, 10)
+  sucesso.value = false
+  perguntarNovaManutencao.value = false
+}
+
+function irParaInicio() {
+  sucesso.value = false
+  perguntarNovaManutencao.value = false
+  router.push({ name: 'dashboard' })
 }
 
 const navItems = [
@@ -229,11 +247,11 @@ onMounted(carregar)
         <div v-if="sucesso"
           class="flex items-center gap-3 bg-primary-container/20 text-primary-container text-sm font-label px-4 py-3 border-l-4 border-primary-container">
           <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
-          Manutenção registrada! Redirecionando…
+          Manutenção registrada com sucesso!
         </div>
 
         <!-- Botão -->
-        <button type="submit" :disabled="enviando || sucesso"
+        <button type="submit" :disabled="enviando || perguntarNovaManutencao"
           class="btn-primary h-16 text-base disabled:opacity-40 disabled:cursor-not-allowed">
           <span v-if="enviando" class="material-symbols-outlined animate-spin">refresh</span>
           <template v-else>
@@ -244,6 +262,42 @@ onMounted(carregar)
 
       </form>
     </main>
+
+    <!-- Modal pós-sucesso -->
+    <div
+      v-if="perguntarNovaManutencao"
+      class="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center px-5"
+    >
+      <div class="w-full max-w-sm bg-surface-container-high border border-outline-variant p-5 space-y-4">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-on-surface-variant">help</span>
+          <p class="font-label text-[10px] font-bold tracking-[0.12em] text-on-surface uppercase">
+            Nova manutenção
+          </p>
+        </div>
+
+        <p class="font-body text-sm text-on-surface">
+          Deseja registrar outra manutenção?
+        </p>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            class="h-11 bg-surface-bright text-on-surface font-label text-[10px] font-bold tracking-wider uppercase transition-colors hover:bg-surface-container"
+            @click="prepararNovaManutencao"
+          >
+            Sim, nova
+          </button>
+          <button
+            type="button"
+            class="h-11 bg-surface-container-low text-on-surface-variant font-label text-[10px] font-bold tracking-wider uppercase border border-outline-variant transition-colors hover:text-on-surface hover:bg-surface-container"
+            @click="irParaInicio"
+          >
+            Ir para início
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Bottom Nav -->
     <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-background border-t-4 border-surface-container grid grid-cols-5">
