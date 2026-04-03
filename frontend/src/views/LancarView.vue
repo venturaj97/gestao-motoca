@@ -52,23 +52,32 @@ async function carregar() {
   } finally {
     carregando.value = false
   }
-}
-
-// ── Submissão ───────────────────────────────────────────────────
+}// ── Submissão ───────────────────────────────────────────────────
 async function handleSubmit() {
   erro.value = ''
 
+  // Validação de Valor
   const valorNum = parseFloat(valor.value.replace(',', '.'))
   if (!valor.value || isNaN(valorNum) || valorNum <= 0) {
     erro.value = 'Informe um valor válido.'
     return
   }
+
+  // Validação de Categoria
   if (!categoriaId.value) {
     erro.value = 'Selecione uma categoria.'
     return
   }
-  if (!periodo.value) {
-    erro.value = 'Selecione o período do lançamento.'
+
+  // Validação de Período (apenas para Ganho)
+  if (tipo.value === 'GANHO' && !periodo.value) {
+    erro.value = 'Selecione o período do ganho.'
+    return
+  }
+
+  // Validação de Data (Obrigatória)
+  if (!dataLancamento.value) {
+    erro.value = 'A data do lançamento é obrigatória.'
     return
   }
 
@@ -79,12 +88,12 @@ async function handleSubmit() {
       categoria_id: categoriaId.value,
       valor: valorNum,
       descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
-      periodo: periodo.value,
+      periodo: tipo.value === 'GANHO' ? periodo.value : 'DIARIO',
       minutos_corrida: ehCorrida.value && minutosCorrida.value
         ? parseInt(minutosCorrida.value) : undefined,
       km_corrida: ehCorrida.value && kmCorrida.value
         ? parseFloat(kmCorrida.value) : undefined,
-      data_lancamento: dataLancamento.value || undefined,
+      data_lancamento: dataLancamento.value,
       moto_usuario_id: motoId.value,
     })
     sucesso.value = true
@@ -227,7 +236,7 @@ onMounted(carregar)
         </div>
 
         <!-- Período -->
-        <div>
+        <div v-if="tipo === 'GANHO'">
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
             PERÍODO
           </label>
@@ -240,7 +249,7 @@ onMounted(carregar)
                 : 'bg-surface-container text-on-surface-variant border-transparent hover:border-primary-container'"
               @click="periodo = p as PeriodoLancamento"
             >
-              {{ p === 'DIARIO' ? 'DIÁRIO' : p === 'SEMANAL' ? 'SEMANAL' : 'CORRIDA' }}
+              {{ p === 'DIARIO' ? 'DIÁRIO' : 'CORRIDA' }}
             </button>
           </div>
         </div>
