@@ -231,8 +231,8 @@ onMounted(carregar)
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
             PERÍODO
           </label>
-          <div class="grid grid-cols-3 gap-2">
-            <button v-for="p in ['DIARIO', 'SEMANAL', 'CORRIDA']" :key="p"
+          <div class="grid grid-cols-2 gap-2">
+            <button v-for="p in ['DIARIO', 'CORRIDA']" :key="p"
               type="button"
               class="h-10 font-label text-[10px] font-bold tracking-wider uppercase transition-all border-b-2"
               :class="periodo === p
@@ -299,13 +299,10 @@ onMounted(carregar)
         <!-- Data -->
         <div>
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-            {{ periodo === 'SEMANAL' ? 'SEMANA DE REFERÊNCIA' : 'DATA' }}
+            DATA
           </label>
           <input v-model="dataLancamento" type="date"
             class="tactical-input py-3 text-base" />
-          <p v-if="periodo === 'SEMANAL'" class="mt-1 font-label text-[9px] text-on-surface-variant italic">
-            * Informe uma data dentro da semana que deseja registrar.
-          </p>
         </div>
 
         <!-- Erro -->
