@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import date
 
 import pytest
 
@@ -106,6 +107,7 @@ def test_fluxo_moto_por_placa_cache_lancamento_e_manutencao(db_session, monkeypa
             tipo="DESPESA",
             valor=Decimal("20.00"),
             descricao="Teste lancamento",
+            data_lancamento=date.today(),
         ),
     )
     assert lancamento.usuario_id == usuario.id

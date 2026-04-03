@@ -91,7 +91,7 @@ async function handleSubmit() {
       categoria_id: categoriaId.value,
       valor: valorNum,
       descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
-      periodo: tipo.value === 'GANHO' ? periodo.value : 'DIARIO',
+      periodo: tipo.value === 'GANHO' ? periodo.value : undefined,
       minutos_corrida: ehCorrida.value && minutosCorrida.value
         ? parseInt(minutosCorrida.value) : undefined,
       km_corrida: ehCorrida.value && kmCorrida.value

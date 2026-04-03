@@ -26,16 +26,16 @@ def _resolver_campos_ganho(dados: LancamentoCriar, tipo: str) -> tuple[Optional[
     minutos = dados.minutos_corrida
     km = dados.km_corrida
 
+    if tipo == "DESPESA":
+        if periodo is not None or minutos is not None or km is not None:
+            raise ValueError("campos_ganho_nao_permitidos_para_despesa")
+        return None, None, None
+
     if not periodo:
         raise ValueError("periodo_obrigatorio")
 
     if periodo not in PERIODOS_GANHO:
         raise ValueError("periodo_invalido")
-
-    if tipo == "DESPESA":
-        if minutos is not None or km is not None:
-            raise ValueError("campos_ganho_nao_permitidos_para_despesa")
-        return periodo, None, None
 
     # GANHO
     if periodo == "CORRIDA":
@@ -49,9 +49,8 @@ def _resolver_campos_ganho(dados: LancamentoCriar, tipo: str) -> tuple[Optional[
 
 
 def _resolver_dia_semana(tipo: str, periodo: Optional[str], data_ref: date) -> Optional[str]:
-    # Para GANHO semanal, nao ha um unico dia representativo.
-    if tipo == "GANHO" and periodo == "SEMANAL":
-        return None
+    _ = tipo
+    _ = periodo
     return _dia_semana_por_data(data_ref)
 
 
@@ -124,6 +123,9 @@ def criar_lancamento(db: Session, dados: LancamentoCriar, auto_commit: bool = Tr
         raise ValueError("tipo_incompativel_com_categoria")
 
     periodo, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+
+    if tipo == "DESPESA" and not dados.data_lancamento:
+        raise ValueError("data_lancamento_obrigatoria")
 
     data_ref = dados.data_lancamento or date.today()
     dia_semana = _resolver_dia_semana(tipo, periodo, data_ref)
@@ -224,6 +226,9 @@ def atualizar_lancamento(
             raise ValueError("lancamento_vinculado_apenas_despesa")
 
     periodo, minutos_corrida, km_corrida = _resolver_campos_ganho(dados, tipo)
+
+    if tipo == "DESPESA" and not dados.data_lancamento:
+        raise ValueError("data_lancamento_obrigatoria")
 
     data_ref = dados.data_lancamento or date.today()
     dia_semana = _resolver_dia_semana(tipo, periodo, data_ref)

@@ -27,9 +27,13 @@ def _erros_lancamento_valor(e: ValueError) -> None:
         "tipo_incompativel_com_categoria": (422, "Tipo do lancamento nao corresponde ao tipo da categoria"),
         "periodo_obrigatorio": (
             422,
-            "Para lancamento de GANHO, informe periodo: DIARIO, SEMANAL ou CORRIDA",
+            "Para lancamento de GANHO, informe periodo: DIARIO ou CORRIDA",
         ),
         "periodo_invalido": (422, "periodo invalido"),
+        "data_lancamento_obrigatoria": (
+            422,
+            "Para lancamento de DESPESA, informe a data do lancamento",
+        ),
         "dados_corrida_obrigatorios": (
             422,
             "Para GANHO por CORRIDA, informe minutos_corrida e km_corrida",
