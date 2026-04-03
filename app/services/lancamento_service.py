@@ -26,18 +26,18 @@ def _resolver_campos_ganho(dados: LancamentoCriar, tipo: str) -> tuple[Optional[
     minutos = dados.minutos_corrida
     km = dados.km_corrida
 
-    if tipo == "DESPESA":
-        if periodo or minutos is not None or km is not None:
-            raise ValueError("campos_ganho_nao_permitidos_para_despesa")
-        return None, None, None
-
-    # GANHO
     if not periodo:
         raise ValueError("periodo_obrigatorio")
 
     if periodo not in PERIODOS_GANHO:
         raise ValueError("periodo_invalido")
 
+    if tipo == "DESPESA":
+        if minutos is not None or km is not None:
+            raise ValueError("campos_ganho_nao_permitidos_para_despesa")
+        return periodo, None, None
+
+    # GANHO
     if periodo == "CORRIDA":
         if minutos is None or km is None:
             raise ValueError("dados_corrida_obrigatorios")

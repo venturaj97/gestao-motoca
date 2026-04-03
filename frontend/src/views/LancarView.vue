@@ -19,10 +19,11 @@ const tipo          = ref<TipoLancamento>(tipoInicial)
 const categoriaId   = ref<number | null>(null)
 const valor         = ref('')
 const descricao     = ref('')
-const periodo       = ref<PeriodoLancamento | ''>('')
+const periodo       = ref<PeriodoLancamento>('DIARIO')
 const minutosCorrida = ref('')
 const kmCorrida     = ref('')
 const dataLancamento = ref(new Date().toISOString().slice(0, 10))
+const mostrarDescricao = ref(false)
 
 const categorias    = ref<CategoriaResposta[]>([])
 const carregando    = ref(false)
@@ -66,6 +67,10 @@ async function handleSubmit() {
     erro.value = 'Selecione uma categoria.'
     return
   }
+  if (!periodo.value) {
+    erro.value = 'Selecione o período do lançamento.'
+    return
+  }
 
   enviando.value = true
   try {
@@ -73,8 +78,8 @@ async function handleSubmit() {
       tipo: tipo.value,
       categoria_id: categoriaId.value,
       valor: valorNum,
-      descricao: descricao.value || undefined,
-      periodo: periodo.value || undefined,
+      descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
+      periodo: periodo.value,
       minutos_corrida: ehCorrida.value && minutosCorrida.value
         ? parseInt(minutosCorrida.value) : undefined,
       km_corrida: ehCorrida.value && kmCorrida.value
@@ -155,7 +160,7 @@ onMounted(carregar)
             :class="tipo === 'GANHO'
               ? 'bg-primary-container text-on-primary-fixed border-primary-container'
               : 'bg-surface-container text-on-surface-variant border-transparent hover:border-primary-container'"
-            @click="tipo = 'GANHO'; categoriaId = null; periodo = ''"
+            @click="tipo = 'GANHO'; categoriaId = null; periodo = 'DIARIO'"
           >
             <span class="material-symbols-outlined text-sm align-middle mr-1">add_circle</span>
             GANHO
@@ -165,7 +170,7 @@ onMounted(carregar)
             :class="tipo === 'DESPESA'
               ? 'bg-secondary text-on-secondary border-secondary'
               : 'bg-surface-container text-on-surface-variant border-transparent hover:border-secondary'"
-            @click="tipo = 'DESPESA'; categoriaId = null; periodo = ''"
+            @click="tipo = 'DESPESA'; categoriaId = null; periodo = 'DIARIO'"
           >
             <span class="material-symbols-outlined text-sm align-middle mr-1">remove_circle</span>
             DESPESA
@@ -221,10 +226,10 @@ onMounted(carregar)
           </div>
         </div>
 
-        <!-- Período (apenas para GANHO) -->
-        <div v-if="tipo === 'GANHO'">
+        <!-- Período -->
+        <div>
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-            PERÍODO <span class="font-normal text-outline">(opcional)</span>
+            PERÍODO
           </label>
           <div class="grid grid-cols-3 gap-2">
             <button v-for="p in ['DIARIO', 'SEMANAL', 'CORRIDA']" :key="p"
@@ -233,7 +238,7 @@ onMounted(carregar)
               :class="periodo === p
                 ? 'bg-primary-container text-on-primary-fixed border-primary-container'
                 : 'bg-surface-container text-on-surface-variant border-transparent hover:border-primary-container'"
-              @click="periodo = (periodo === p ? '' : p as PeriodoLancamento)"
+              @click="periodo = p as PeriodoLancamento"
             >
               {{ p === 'DIARIO' ? 'DIÁRIO' : p === 'SEMANAL' ? 'SEMANAL' : 'CORRIDA' }}
             </button>
@@ -260,23 +265,47 @@ onMounted(carregar)
           </div>
         </div>
 
-        <!-- Descrição -->
-        <div>
-          <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-            DESCRIÇÃO <span class="font-normal text-outline">(opcional)</span>
-          </label>
-          <input v-model="descricao" type="text"
-            placeholder="Ex: Corrida aeroporto"
-            class="tactical-input py-3" />
+        <!-- Botão Abrir Descrição / Campo de Descrição -->
+        <div class="space-y-2">
+          <div v-if="!mostrarDescricao">
+            <button
+              type="button"
+              class="flex items-center gap-2 font-label text-[10px] font-bold tracking-widest text-on-surface-variant hover:text-primary-container uppercase transition-colors"
+              @click="mostrarDescricao = true"
+            >
+              <span class="material-symbols-outlined text-lg">add</span>
+              CRIAR DESCRIÇÃO
+            </button>
+          </div>
+          <div v-else>
+            <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
+              DESCRIÇÃO
+            </label>
+            <div class="relative">
+              <input v-model="descricao" type="text"
+                placeholder="Ex: Corrida aeroporto"
+                class="tactical-input py-3 pr-10" />
+              <button
+                type="button"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-error transition-colors"
+                @click="mostrarDescricao = false; descricao = ''"
+              >
+                <span class="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Data -->
         <div>
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-            DATA
+            {{ periodo === 'SEMANAL' ? 'SEMANA DE REFERÊNCIA' : 'DATA' }}
           </label>
           <input v-model="dataLancamento" type="date"
             class="tactical-input py-3 text-base" />
+          <p v-if="periodo === 'SEMANAL'" class="mt-1 font-label text-[9px] text-on-surface-variant italic">
+            * Informe uma data dentro da semana que deseja registrar.
+          </p>
         </div>
 
         <!-- Erro -->
