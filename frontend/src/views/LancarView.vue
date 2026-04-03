@@ -13,17 +13,19 @@ const motoStore = useMotoStore()
 
 // Tipo inicial via query param (?tipo=GANHO ou ?tipo=DESPESA)
 const tipoInicial = (route.query.tipo as TipoLancamento) || 'GANHO'
+type GrupoDespesa = 'GERAL' | 'ABASTECIMENTO' | 'MANUTENCAO'
 
 // ── Estado ─────────────────────────────────────────────────────
 const tipo          = ref<TipoLancamento>(tipoInicial)
-const categoriaId   = ref<number | null>(null)
-const valor         = ref('')
+const categoriasSelecionadas = ref<number[]>([])
+const valoresPorCategoria = ref<Record<number, string>>({})
 const descricao     = ref('')
 const periodo       = ref<PeriodoLancamento>('DIARIO')
 const minutosCorrida = ref('')
 const kmCorrida     = ref('')
 const dataLancamento = ref(new Date().toISOString().slice(0, 10))
 const mostrarDescricao = ref(false)
+const grupoDespesaAtivo = ref<GrupoDespesa>('GERAL')
 
 const hoje = new Date().toISOString().slice(0, 10)
 const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
@@ -38,6 +40,42 @@ const sucesso       = ref(false)
 const categoriasFiltradas = computed(() =>
   categorias.value.filter(c => c.ativo && c.tipo === tipo.value)
 )
+
+const categoriasSelecionadasDetalhes = computed(() =>
+  categoriasFiltradas.value.filter(c => categoriasSelecionadas.value.includes(c.id))
+)
+
+const totalSelecionado = computed(() =>
+  categoriasSelecionadasDetalhes.value.reduce((acc, cat) => {
+    const valor = parseFloat((valoresPorCategoria.value[cat.id] || '').replace(',', '.'))
+    return acc + (isNaN(valor) ? 0 : valor)
+  }, 0)
+)
+
+const categoriasDespesaPorGrupo = computed(() => {
+  const todas = categoriasFiltradas.value
+  const abastecimento = todas.filter((c) => {
+    const n = c.nome.toLowerCase()
+    return n.includes('combust') || n.includes('gasolina') || n.includes('etanol') || n.includes('abastec')
+  })
+  const manutencao = todas.filter((c) => {
+    const n = c.nome.toLowerCase()
+    return n.includes('manut') || n.includes('oleo') || n.includes('pneu') || n.includes('oficina') || n.includes('revis')
+  })
+  const idsEspecial = new Set([...abastecimento, ...manutencao].map((c) => c.id))
+  const geral = todas.filter((c) => !idsEspecial.has(c.id))
+
+  return {
+    ABASTECIMENTO: abastecimento,
+    MANUTENCAO: manutencao,
+    GERAL: geral,
+  } as Record<GrupoDespesa, CategoriaResposta[]>
+})
+
+const categoriasVisiveis = computed(() => {
+  if (tipo.value === 'GANHO') return categoriasFiltradas.value
+  return categoriasDespesaPorGrupo.value[grupoDespesaAtivo.value]
+})
 
 const ehCorrida = computed(() =>
   periodo.value === 'CORRIDA'
@@ -55,20 +93,46 @@ async function carregar() {
   } finally {
     carregando.value = false
   }
-}// ── Submissão ───────────────────────────────────────────────────
-async function handleSubmit() {
-  erro.value = ''
+}
 
-  // Validação de Valor
-  const valorNum = parseFloat(valor.value.replace(',', '.'))
-  if (!valor.value || isNaN(valorNum) || valorNum <= 0) {
-    erro.value = 'Informe um valor válido.'
+function resetarSelecaoCategorias() {
+  categoriasSelecionadas.value = []
+  valoresPorCategoria.value = {}
+}
+
+function alterarTipo(novoTipo: TipoLancamento) {
+  tipo.value = novoTipo
+  periodo.value = 'DIARIO'
+  erro.value = ''
+  sucesso.value = false
+  if (novoTipo === 'DESPESA') grupoDespesaAtivo.value = 'GERAL'
+  resetarSelecaoCategorias()
+}
+
+function alternarCategoria(catId: number) {
+  const idx = categoriasSelecionadas.value.indexOf(catId)
+  if (idx >= 0) {
+    categoriasSelecionadas.value.splice(idx, 1)
+    delete valoresPorCategoria.value[catId]
     return
   }
+  categoriasSelecionadas.value.push(catId)
+  if (!valoresPorCategoria.value[catId]) valoresPorCategoria.value[catId] = ''
+}
 
-  // Validação de Categoria
-  if (!categoriaId.value) {
-    erro.value = 'Selecione uma categoria.'
+function formatarValorCategoriaInput(catId: number, e: Event) {
+  const input = e.target as HTMLInputElement
+  input.value = input.value.replace(/[^0-9.,]/g, '')
+  valoresPorCategoria.value[catId] = input.value
+}
+
+// ── Submissão ───────────────────────────────────────────────────
+async function handleSubmit() {
+  erro.value = ''
+  sucesso.value = false
+
+  if (categoriasSelecionadas.value.length === 0) {
+    erro.value = 'Selecione pelo menos uma categoria.'
     return
   }
 
@@ -84,21 +148,36 @@ async function handleSubmit() {
     return
   }
 
+  const categoriasComValor = categoriasSelecionadas.value.map((catId) => {
+    const bruto = valoresPorCategoria.value[catId] || ''
+    const valorNum = parseFloat(bruto.replace(',', '.'))
+    return { catId, valorNum }
+  })
+
+  const semValor = categoriasComValor.find((item) => isNaN(item.valorNum) || item.valorNum <= 0)
+  if (semValor) {
+    const cat = categoriasFiltradas.value.find((c) => c.id === semValor.catId)
+    erro.value = `Informe um valor válido para ${cat?.nome ?? 'a categoria selecionada'}.`
+    return
+  }
+
   enviando.value = true
   try {
-    await criarLancamento({
-      tipo: tipo.value,
-      categoria_id: categoriaId.value,
-      valor: valorNum,
-      descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
-      periodo: tipo.value === 'GANHO' ? periodo.value : undefined,
-      minutos_corrida: ehCorrida.value && minutosCorrida.value
-        ? parseInt(minutosCorrida.value) : undefined,
-      km_corrida: ehCorrida.value && kmCorrida.value
-        ? parseFloat(kmCorrida.value) : undefined,
-      data_lancamento: dataLancamento.value,
-      moto_usuario_id: motoId.value,
-    })
+    for (const item of categoriasComValor) {
+      await criarLancamento({
+        tipo: tipo.value,
+        categoria_id: item.catId,
+        valor: item.valorNum,
+        descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
+        periodo: tipo.value === 'GANHO' ? periodo.value : undefined,
+        minutos_corrida: ehCorrida.value && minutosCorrida.value
+          ? parseInt(minutosCorrida.value) : undefined,
+        km_corrida: ehCorrida.value && kmCorrida.value
+          ? parseFloat(kmCorrida.value) : undefined,
+        data_lancamento: dataLancamento.value,
+        moto_usuario_id: motoId.value,
+      })
+    }
     sucesso.value = true
     limparFormularioAposSucesso()
     setTimeout(() => {
@@ -112,18 +191,11 @@ async function handleSubmit() {
 }
 
 function limparFormularioAposSucesso() {
-  valor.value = ''
+  resetarSelecaoCategorias()
   descricao.value = ''
   mostrarDescricao.value = false
   minutosCorrida.value = ''
   kmCorrida.value = ''
-}
-
-function formatarInput(e: Event) {
-  const input = e.target as HTMLInputElement
-  // Permite apenas números e vírgula/ponto
-  input.value = input.value.replace(/[^0-9.,]/g, '')
-  valor.value = input.value
 }
 
 const navItems = [
@@ -183,7 +255,7 @@ onMounted(carregar)
             :class="tipo === 'GANHO'
               ? 'bg-primary-container text-on-primary-fixed border-primary-container'
               : 'bg-surface-container text-on-surface-variant border-transparent hover:border-primary-container'"
-            @click="tipo = 'GANHO'; categoriaId = null; periodo = 'DIARIO'"
+            @click="alterarTipo('GANHO')"
           >
             <span class="material-symbols-outlined text-sm align-middle mr-1">add_circle</span>
             GANHO
@@ -193,7 +265,7 @@ onMounted(carregar)
             :class="tipo === 'DESPESA'
               ? 'bg-secondary text-on-secondary border-secondary'
               : 'bg-surface-container text-on-surface-variant border-transparent hover:border-secondary'"
-            @click="tipo = 'DESPESA'; categoriaId = null; periodo = 'DIARIO'"
+            @click="alterarTipo('DESPESA')"
           >
             <span class="material-symbols-outlined text-sm align-middle mr-1">remove_circle</span>
             DESPESA
@@ -204,47 +276,106 @@ onMounted(carregar)
       <!-- Formulário -->
       <form class="space-y-5" @submit.prevent="handleSubmit">
 
-        <!-- Valor -->
-        <div>
-          <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-            VALOR (R$)
-          </label>
-          <div class="relative">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
-            <input
-              :value="valor"
-              inputmode="decimal"
-              placeholder="0,00"
-              class="tactical-input pl-10 py-4 text-2xl font-bold"
-              @input="formatarInput"
-            />
-          </div>
-        </div>
-
         <!-- Categoria -->
         <div>
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-            CATEGORIA
+            CATEGORIAS
           </label>
           <div v-if="carregando" class="h-12 bg-surface-container-low animate-pulse" />
-          <div v-else class="grid grid-cols-2 gap-2">
+          <div v-else class="space-y-3">
+            <div v-if="tipo === 'DESPESA'" class="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
+                :class="grupoDespesaAtivo === 'GERAL'
+                  ? 'bg-surface-bright text-on-surface border-outline'
+                  : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
+                @click="grupoDespesaAtivo = 'GERAL'"
+              >
+                DIA A DIA
+              </button>
+              <button
+                type="button"
+                class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
+                :class="grupoDespesaAtivo === 'ABASTECIMENTO'
+                  ? 'bg-surface-bright text-on-surface border-outline'
+                  : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
+                @click="grupoDespesaAtivo = 'ABASTECIMENTO'"
+              >
+                ABASTECER
+              </button>
+              <button
+                type="button"
+                class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
+                :class="grupoDespesaAtivo === 'MANUTENCAO'
+                  ? 'bg-surface-bright text-on-surface border-outline'
+                  : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
+                @click="grupoDespesaAtivo = 'MANUTENCAO'"
+              >
+                MANUTENÇÃO
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
             <button
-              v-for="cat in categoriasFiltradas"
+              v-for="cat in categoriasVisiveis"
               :key="cat.id"
               type="button"
-              class="h-11 px-3 font-label text-[10px] font-bold tracking-wider uppercase transition-all text-left border-l-2"
-              :class="categoriaId === cat.id
+              class="h-11 px-3 font-label text-[10px] font-bold tracking-wider uppercase transition-all text-left border-l-2 flex items-center justify-between gap-2"
+              :class="categoriasSelecionadas.includes(cat.id)
                 ? tipo === 'GANHO'
                   ? 'bg-primary-container text-on-primary-fixed border-primary-container'
                   : 'bg-secondary text-on-secondary border-secondary'
                 : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline'"
-              @click="categoriaId = cat.id"
+              @click="alternarCategoria(cat.id)"
             >
-              {{ cat.nome }}
+              <span class="truncate">{{ cat.nome }}</span>
+              <span class="material-symbols-outlined text-sm">
+                {{ categoriasSelecionadas.includes(cat.id) ? 'check_box' : 'check_box_outline_blank' }}
+              </span>
             </button>
-            <div v-if="categoriasFiltradas.length === 0"
+            </div>
+            <div v-if="categoriasVisiveis.length === 0"
               class="col-span-2 text-center font-label text-xs text-on-surface-variant py-4">
-              Nenhuma categoria cadastrada para {{ tipo === 'GANHO' ? 'ganhos' : 'despesas' }}.
+              Nenhuma categoria neste grupo.
+            </div>
+
+            <div v-if="categoriasSelecionadasDetalhes.length > 0" class="space-y-2 pt-1">
+              <p class="font-label text-[9px] font-bold tracking-[0.2em] text-on-surface-variant uppercase">
+                VALOR POR CATEGORIA
+              </p>
+              <div
+                v-for="cat in categoriasSelecionadasDetalhes"
+                :key="cat.id"
+                class="bg-surface-container-low p-3 border-l-2"
+                :class="tipo === 'GANHO' ? 'border-primary-container' : 'border-secondary'"
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <p class="font-label text-[10px] font-bold tracking-wider uppercase text-on-surface truncate">
+                    {{ cat.nome }}
+                  </p>
+                  <div class="relative w-32">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs">R$</span>
+                    <input
+                      :value="valoresPorCategoria[cat.id] || ''"
+                      inputmode="decimal"
+                      placeholder="0,00"
+                      class="tactical-input pl-8 py-2 text-sm font-bold"
+                      @input="formatarValorCategoriaInput(cat.id, $event)"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="categoriasSelecionadasDetalhes.length > 0" class="bg-surface-container p-3 flex items-center justify-between">
+              <p class="font-label text-[10px] font-bold tracking-[0.12em] uppercase text-on-surface-variant">
+                Total selecionado
+              </p>
+              <p class="font-headline font-bold text-lg"
+                :class="tipo === 'GANHO' ? 'text-primary-container' : 'text-secondary'">
+                {{ totalSelecionado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
+              </p>
             </div>
           </div>
         </div>
@@ -377,7 +508,7 @@ onMounted(carregar)
         <div v-if="sucesso"
           class="flex items-center gap-3 bg-primary-container/20 text-primary-container text-sm font-label px-4 py-3 border-l-4 border-primary-container">
           <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
-          Lançamento registrado! Pode lançar outro.
+          Lançamentos registrados! Pode lançar outros.
         </div>
 
         <!-- Botão -->
@@ -389,7 +520,7 @@ onMounted(carregar)
             <span class="material-symbols-outlined">
               {{ tipo === 'GANHO' ? 'add_circle' : 'remove_circle' }}
             </span>
-            REGISTRAR {{ tipo === 'GANHO' ? 'GANHO' : 'DESPESA' }}
+            REGISTRAR {{ tipo === 'GANHO' ? 'GANHOS' : 'DESPESAS' }}
           </template>
         </button>
 
