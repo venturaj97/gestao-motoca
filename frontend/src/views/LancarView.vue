@@ -100,12 +100,23 @@ async function handleSubmit() {
       moto_usuario_id: motoId.value,
     })
     sucesso.value = true
-    setTimeout(() => router.push({ name: 'dashboard' }), 1200)
+    limparFormularioAposSucesso()
+    setTimeout(() => {
+      sucesso.value = false
+    }, 1800)
   } catch {
     erro.value = 'Erro ao registrar lançamento. Tente novamente.'
   } finally {
     enviando.value = false
   }
+}
+
+function limparFormularioAposSucesso() {
+  valor.value = ''
+  descricao.value = ''
+  mostrarDescricao.value = false
+  minutosCorrida.value = ''
+  kmCorrida.value = ''
 }
 
 function formatarInput(e: Event) {
@@ -362,11 +373,11 @@ onMounted(carregar)
         <div v-if="sucesso"
           class="flex items-center gap-3 bg-primary-container/20 text-primary-container text-sm font-label px-4 py-3 border-l-4 border-primary-container">
           <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
-          Lançamento registrado! Redirecionando…
+          Lançamento registrado! Pode lançar outro.
         </div>
 
         <!-- Botão -->
-        <button type="submit" :disabled="enviando || sucesso"
+        <button type="submit" :disabled="enviando"
           class="btn-primary h-16 text-base disabled:opacity-40 disabled:cursor-not-allowed"
           :class="tipo === 'DESPESA' ? 'bg-secondary text-on-secondary hover:brightness-110' : ''">
           <span v-if="enviando" class="material-symbols-outlined animate-spin">refresh</span>
