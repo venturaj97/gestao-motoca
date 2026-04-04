@@ -33,8 +33,16 @@ def _criar_contexto_base(db_session):
         ),
     )
 
-    categoria_ganho = criar_categoria(db_session, CategoriaCriar(nome="Corridas", tipo="GANHO"))
-    categoria_despesa = criar_categoria(db_session, CategoriaCriar(nome="Combustivel", tipo="DESPESA"))
+    categoria_ganho = criar_categoria(
+        db_session,
+        usuario.id,
+        CategoriaCriar(nome="Corridas", tipo="GANHO"),
+    )
+    categoria_despesa = criar_categoria(
+        db_session,
+        usuario.id,
+        CategoriaCriar(nome="Combustivel Teste", tipo="DESPESA", grupo_despesa="ABASTECIMENTO"),
+    )
     return usuario, categoria_ganho, categoria_despesa
 
 

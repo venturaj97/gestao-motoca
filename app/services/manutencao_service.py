@@ -17,7 +17,10 @@ from app.services.lancamento_service import (
 
 def criar_manutencao(db: Session, dados: ManutencaoCriar) -> Manutencao:
     categoria = db.execute(
-        select(Categoria).where(Categoria.id == dados.categoria_id)
+        select(Categoria).where(
+            Categoria.id == dados.categoria_id,
+            Categoria.usuario_id == dados.usuario_id,
+        )
     ).scalar_one_or_none()
 
     if not categoria:
@@ -103,7 +106,10 @@ def atualizar_manutencao(
         raise ValueError("manutencao_nao_encontrada")
 
     categoria = db.execute(
-        select(Categoria).where(Categoria.id == dados.categoria_id)
+        select(Categoria).where(
+            Categoria.id == dados.categoria_id,
+            Categoria.usuario_id == dados.usuario_id,
+        )
     ).scalar_one_or_none()
 
     if not categoria:

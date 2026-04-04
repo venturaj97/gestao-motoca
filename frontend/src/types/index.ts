@@ -84,11 +84,14 @@ export type TipoLancamento = 'GANHO' | 'DESPESA'
 export type PeriodoLancamento = 'DIARIO' | 'SEMANAL' | 'CORRIDA'
 export type PeriodoMeta = 'SEMANAL' | 'MENSAL'
 export type StatusMeta = 'EM_DIA' | 'ATENCAO' | 'CRITICO'
+export type GrupoDespesa = 'GERAL' | 'MANUTENCAO' | 'ABASTECIMENTO' | 'IMPOSTO'
 
 export interface CategoriaResposta {
   id: number
+  usuario_id: number | null
   nome: string
   tipo: TipoLancamento
+  grupo_despesa: GrupoDespesa | null
   ativo: boolean
 }
 

@@ -5,7 +5,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
 import { criarLancamento } from '@/api/lancamentos'
 import { listarCategorias } from '@/api/categorias'
-import type { CategoriaResposta, TipoLancamento, PeriodoLancamento } from '@/types'
+import type { CategoriaResposta, TipoLancamento, PeriodoLancamento, GrupoDespesa } from '@/types'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -13,7 +13,6 @@ const motoStore = useMotoStore()
 
 // Tipo inicial via query param (?tipo=GANHO ou ?tipo=DESPESA)
 const tipoInicial = (route.query.tipo as TipoLancamento) || 'GANHO'
-type GrupoDespesa = 'GERAL' | 'ABASTECIMENTO' | 'MANUTENCAO'
 
 // ── Estado ─────────────────────────────────────────────────────
 const tipo          = ref<TipoLancamento>(tipoInicial)
@@ -53,28 +52,32 @@ const totalSelecionado = computed(() =>
 )
 
 const categoriasDespesaPorGrupo = computed(() => {
-  const todas = categoriasFiltradas.value
-  const abastecimento = todas.filter((c) => {
-    const n = c.nome.toLowerCase()
-    return n.includes('combust') || n.includes('gasolina') || n.includes('etanol') || n.includes('abastec')
-  })
-  const manutencao = todas.filter((c) => {
-    const n = c.nome.toLowerCase()
-    return n.includes('manut') || n.includes('oleo') || n.includes('pneu') || n.includes('oficina') || n.includes('revis')
-  })
-  const idsEspecial = new Set([...abastecimento, ...manutencao].map((c) => c.id))
-  const geral = todas.filter((c) => !idsEspecial.has(c.id))
+  const todas = categoriasFiltradas.value.filter((c) => c.tipo === 'DESPESA')
+  const abastecimento = todas.filter((c) => c.grupo_despesa === 'ABASTECIMENTO')
+  const manutencao = todas.filter((c) => c.grupo_despesa === 'MANUTENCAO')
+  const imposto = todas.filter((c) => c.grupo_despesa === 'IMPOSTO')
+  const geral = todas.filter((c) => c.grupo_despesa === 'GERAL' || c.grupo_despesa === null)
 
   return {
     ABASTECIMENTO: abastecimento,
     MANUTENCAO: manutencao,
+    IMPOSTO: imposto,
     GERAL: geral,
   } as Record<GrupoDespesa, CategoriaResposta[]>
 })
 
 const categoriasVisiveis = computed(() => {
-  if (tipo.value === 'GANHO') return categoriasFiltradas.value
+  if (tipo.value === 'GANHO') return categoriasFiltradas.value.filter((c) => c.tipo === 'GANHO')
   return categoriasDespesaPorGrupo.value[grupoDespesaAtivo.value]
+})
+const tituloGrupoDespesaAtivo = computed(() => {
+  const mapa: Record<GrupoDespesa, string> = {
+    GERAL: 'Dia a dia',
+    ABASTECIMENTO: 'Abastecer',
+    MANUTENCAO: 'Manutencao',
+    IMPOSTO: 'Imposto',
+  }
+  return mapa[grupoDespesaAtivo.value]
 })
 
 const ehCorrida = computed(() =>
@@ -297,12 +300,12 @@ onMounted(carregar)
           </label>
           <div v-if="carregando" class="h-12 bg-surface-container-low animate-pulse" />
           <div v-else class="space-y-3">
-            <div v-if="tipo === 'DESPESA'" class="grid grid-cols-3 gap-2">
+            <div v-if="tipo === 'DESPESA'" class="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
                 :class="grupoDespesaAtivo === 'GERAL'
-                  ? 'bg-surface-bright text-on-surface border-outline'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
                   : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
                 @click="grupoDespesaAtivo = 'GERAL'"
               >
@@ -312,7 +315,7 @@ onMounted(carregar)
                 type="button"
                 class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
                 :class="grupoDespesaAtivo === 'ABASTECIMENTO'
-                  ? 'bg-surface-bright text-on-surface border-outline'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
                   : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
                 @click="grupoDespesaAtivo = 'ABASTECIMENTO'"
               >
@@ -322,30 +325,57 @@ onMounted(carregar)
                 type="button"
                 class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
                 :class="grupoDespesaAtivo === 'MANUTENCAO'
-                  ? 'bg-surface-bright text-on-surface border-outline'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
                   : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
                 @click="grupoDespesaAtivo = 'MANUTENCAO'"
               >
                 MANUTENÇÃO
               </button>
+              <button
+                type="button"
+                class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
+                :class="grupoDespesaAtivo === 'IMPOSTO'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
+                  : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
+                @click="grupoDespesaAtivo = 'IMPOSTO'"
+              >
+                IMPOSTO
+              </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
+            <div
+              v-if="tipo === 'DESPESA'"
+              class="px-3 py-2 bg-surface-container-low border-l-2 border-secondary"
+            >
+              <p class="font-label text-[9px] tracking-[0.14em] uppercase text-on-surface-variant">
+                Grupo ativo
+              </p>
+              <p class="font-label text-[11px] font-bold tracking-wider uppercase text-on-surface">
+                {{ tituloGrupoDespesaAtivo }}
+              </p>
+            </div>
+
+            <div class="space-y-2">
             <button
               v-for="cat in categoriasVisiveis"
               :key="cat.id"
               type="button"
-              class="h-11 px-3 font-label text-[10px] font-bold tracking-wider uppercase transition-all text-left border-l-2 flex items-center justify-between gap-2"
+              class="w-full h-11 px-3 font-label text-[10px] font-bold tracking-wider uppercase transition-all text-left border-b-2 flex items-center justify-between gap-2"
               :class="categoriasSelecionadas.includes(cat.id)
                 ? tipo === 'GANHO'
-                  ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-                  : 'bg-secondary text-on-secondary border-secondary'
+                  ? 'bg-primary-container/15 text-primary-container border-primary-container'
+                  : 'bg-secondary/15 text-secondary border-secondary'
                 : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline'"
               @click="alternarCategoria(cat.id)"
             >
-              <span class="truncate">{{ cat.nome }}</span>
-              <span class="material-symbols-outlined text-sm">
-                {{ categoriasSelecionadas.includes(cat.id) ? 'check_box' : 'check_box_outline_blank' }}
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-sm">
+                  {{ categoriasSelecionadas.includes(cat.id) ? 'check_box' : 'check_box_outline_blank' }}
+                </span>
+                <span class="truncate">{{ cat.nome }}</span>
+              </div>
+              <span class="font-label text-[9px] tracking-widest">
+                {{ categoriasSelecionadas.includes(cat.id) ? 'OK' : '' }}
               </span>
             </button>
             </div>
