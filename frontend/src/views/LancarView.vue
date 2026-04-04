@@ -36,6 +36,7 @@ const erro          = ref('')
 const sucesso       = ref(false)
 const mensagemSucesso = ref('')
 const MAX_VALOR_CENTAVOS = 99_999_999 // 999.999,99
+const MAX_DIGITOS_VALOR = String(MAX_VALOR_CENTAVOS).length
 
 // ── Computed ────────────────────────────────────────────────────
 const categoriasFiltradas = computed(() =>
@@ -142,8 +143,14 @@ function formatarValorCategoriaInput(catId: number, e: Event) {
   valoresPorCategoria.value[catId] = centavos > 0 ? centavosParaTexto(centavos) : ''
 }
 
+function handlePasteValorCategoria(catId: number, e: ClipboardEvent) {
+  const texto = e.clipboardData?.getData('text') ?? ''
+  const centavos = textoParaCentavos(texto)
+  valoresPorCategoria.value[catId] = centavos > 0 ? centavosParaTexto(centavos) : ''
+}
+
 function textoParaCentavos(valor: string): number {
-  const apenasDigitos = valor.replace(/\D/g, '')
+  const apenasDigitos = valor.replace(/\D/g, '').slice(0, MAX_DIGITOS_VALOR)
   if (!apenasDigitos) return 0
   const bruto = parseInt(apenasDigitos, 10)
   if (isNaN(bruto) || bruto <= 0) return 0
@@ -427,9 +434,11 @@ onMounted(carregar)
                       :value="valoresPorCategoria[cat.id] || ''"
                       inputmode="numeric"
                       placeholder="0,00"
+                      maxlength="10"
                       class="tactical-input pl-8 py-2 text-sm font-bold"
                       :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
                       @input="formatarValorCategoriaInput(cat.id, $event)"
+                      @paste.prevent="handlePasteValorCategoria(cat.id, $event)"
                     />
                   </div>
                 </div>
