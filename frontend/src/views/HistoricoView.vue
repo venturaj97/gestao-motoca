@@ -16,9 +16,17 @@ const filtroTipo   = ref<TipoLancamento | 'TODOS'>('TODOS')
 const dataInicio   = ref('')
 const dataFim      = ref('')
 const paginaAtual  = ref(1)
-const limitePorPagina = ref(20)
+const limitePorPagina = ref(10)
 const totalRegistros = ref(0)
 const totalPaginas = ref(1)
+const mostrarModalFiltros = ref(false)
+const filtroCategoriaNome = ref('')
+const filtroValorMin = ref('')
+const filtroValorMax = ref('')
+const rascunhoCategoriaNome = ref('')
+const rascunhoValorMin = ref('')
+const rascunhoValorMax = ref('')
+const rascunhoLimitePorPagina = ref(10)
 type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
 const modoPeriodo = ref<ModoPeriodo>('HOJE')
 
@@ -48,6 +56,31 @@ const faixaPeriodo = computed(() => {
   return inicio === fim ? inicio : `${inicio} até ${fim}`
 })
 
+const filtrosAtivos = computed(() => {
+  const chips: Array<{ chave: 'categoria' | 'min' | 'max' | 'limite'; texto: string }> = []
+  if (filtroCategoriaNome.value.trim()) {
+    chips.push({ chave: 'categoria', texto: `Categoria: ${filtroCategoriaNome.value.trim()}` })
+  }
+  if (filtroValorMin.value.trim()) {
+    chips.push({ chave: 'min', texto: `Min: R$ ${filtroValorMin.value.trim()}` })
+  }
+  if (filtroValorMax.value.trim()) {
+    chips.push({ chave: 'max', texto: `Max: R$ ${filtroValorMax.value.trim()}` })
+  }
+  if (limitePorPagina.value !== 10) {
+    chips.push({ chave: 'limite', texto: `${limitePorPagina.value}/página` })
+  }
+  return chips
+})
+
+function paraNumeroFiltro(valor: string): number | undefined {
+  const txt = valor.trim()
+  if (!txt) return undefined
+  const n = Number(txt.replace(',', '.'))
+  if (Number.isNaN(n) || n < 0) return undefined
+  return n
+}
+
 // ── Carregar ────────────────────────────────────────────────────
 async function carregar(pagina = paginaAtual.value) {
   carregando.value = true
@@ -57,6 +90,9 @@ async function carregar(pagina = paginaAtual.value) {
       tipo: tipoFiltroApi.value,
       data_inicio: dataInicio.value || undefined,
       data_fim: dataFim.value || undefined,
+      categoria_nome: filtroCategoriaNome.value.trim() || undefined,
+      valor_min: paraNumeroFiltro(filtroValorMin.value),
+      valor_max: paraNumeroFiltro(filtroValorMax.value),
       pagina,
       limite: limitePorPagina.value,
     })
@@ -158,6 +194,50 @@ function aplicarPeriodoPersonalizado(): void {
 
 function mudarTipoFiltro(tipo: TipoLancamento | 'TODOS') {
   filtroTipo.value = tipo
+  carregar(1)
+}
+
+function aplicarFiltrosAvancados() {
+  const min = paraNumeroFiltro(rascunhoValorMin.value)
+  const max = paraNumeroFiltro(rascunhoValorMax.value)
+  if (min !== undefined && max !== undefined && min > max) {
+    erro.value = 'Valor mínimo não pode ser maior que o valor máximo.'
+    return
+  }
+  filtroCategoriaNome.value = rascunhoCategoriaNome.value.trim()
+  filtroValorMin.value = rascunhoValorMin.value.trim()
+  filtroValorMax.value = rascunhoValorMax.value.trim()
+  limitePorPagina.value = rascunhoLimitePorPagina.value
+  mostrarModalFiltros.value = false
+  carregar(1)
+}
+
+function limparFiltrosAvancados() {
+  rascunhoCategoriaNome.value = ''
+  rascunhoValorMin.value = ''
+  rascunhoValorMax.value = ''
+  rascunhoLimitePorPagina.value = 10
+  filtroCategoriaNome.value = ''
+  filtroValorMin.value = ''
+  filtroValorMax.value = ''
+  limitePorPagina.value = 10
+  mostrarModalFiltros.value = false
+  carregar(1)
+}
+
+function abrirModalFiltros() {
+  rascunhoCategoriaNome.value = filtroCategoriaNome.value
+  rascunhoValorMin.value = filtroValorMin.value
+  rascunhoValorMax.value = filtroValorMax.value
+  rascunhoLimitePorPagina.value = limitePorPagina.value
+  mostrarModalFiltros.value = true
+}
+
+function removerFiltro(chave: 'categoria' | 'min' | 'max' | 'limite') {
+  if (chave === 'categoria') filtroCategoriaNome.value = ''
+  if (chave === 'min') filtroValorMin.value = ''
+  if (chave === 'max') filtroValorMax.value = ''
+  if (chave === 'limite') limitePorPagina.value = 10
   carregar(1)
 }
 
@@ -297,6 +377,27 @@ onMounted(() => {
         </button>
       </div>
 
+      <!-- Acesso rápido a filtros -->
+      <div class="space-y-2">
+        <button
+          class="w-full h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-bright transition-colors"
+          @click="abrirModalFiltros"
+        >
+          MAIS FILTROS
+        </button>
+        <div v-if="filtrosAtivos.length" class="flex flex-wrap gap-2">
+          <button
+            v-for="chip in filtrosAtivos"
+            :key="chip.chave"
+            class="h-7 px-2 flex items-center gap-1 bg-surface-container border border-outline-variant text-on-surface-variant font-label text-[9px] uppercase tracking-wider"
+            @click="removerFiltro(chip.chave)"
+          >
+            <span>{{ chip.texto }}</span>
+            <span class="material-symbols-outlined text-xs">close</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Erro -->
       <div v-if="erro"
         class="flex items-center gap-2 bg-error-container text-on-error-container text-xs font-label px-4 py-3">
@@ -369,25 +470,87 @@ onMounted(() => {
 
       <div
         v-if="totalPaginas > 1"
-        class="grid grid-cols-3 gap-2 items-center"
+        class="flex items-center justify-center gap-3"
       >
         <button
-          class="h-9 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
+          class="w-10 h-9 flex items-center justify-center border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
           :disabled="paginaAtual <= 1 || carregando"
           @click="paginaAnterior"
         >
-          ANTERIOR
+          <span class="material-symbols-outlined text-base">chevron_left</span>
         </button>
         <p class="text-center font-label text-[9px] text-on-surface-variant uppercase tracking-widest">
           PÁG {{ paginaAtual }} / {{ totalPaginas }}
         </p>
         <button
-          class="h-9 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
+          class="w-10 h-9 flex items-center justify-center border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
           :disabled="paginaAtual >= totalPaginas || carregando"
           @click="proximaPagina"
         >
-          PRÓXIMA
+          <span class="material-symbols-outlined text-base">chevron_right</span>
         </button>
+      </div>
+
+      <!-- Modal de filtros -->
+      <div
+        v-if="mostrarModalFiltros"
+        class="fixed inset-0 z-[90] bg-black/60 flex items-end"
+        @click.self="mostrarModalFiltros = false"
+      >
+        <div class="w-full max-w-md mx-auto bg-surface-container p-4 border-t border-outline-variant space-y-3 rounded-t-sm">
+          <div class="flex items-center justify-between">
+            <p class="font-label text-[10px] font-bold tracking-widest text-on-surface uppercase">FILTROS AVANÇADOS</p>
+            <button class="text-on-surface-variant hover:text-on-surface" @click="mostrarModalFiltros = false">
+              <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+          </div>
+
+          <input
+            v-model="rascunhoCategoriaNome"
+            type="text"
+            placeholder="Categoria (ex: combustível)"
+            class="tactical-input py-2 text-sm"
+          />
+          <div class="grid grid-cols-2 gap-2">
+            <input
+              v-model="rascunhoValorMin"
+              type="text"
+              inputmode="decimal"
+              placeholder="Valor mínimo"
+              class="tactical-input py-2 text-sm"
+            />
+            <input
+              v-model="rascunhoValorMax"
+              type="text"
+              inputmode="decimal"
+              placeholder="Valor máximo"
+              class="tactical-input py-2 text-sm"
+            />
+          </div>
+          <select
+            v-model.number="rascunhoLimitePorPagina"
+            class="tactical-input py-2 text-sm"
+          >
+            <option :value="10">10 por página</option>
+            <option :value="15">15 por página</option>
+            <option :value="20">20 por página</option>
+          </select>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface"
+              @click="limparFiltrosAvancados"
+            >
+              LIMPAR
+            </button>
+            <button
+              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-primary-container text-on-primary-fixed"
+              @click="aplicarFiltrosAvancados"
+            >
+              APLICAR
+            </button>
+          </div>
+        </div>
       </div>
 
     </main>

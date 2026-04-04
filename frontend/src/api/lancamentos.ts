@@ -9,6 +9,9 @@ export interface FiltrosLancamento {
   tipo?: 'GANHO' | 'DESPESA'
   data_inicio?: string   // formato: YYYY-MM-DD
   data_fim?: string
+  categoria_nome?: string
+  valor_min?: number
+  valor_max?: number
   pagina?: number
   limite?: number
 }

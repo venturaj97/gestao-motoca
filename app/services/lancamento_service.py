@@ -165,9 +165,15 @@ def listar_lancamentos(
     tipo: Optional[str] = None,
     data_inicio: Optional[date] = None,
     data_fim: Optional[date] = None,
+    categoria_nome: Optional[str] = None,
+    valor_min: Optional[Decimal] = None,
+    valor_max: Optional[Decimal] = None,
     pagina: int = 1,
     limite: int = 20,
 ) -> tuple[list[dict], int]:
+    if valor_min is not None and valor_max is not None and valor_min > valor_max:
+        raise ValueError("intervalo_valor_invalido")
+
     filtros = [Lancamento.usuario_id == usuario_id]
 
     if tipo:
@@ -179,6 +185,15 @@ def listar_lancamentos(
     if data_fim:
         filtros.append(Lancamento.data_lancamento <= data_fim)
 
+    if categoria_nome:
+        filtros.append(Categoria.nome.ilike(f"%{categoria_nome.strip()}%"))
+
+    if valor_min is not None:
+        filtros.append(Lancamento.valor >= valor_min)
+
+    if valor_max is not None:
+        filtros.append(Lancamento.valor <= valor_max)
+
     stmt = (
         select(Lancamento, Categoria.nome.label("categoria_nome"))
         .join(Categoria, Categoria.id == Lancamento.categoria_id)
@@ -187,7 +202,12 @@ def listar_lancamentos(
         .offset((pagina - 1) * limite)
         .limit(limite)
     )
-    total_stmt = select(func.count(Lancamento.id)).where(*filtros)
+    total_stmt = (
+        select(func.count(Lancamento.id))
+        .select_from(Lancamento)
+        .join(Categoria, Categoria.id == Lancamento.categoria_id)
+        .where(*filtros)
+    )
     total = int(db.execute(total_stmt).scalar_one() or 0)
 
     itens = []
