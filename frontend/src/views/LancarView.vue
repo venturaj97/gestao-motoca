@@ -35,6 +35,7 @@ const enviando      = ref(false)
 const erro          = ref('')
 const sucesso       = ref(false)
 const mensagemSucesso = ref('')
+const MAX_VALOR_CENTAVOS = 99_999_999 // 999.999,99
 
 // ── Computed ────────────────────────────────────────────────────
 const categoriasFiltradas = computed(() =>
@@ -47,8 +48,8 @@ const categoriasSelecionadasDetalhes = computed(() =>
 
 const totalSelecionado = computed(() =>
   categoriasSelecionadasDetalhes.value.reduce((acc, cat) => {
-    const valor = parseFloat((valoresPorCategoria.value[cat.id] || '').replace(',', '.'))
-    return acc + (isNaN(valor) ? 0 : valor)
+    const valor = valorTextoParaNumero(valoresPorCategoria.value[cat.id] || '')
+    return acc + valor
   }, 0)
 )
 
@@ -137,8 +138,27 @@ function alternarCategoria(catId: number) {
 
 function formatarValorCategoriaInput(catId: number, e: Event) {
   const input = e.target as HTMLInputElement
-  input.value = input.value.replace(/[^0-9.,]/g, '')
-  valoresPorCategoria.value[catId] = input.value
+  const centavos = textoParaCentavos(input.value)
+  valoresPorCategoria.value[catId] = centavos > 0 ? centavosParaTexto(centavos) : ''
+}
+
+function textoParaCentavos(valor: string): number {
+  const apenasDigitos = valor.replace(/\D/g, '')
+  if (!apenasDigitos) return 0
+  const bruto = parseInt(apenasDigitos, 10)
+  if (isNaN(bruto) || bruto <= 0) return 0
+  return Math.min(bruto, MAX_VALOR_CENTAVOS)
+}
+
+function centavosParaTexto(centavos: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(centavos / 100)
+}
+
+function valorTextoParaNumero(valor: string): number {
+  return textoParaCentavos(valor) / 100
 }
 
 // ── Submissão ───────────────────────────────────────────────────
@@ -170,7 +190,7 @@ async function handleSubmit() {
 
   const categoriasComValor = categoriasSelecionadas.value.map((catId) => {
     const bruto = valoresPorCategoria.value[catId] || ''
-    const valorNum = parseFloat(bruto.replace(',', '.'))
+    const valorNum = valorTextoParaNumero(bruto)
     return { catId, valorNum }
   })
 
@@ -405,7 +425,7 @@ onMounted(carregar)
                     <span class="absolute left-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs">R$</span>
                     <input
                       :value="valoresPorCategoria[cat.id] || ''"
-                      inputmode="decimal"
+                      inputmode="numeric"
                       placeholder="0,00"
                       class="tactical-input pl-8 py-2 text-sm font-bold"
                       :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
