@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listarLancamentos } from '@/api/lancamentos'
 import type { LancamentoResposta, TipoLancamento } from '@/types'
@@ -27,6 +27,7 @@ const rascunhoCategoriaNome = ref('')
 const rascunhoValorMin = ref('')
 const rascunhoValorMax = ref('')
 const rascunhoLimitePorPagina = ref(10)
+const categoriaInputRef = ref<HTMLInputElement | null>(null)
 type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
 const modoPeriodo = ref<ModoPeriodo>('HOJE')
 
@@ -225,12 +226,14 @@ function limparFiltrosAvancados() {
   carregar(1)
 }
 
-function abrirModalFiltros() {
+async function abrirModalFiltros() {
   rascunhoCategoriaNome.value = filtroCategoriaNome.value
   rascunhoValorMin.value = filtroValorMin.value
   rascunhoValorMax.value = filtroValorMax.value
   rascunhoLimitePorPagina.value = limitePorPagina.value
   mostrarModalFiltros.value = true
+  await nextTick()
+  categoriaInputRef.value?.focus()
 }
 
 function removerFiltro(chave: 'categoria' | 'min' | 'max' | 'limite') {
@@ -494,22 +497,27 @@ onMounted(() => {
       <!-- Modal de filtros -->
       <div
         v-if="mostrarModalFiltros"
-        class="fixed inset-0 z-[90] bg-black/60 flex items-end"
+        class="fixed inset-0 z-[90] bg-black/70 backdrop-blur-[1px] flex items-end"
         @click.self="mostrarModalFiltros = false"
       >
-        <div class="w-full max-w-md mx-auto bg-surface-container p-4 border-t border-outline-variant space-y-3 rounded-t-sm">
+        <div class="w-full max-w-md mx-auto bg-surface-container-high rounded-t-md border-t border-outline-variant px-4 pt-4 pb-5 space-y-4 shadow-2xl">
+          <div class="w-10 h-1 bg-outline-variant/70 rounded-full mx-auto"></div>
           <div class="flex items-center justify-between">
             <p class="font-label text-[10px] font-bold tracking-widest text-on-surface uppercase">FILTROS AVANÇADOS</p>
             <button class="text-on-surface-variant hover:text-on-surface" @click="mostrarModalFiltros = false">
               <span class="material-symbols-outlined text-lg">close</span>
             </button>
           </div>
+          <p class="font-label text-[9px] tracking-wider text-on-surface-variant uppercase">
+            Ajuste os filtros e toque em aplicar
+          </p>
 
           <input
+            ref="categoriaInputRef"
             v-model="rascunhoCategoriaNome"
             type="text"
             placeholder="Categoria (ex: combustível)"
-            class="tactical-input py-2 text-sm"
+            class="tactical-input py-2.5 px-2 text-sm"
           />
           <div class="grid grid-cols-2 gap-2">
             <input
@@ -517,34 +525,37 @@ onMounted(() => {
               type="text"
               inputmode="decimal"
               placeholder="Valor mínimo"
-              class="tactical-input py-2 text-sm"
+              class="tactical-input py-2.5 px-2 text-sm"
             />
             <input
               v-model="rascunhoValorMax"
               type="text"
               inputmode="decimal"
               placeholder="Valor máximo"
-              class="tactical-input py-2 text-sm"
+              class="tactical-input py-2.5 px-2 text-sm"
             />
           </div>
-          <select
-            v-model.number="rascunhoLimitePorPagina"
-            class="tactical-input py-2 text-sm"
-          >
-            <option :value="10">10 por página</option>
-            <option :value="15">15 por página</option>
-            <option :value="20">20 por página</option>
-          </select>
+          <div class="space-y-1">
+            <p class="font-label text-[9px] font-bold tracking-wider text-on-surface-variant uppercase">Itens por página</p>
+            <select
+              v-model.number="rascunhoLimitePorPagina"
+              class="tactical-input py-2.5 px-2 text-sm"
+            >
+              <option :value="10">10 por página</option>
+              <option :value="15">15 por página</option>
+              <option :value="20">20 por página</option>
+            </select>
+          </div>
 
           <div class="grid grid-cols-2 gap-2">
             <button
-              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface"
+              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-bright transition-colors"
               @click="limparFiltrosAvancados"
             >
               LIMPAR
             </button>
             <button
-              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-primary-container text-on-primary-fixed"
+              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-primary-container bg-primary-container text-on-primary-fixed hover:brightness-110 transition-all"
               @click="aplicarFiltrosAvancados"
             >
               APLICAR
