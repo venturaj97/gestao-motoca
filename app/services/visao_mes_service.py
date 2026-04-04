@@ -78,6 +78,50 @@ def obter_visao_mes(
     moto_usuario_id: Optional[int] = None,
 ) -> dict:
     inicio, fim = _intervalo_mes(ano, mes)
+    return _obter_visao_periodo_base(
+        db=db,
+        usuario_id=usuario_id,
+        data_inicio=inicio,
+        data_fim=fim,
+        moto_usuario_id=moto_usuario_id,
+        ano=ano,
+        mes=mes,
+        filtrar_alertas_mensais=True,
+    )
+
+
+def obter_visao_periodo(
+    db: Session,
+    usuario_id: int,
+    data_inicio: date,
+    data_fim: date,
+    moto_usuario_id: Optional[int] = None,
+) -> dict:
+    if data_inicio > data_fim:
+        raise ValueError("intervalo_invalido")
+    return _obter_visao_periodo_base(
+        db=db,
+        usuario_id=usuario_id,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        moto_usuario_id=moto_usuario_id,
+        ano=data_inicio.year,
+        mes=data_inicio.month,
+        filtrar_alertas_mensais=False,
+    )
+
+
+def _obter_visao_periodo_base(
+    db: Session,
+    usuario_id: int,
+    data_inicio: date,
+    data_fim: date,
+    moto_usuario_id: Optional[int],
+    ano: int,
+    mes: int,
+    filtrar_alertas_mensais: bool,
+) -> dict:
+    inicio, fim = data_inicio, data_fim
 
     ganho = obter_indicadores_resumo(
         db=db,
@@ -99,15 +143,17 @@ def obter_visao_mes(
     saldo_mes = Decimal(ganho["total_periodo"]) - Decimal(despesa["total_periodo"])
 
     metas_ativas = listar_metas(db, usuario_id=usuario_id, apenas_ativas=True)
-    data_ref = _data_referencia_para_mes(inicio, fim)
-    alertas = listar_alertas_metas(db, usuario_id=usuario_id, data_ref=data_ref)
-    alertas_mensais = [
-        alerta
-        for alerta in alertas
-        if alerta["periodo"] == "MENSAL"
-        and alerta["periodo_inicio"] == inicio
-        and alerta["periodo_fim"] == fim
-    ]
+    alertas_mensais: list[dict] = []
+    if filtrar_alertas_mensais:
+        data_ref = _data_referencia_para_mes(inicio, fim)
+        alertas = listar_alertas_metas(db, usuario_id=usuario_id, data_ref=data_ref)
+        alertas_mensais = [
+            alerta
+            for alerta in alertas
+            if alerta["periodo"] == "MENSAL"
+            and alerta["periodo_inicio"] == inicio
+            and alerta["periodo_fim"] == fim
+        ]
     resumo_executivo = _montar_resumo_executivo(ganho, despesa, saldo_mes, alertas_mensais)
 
     return {
