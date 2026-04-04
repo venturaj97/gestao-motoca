@@ -14,13 +14,14 @@ const carregando = ref(false)
 const mostrarSenha = ref(false)
 
 async function handleLogin() {
-  erro.value = ''
+  // Só limpa o erro após validação — mantém a mensagem visível
   if (!email.value || !senha.value) {
     erro.value = 'Preencha e-mail e senha.'
     return
   }
+  erro.value = ''
+  carregando.value = true
   try {
-    carregando.value = true
     const resposta = await login({ email: email.value, senha: senha.value })
     authStore.salvarToken(resposta.access_token)
     await authStore.carregarUsuario()
@@ -28,9 +29,9 @@ async function handleLogin() {
   } catch (e: any) {
     const status = e?.response?.status
     if (status === 401) {
-      erro.value = 'E-mail ou senha inválidos.'
+      erro.value = 'E-mail ou senha incorretos. Verifique e tente novamente.'
     } else {
-      erro.value = 'Erro ao conectar. Tente novamente.'
+      erro.value = 'Não foi possível conectar ao servidor. Tente novamente.'
     }
   } finally {
     carregando.value = false
@@ -116,7 +117,12 @@ async function handleLogin() {
           </div>
 
           <!-- Erro -->
-          <div v-if="erro" class="bg-error-container text-on-error-container text-sm font-label px-4 py-3 tracking-wide">
+          <div
+            v-if="erro"
+            class="flex items-start gap-3 bg-error-container text-on-error-container
+                   text-sm font-label px-4 py-3 border-l-4 border-error"
+          >
+            <span class="material-symbols-outlined text-base mt-0.5 flex-shrink-0">error</span>
             {{ erro }}
           </div>
 

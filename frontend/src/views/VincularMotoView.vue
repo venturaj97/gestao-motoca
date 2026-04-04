@@ -11,7 +11,7 @@ const motoStore = useMotoStore()
 // ── Estado ──────────────────────────────────────────────────
 const placa = ref('')
 const kmInicial = ref('')
-const etapa = ref<'digitar' | 'confirmar' | 'km'>('digitar')
+const etapa = ref<'digitar' | 'confirmar'>('digitar')
 const carregando = ref(false)
 const erro = ref('')
 const dadosConsulta = ref<ConsultaPlacaResposta | null>(null)
@@ -112,6 +112,11 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+function handlePaste(e: ClipboardEvent) {
+  const txt = e.clipboardData?.getData('text') ?? ''
+  placa.value = txt.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7)
+}
+
 async function consultar() {
   if (!placaValida.value) {
     erro.value = 'Placa inválida. Informe 7 caracteres (ex: ABC1D23 ou ABC1234).'
@@ -135,16 +140,6 @@ async function consultar() {
   } finally {
     carregando.value = false
   }
-}
-
-function irParaKm() {
-  const km = parseInt(kmInicial.value)
-  if (!kmInicial.value || isNaN(km) || km < 0) {
-    erro.value = 'Informe o quilometragem atual da moto.'
-    return
-  }
-  erro.value = ''
-  etapa.value = 'km'
 }
 
 async function vincular() {
@@ -180,8 +175,6 @@ function voltar() {
   if (etapa.value === 'confirmar') {
     etapa.value = 'digitar'
     dadosConsulta.value = null
-  } else if (etapa.value === 'km') {
-    etapa.value = 'confirmar'
   }
 }
 </script>
@@ -280,10 +273,7 @@ function voltar() {
                     @input="handleInput"
                     @keydown="handleKeydown"
                     @keyup.enter="consultar"
-                    @paste.prevent="(e: any) => {
-                      const txt = e.clipboardData?.getData('text') ?? ''
-                      placa.value = txt.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7)
-                    }"
+                    @paste.prevent="handlePaste"
                   />
                 </div>
               </div>
