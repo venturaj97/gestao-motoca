@@ -165,23 +165,52 @@ def listar_lancamentos(
     tipo: Optional[str] = None,
     data_inicio: Optional[date] = None,
     data_fim: Optional[date] = None,
-) -> list[Lancamento]:
-    stmt = (
-        select(Lancamento)
-        .where(Lancamento.usuario_id == usuario_id)
-        .order_by(Lancamento.data_lancamento.desc(), Lancamento.id.desc())
-    )
+    pagina: int = 1,
+    limite: int = 20,
+) -> tuple[list[dict], int]:
+    filtros = [Lancamento.usuario_id == usuario_id]
 
     if tipo:
-        stmt = stmt.where(Lancamento.tipo == tipo.upper())
+        filtros.append(Lancamento.tipo == tipo.upper())
 
     if data_inicio:
-        stmt = stmt.where(Lancamento.data_lancamento >= data_inicio)
+        filtros.append(Lancamento.data_lancamento >= data_inicio)
 
     if data_fim:
-        stmt = stmt.where(Lancamento.data_lancamento <= data_fim)
+        filtros.append(Lancamento.data_lancamento <= data_fim)
 
-    return db.execute(stmt).scalars().all()
+    stmt = (
+        select(Lancamento, Categoria.nome.label("categoria_nome"))
+        .join(Categoria, Categoria.id == Lancamento.categoria_id)
+        .where(*filtros)
+        .order_by(Lancamento.data_lancamento.desc(), Lancamento.id.desc())
+        .offset((pagina - 1) * limite)
+        .limit(limite)
+    )
+    total_stmt = select(func.count(Lancamento.id)).where(*filtros)
+    total = int(db.execute(total_stmt).scalar_one() or 0)
+
+    itens = []
+    for lancamento, categoria_nome in db.execute(stmt).all():
+        dados = {
+            "id": lancamento.id,
+            "usuario_id": lancamento.usuario_id,
+            "categoria_id": lancamento.categoria_id,
+            "categoria_nome": categoria_nome,
+            "moto_usuario_id": lancamento.moto_usuario_id,
+            "tipo": lancamento.tipo,
+            "valor": lancamento.valor,
+            "descricao": lancamento.descricao,
+            "dia_semana": lancamento.dia_semana,
+            "periodo": lancamento.periodo,
+            "minutos_corrida": lancamento.minutos_corrida,
+            "km_corrida": lancamento.km_corrida,
+            "data_lancamento": lancamento.data_lancamento,
+            "data_criacao": lancamento.data_criacao,
+        }
+        itens.append(dados)
+
+    return itens, total
 
 
 def atualizar_lancamento(

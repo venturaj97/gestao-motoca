@@ -1,6 +1,7 @@
 import api from './client'
 import type {
   LancamentoCriar,
+  LancamentoListaPaginadaResposta,
   LancamentoResposta,
 } from '@/types'
 
@@ -8,6 +9,8 @@ export interface FiltrosLancamento {
   tipo?: 'GANHO' | 'DESPESA'
   data_inicio?: string   // formato: YYYY-MM-DD
   data_fim?: string
+  pagina?: number
+  limite?: number
 }
 
 export interface LancamentoLoteResposta {
@@ -36,8 +39,8 @@ export async function criarLancamentosLote(itens: LancamentoCriar[]): Promise<La
 }
 
 // GET /lancamentos
-export async function listarLancamentos(filtros?: FiltrosLancamento): Promise<LancamentoResposta[]> {
-  const res = await api.get<LancamentoResposta[]>('/lancamentos', { params: filtros })
+export async function listarLancamentos(filtros?: FiltrosLancamento): Promise<LancamentoListaPaginadaResposta> {
+  const res = await api.get<LancamentoListaPaginadaResposta>('/lancamentos', { params: filtros })
   return res.data
 }
 

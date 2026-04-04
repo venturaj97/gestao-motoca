@@ -15,14 +15,19 @@ const erro         = ref('')
 const filtroTipo   = ref<TipoLancamento | 'TODOS'>('TODOS')
 const dataInicio   = ref('')
 const dataFim      = ref('')
+const paginaAtual  = ref(1)
+const limitePorPagina = ref(20)
+const totalRegistros = ref(0)
+const totalPaginas = ref(1)
 type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
 const modoPeriodo = ref<ModoPeriodo>('HOJE')
 
 // ── Computed ────────────────────────────────────────────────────
-const lancamentosFiltrados = computed(() => {
-  if (filtroTipo.value === 'TODOS') return lancamentos.value
-  return lancamentos.value.filter(l => l.tipo === filtroTipo.value)
-})
+const lancamentosFiltrados = computed(() => lancamentos.value)
+
+const tipoFiltroApi = computed(() =>
+  filtroTipo.value === 'TODOS' ? undefined : filtroTipo.value
+)
 
 const totalGanhos = computed(() =>
   lancamentos.value
@@ -44,14 +49,21 @@ const faixaPeriodo = computed(() => {
 })
 
 // ── Carregar ────────────────────────────────────────────────────
-async function carregar() {
+async function carregar(pagina = paginaAtual.value) {
   carregando.value = true
   erro.value = ''
   try {
-    lancamentos.value = await listarLancamentos({
+    const resposta = await listarLancamentos({
+      tipo: tipoFiltroApi.value,
       data_inicio: dataInicio.value || undefined,
       data_fim: dataFim.value || undefined,
+      pagina,
+      limite: limitePorPagina.value,
     })
+    lancamentos.value = resposta.itens
+    totalRegistros.value = resposta.total
+    paginaAtual.value = resposta.pagina
+    totalPaginas.value = resposta.total_paginas
   } catch {
     erro.value = 'Erro ao carregar histórico.'
   } finally {
@@ -117,18 +129,18 @@ function aplicarPeriodoRapido(modo: Exclude<ModoPeriodo, 'PERSONALIZADO'>): void
     const isoHoje = formatarDataIso(hoje)
     dataInicio.value = isoHoje
     dataFim.value = isoHoje
-    carregar()
+    carregar(1)
     return
   }
   if (modo === 'SEMANA') {
     dataInicio.value = formatarDataIso(obterInicioSemanaAtual())
     dataFim.value = formatarDataIso(obterFimSemanaAtual())
-    carregar()
+    carregar(1)
     return
   }
   dataInicio.value = formatarDataIso(obterInicioMesAtual())
   dataFim.value = formatarDataIso(obterFimMesAtual())
-  carregar()
+  carregar(1)
 }
 
 function aplicarPeriodoPersonalizado(): void {
@@ -141,7 +153,22 @@ function aplicarPeriodoPersonalizado(): void {
     return
   }
   modoPeriodo.value = 'PERSONALIZADO'
-  carregar()
+  carregar(1)
+}
+
+function mudarTipoFiltro(tipo: TipoLancamento | 'TODOS') {
+  filtroTipo.value = tipo
+  carregar(1)
+}
+
+function paginaAnterior() {
+  if (paginaAtual.value <= 1) return
+  carregar(paginaAtual.value - 1)
+}
+
+function proximaPagina() {
+  if (paginaAtual.value >= totalPaginas.value) return
+  carregar(paginaAtual.value + 1)
 }
 
 function formatarDiaSemana(ds: string | null): string {
@@ -180,7 +207,7 @@ onMounted(() => {
       </div>
       <button class="text-on-surface-variant hover:text-primary-container transition-colors"
         :class="{ 'animate-spin': carregando }"
-        @click="carregar">
+        @click="carregar()">
         <span class="material-symbols-outlined text-xl">refresh</span>
       </button>
     </header>
@@ -265,7 +292,7 @@ onMounted(() => {
                 ? 'bg-secondary text-on-secondary border-secondary'
                 : 'bg-surface-container-high text-on-surface border-outline'
             : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline'"
-          @click="filtroTipo = t as any">
+          @click="mudarTipoFiltro(t as TipoLancamento | 'TODOS')">
           {{ t === 'TODOS' ? 'TODOS' : t === 'GANHO' ? 'GANHOS' : 'DESPESAS' }}
         </button>
       </div>
@@ -315,6 +342,9 @@ onMounted(() => {
                 <span v-if="l.dia_semana" class="opacity-60">· {{ formatarDiaSemana(l.dia_semana) }}</span>
                 <span v-if="l.periodo" class="opacity-60">· {{ l.periodo }}</span>
               </p>
+              <p v-if="l.categoria_nome" class="font-label text-[9px] text-on-surface-variant uppercase opacity-80">
+                {{ l.categoria_nome }}
+              </p>
               <!-- Infos adicionais -->
               <p v-if="l.km_corrida" class="font-label text-[9px] text-on-surface-variant">
                 {{ parseFloat(l.km_corrida).toFixed(1) }} km
@@ -334,8 +364,31 @@ onMounted(() => {
       <!-- Contagem -->
       <p v-if="lancamentosFiltrados.length > 0"
         class="text-center font-label text-[9px] text-on-surface-variant uppercase tracking-widest py-2">
-        {{ lancamentosFiltrados.length }} registro{{ lancamentosFiltrados.length > 1 ? 's' : '' }}
+        {{ totalRegistros }} registro{{ totalRegistros > 1 ? 's' : '' }}
       </p>
+
+      <div
+        v-if="totalPaginas > 1"
+        class="grid grid-cols-3 gap-2 items-center"
+      >
+        <button
+          class="h-9 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
+          :disabled="paginaAtual <= 1 || carregando"
+          @click="paginaAnterior"
+        >
+          ANTERIOR
+        </button>
+        <p class="text-center font-label text-[9px] text-on-surface-variant uppercase tracking-widest">
+          PÁG {{ paginaAtual }} / {{ totalPaginas }}
+        </p>
+        <button
+          class="h-9 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
+          :disabled="paginaAtual >= totalPaginas || carregando"
+          @click="proximaPagina"
+        >
+          PRÓXIMA
+        </button>
+      </div>
 
     </main>
 

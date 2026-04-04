@@ -112,6 +112,7 @@ export interface LancamentoResposta {
   id: number
   usuario_id: number
   categoria_id: number
+  categoria_nome: string | null
   moto_usuario_id: number | null
   tipo: TipoLancamento
   valor: string
@@ -121,6 +122,14 @@ export interface LancamentoResposta {
   km_corrida: string | null
   data_lancamento: string
   data_criacao: string
+}
+
+export interface LancamentoListaPaginadaResposta {
+  itens: LancamentoResposta[]
+  total: number
+  pagina: number
+  limite: number
+  total_paginas: number
 }
 
 // === ABASTECIMENTO ===

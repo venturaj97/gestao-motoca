@@ -22,6 +22,7 @@ class LancamentoResposta(BaseModel):
     id: int
     usuario_id: int
     categoria_id: int
+    categoria_nome: Optional[str] = None
     moto_usuario_id: Optional[int]
     tipo: str
     valor: Decimal
@@ -55,3 +56,11 @@ class LancamentoLoteResposta(BaseModel):
     mensagem: str
     itens_resumo: list[LancamentoLoteItemResumo]
     lancamentos: list[LancamentoResposta]
+
+
+class LancamentoListaPaginadaResposta(BaseModel):
+    itens: list[LancamentoResposta]
+    total: int
+    pagina: int
+    limite: int
+    total_paginas: int

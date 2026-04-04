@@ -12,6 +12,7 @@ from app.models.categoria import Categoria
 from app.routers._errors import raise_mapped_error
 from app.schemas.lancamento import (
     LancamentoCriar,
+    LancamentoListaPaginadaResposta,
     LancamentoLoteCriar,
     LancamentoLoteItemResumo,
     LancamentoLoteResposta,
@@ -162,12 +163,30 @@ def rota_excluir_lancamento(
         _erros_lancamento_valor(e)
 
 
-@router.get("", response_model=list[LancamentoResposta])
+@router.get("", response_model=LancamentoListaPaginadaResposta)
 def rota_listar_lancamentos(
     tipo: Optional[str] = Query(default=None),
     data_inicio: Optional[date] = Query(default=None),
     data_fim: Optional[date] = Query(default=None),
+    pagina: int = Query(default=1, ge=1),
+    limite: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_usuario_logado),
 ):
-    return listar_lancamentos(db, usuario.id, tipo, data_inicio, data_fim)
+    itens, total = listar_lancamentos(
+        db=db,
+        usuario_id=usuario.id,
+        tipo=tipo,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        pagina=pagina,
+        limite=limite,
+    )
+    total_paginas = (total + limite - 1) // limite if total > 0 else 1
+    return {
+        "itens": itens,
+        "total": total,
+        "pagina": pagina,
+        "limite": limite,
+        "total_paginas": total_paginas,
+    }
