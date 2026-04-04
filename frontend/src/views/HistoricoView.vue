@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listarLancamentos } from '@/api/lancamentos'
 import type { LancamentoResposta, TipoLancamento } from '@/types'
@@ -16,18 +16,12 @@ const filtroTipo   = ref<TipoLancamento | 'TODOS'>('TODOS')
 const dataInicio   = ref('')
 const dataFim      = ref('')
 const paginaAtual  = ref(1)
-const limitePorPagina = ref(10)
 const totalRegistros = ref(0)
 const totalPaginas = ref(1)
-const mostrarModalFiltros = ref(false)
+const mostrarFiltros = ref(false)
 const filtroCategoriaNome = ref('')
 const filtroValorMin = ref('')
 const filtroValorMax = ref('')
-const rascunhoCategoriaNome = ref('')
-const rascunhoValorMin = ref('')
-const rascunhoValorMax = ref('')
-const rascunhoLimitePorPagina = ref(10)
-const categoriaInputRef = ref<HTMLInputElement | null>(null)
 type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
 const modoPeriodo = ref<ModoPeriodo>('HOJE')
 
@@ -58,7 +52,7 @@ const faixaPeriodo = computed(() => {
 })
 
 const filtrosAtivos = computed(() => {
-  const chips: Array<{ chave: 'categoria' | 'min' | 'max' | 'limite'; texto: string }> = []
+  const chips: Array<{ chave: 'categoria' | 'min' | 'max'; texto: string }> = []
   if (filtroCategoriaNome.value.trim()) {
     chips.push({ chave: 'categoria', texto: `Categoria: ${filtroCategoriaNome.value.trim()}` })
   }
@@ -67,9 +61,6 @@ const filtrosAtivos = computed(() => {
   }
   if (filtroValorMax.value.trim()) {
     chips.push({ chave: 'max', texto: `Max: R$ ${filtroValorMax.value.trim()}` })
-  }
-  if (limitePorPagina.value !== 10) {
-    chips.push({ chave: 'limite', texto: `${limitePorPagina.value}/página` })
   }
   return chips
 })
@@ -95,7 +86,7 @@ async function carregar(pagina = paginaAtual.value) {
       valor_min: paraNumeroFiltro(filtroValorMin.value),
       valor_max: paraNumeroFiltro(filtroValorMax.value),
       pagina,
-      limite: limitePorPagina.value,
+      limite: 10,
     })
     lancamentos.value = resposta.itens
     totalRegistros.value = resposta.total
@@ -199,48 +190,26 @@ function mudarTipoFiltro(tipo: TipoLancamento | 'TODOS') {
 }
 
 function aplicarFiltrosAvancados() {
-  const min = paraNumeroFiltro(rascunhoValorMin.value)
-  const max = paraNumeroFiltro(rascunhoValorMax.value)
+  const min = paraNumeroFiltro(filtroValorMin.value)
+  const max = paraNumeroFiltro(filtroValorMax.value)
   if (min !== undefined && max !== undefined && min > max) {
     erro.value = 'Valor mínimo não pode ser maior que o valor máximo.'
     return
   }
-  filtroCategoriaNome.value = rascunhoCategoriaNome.value.trim()
-  filtroValorMin.value = rascunhoValorMin.value.trim()
-  filtroValorMax.value = rascunhoValorMax.value.trim()
-  limitePorPagina.value = rascunhoLimitePorPagina.value
-  mostrarModalFiltros.value = false
   carregar(1)
 }
 
 function limparFiltrosAvancados() {
-  rascunhoCategoriaNome.value = ''
-  rascunhoValorMin.value = ''
-  rascunhoValorMax.value = ''
-  rascunhoLimitePorPagina.value = 10
   filtroCategoriaNome.value = ''
   filtroValorMin.value = ''
   filtroValorMax.value = ''
-  limitePorPagina.value = 10
-  mostrarModalFiltros.value = false
   carregar(1)
 }
 
-async function abrirModalFiltros() {
-  rascunhoCategoriaNome.value = filtroCategoriaNome.value
-  rascunhoValorMin.value = filtroValorMin.value
-  rascunhoValorMax.value = filtroValorMax.value
-  rascunhoLimitePorPagina.value = limitePorPagina.value
-  mostrarModalFiltros.value = true
-  await nextTick()
-  categoriaInputRef.value?.focus()
-}
-
-function removerFiltro(chave: 'categoria' | 'min' | 'max' | 'limite') {
+function removerFiltro(chave: 'categoria' | 'min' | 'max') {
   if (chave === 'categoria') filtroCategoriaNome.value = ''
   if (chave === 'min') filtroValorMin.value = ''
   if (chave === 'max') filtroValorMax.value = ''
-  if (chave === 'limite') limitePorPagina.value = 10
   carregar(1)
 }
 
@@ -380,25 +349,68 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Acesso rápido a filtros -->
+      <!-- Filtros -->
       <div class="space-y-2">
         <button
-          class="w-full h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-bright transition-colors"
-          @click="abrirModalFiltros"
+          class="w-full h-10 flex items-center justify-between px-3 bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          @click="mostrarFiltros = !mostrarFiltros"
         >
-          MAIS FILTROS
+          <span class="font-label text-[9px] font-bold tracking-widest uppercase">FILTROS</span>
+          <span class="material-symbols-outlined text-base">
+            {{ mostrarFiltros ? 'expand_less' : 'expand_more' }}
+          </span>
         </button>
-        <div v-if="filtrosAtivos.length" class="flex flex-wrap gap-2">
-          <button
-            v-for="chip in filtrosAtivos"
-            :key="chip.chave"
-            class="h-7 px-2 flex items-center gap-1 bg-surface-container border border-outline-variant text-on-surface-variant font-label text-[9px] uppercase tracking-wider"
-            @click="removerFiltro(chip.chave)"
-          >
-            <span>{{ chip.texto }}</span>
-            <span class="material-symbols-outlined text-xs">close</span>
-          </button>
+
+        <div v-if="mostrarFiltros" class="space-y-2 bg-surface-container p-3 border border-outline-variant">
+          <input
+            v-model="filtroCategoriaNome"
+            type="text"
+            placeholder="Categoria (ex: combustível)"
+            class="tactical-input py-2.5 px-2 text-sm"
+          />
+          <div class="grid grid-cols-2 gap-2">
+            <input
+              v-model="filtroValorMin"
+              type="text"
+              inputmode="decimal"
+              placeholder="Valor mínimo"
+              class="tactical-input py-2.5 px-2 text-sm"
+            />
+            <input
+              v-model="filtroValorMax"
+              type="text"
+              inputmode="decimal"
+              placeholder="Valor máximo"
+              class="tactical-input py-2.5 px-2 text-sm"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-bright transition-colors"
+              @click="limparFiltrosAvancados"
+            >
+              LIMPAR
+            </button>
+            <button
+              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-primary-container bg-primary-container text-on-primary-fixed hover:brightness-110 transition-all"
+              @click="aplicarFiltrosAvancados"
+            >
+              APLICAR
+            </button>
+          </div>
         </div>
+      </div>
+
+      <div v-if="filtrosAtivos.length" class="flex flex-wrap gap-2">
+        <button
+          v-for="chip in filtrosAtivos"
+          :key="chip.chave"
+          class="h-7 px-2 flex items-center gap-1 bg-surface-container border border-outline-variant text-on-surface-variant font-label text-[9px] uppercase tracking-wider"
+          @click="removerFiltro(chip.chave)"
+        >
+          <span>{{ chip.texto }}</span>
+          <span class="material-symbols-outlined text-xs">close</span>
+        </button>
       </div>
 
       <!-- Erro -->
@@ -492,76 +504,6 @@ onMounted(() => {
         >
           <span class="material-symbols-outlined text-base">chevron_right</span>
         </button>
-      </div>
-
-      <!-- Modal de filtros -->
-      <div
-        v-if="mostrarModalFiltros"
-        class="fixed inset-0 z-[90] bg-black/70 backdrop-blur-[1px] flex items-end"
-        @click.self="mostrarModalFiltros = false"
-      >
-        <div class="w-full max-w-md mx-auto bg-surface-container-high rounded-t-md border-t border-outline-variant px-4 pt-4 pb-5 space-y-4 shadow-2xl">
-          <div class="w-10 h-1 bg-outline-variant/70 rounded-full mx-auto"></div>
-          <div class="flex items-center justify-between">
-            <p class="font-label text-[10px] font-bold tracking-widest text-on-surface uppercase">FILTROS AVANÇADOS</p>
-            <button class="text-on-surface-variant hover:text-on-surface" @click="mostrarModalFiltros = false">
-              <span class="material-symbols-outlined text-lg">close</span>
-            </button>
-          </div>
-          <p class="font-label text-[9px] tracking-wider text-on-surface-variant uppercase">
-            Ajuste os filtros e toque em aplicar
-          </p>
-
-          <input
-            ref="categoriaInputRef"
-            v-model="rascunhoCategoriaNome"
-            type="text"
-            placeholder="Categoria (ex: combustível)"
-            class="tactical-input py-2.5 px-2 text-sm"
-          />
-          <div class="grid grid-cols-2 gap-2">
-            <input
-              v-model="rascunhoValorMin"
-              type="text"
-              inputmode="decimal"
-              placeholder="Valor mínimo"
-              class="tactical-input py-2.5 px-2 text-sm"
-            />
-            <input
-              v-model="rascunhoValorMax"
-              type="text"
-              inputmode="decimal"
-              placeholder="Valor máximo"
-              class="tactical-input py-2.5 px-2 text-sm"
-            />
-          </div>
-          <div class="space-y-1">
-            <p class="font-label text-[9px] font-bold tracking-wider text-on-surface-variant uppercase">Itens por página</p>
-            <select
-              v-model.number="rascunhoLimitePorPagina"
-              class="tactical-input py-2.5 px-2 text-sm"
-            >
-              <option :value="10">10 por página</option>
-              <option :value="15">15 por página</option>
-              <option :value="20">20 por página</option>
-            </select>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-bright transition-colors"
-              @click="limparFiltrosAvancados"
-            >
-              LIMPAR
-            </button>
-            <button
-              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-primary-container bg-primary-container text-on-primary-fixed hover:brightness-110 transition-all"
-              @click="aplicarFiltrosAvancados"
-            >
-              APLICAR
-            </button>
-          </div>
-        </div>
       </div>
 
     </main>
