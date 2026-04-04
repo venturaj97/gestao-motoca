@@ -34,6 +34,7 @@ const carregando    = ref(false)
 const enviando      = ref(false)
 const erro          = ref('')
 const sucesso       = ref(false)
+const mensagemSucesso = ref('')
 
 // ── Computed ────────────────────────────────────────────────────
 const categoriasFiltradas = computed(() =>
@@ -69,6 +70,15 @@ const categoriasDespesaPorGrupo = computed(() => {
 const categoriasVisiveis = computed(() => {
   if (tipo.value === 'GANHO') return categoriasFiltradas.value.filter((c) => c.tipo === 'GANHO')
   return categoriasDespesaPorGrupo.value[grupoDespesaAtivo.value]
+})
+const fraseGrupoDespesa = computed(() => {
+  const mapa: Record<GrupoDespesa, string> = {
+    GERAL: 'Categorias do dia a dia',
+    ABASTECIMENTO: 'Categorias de abastecimento',
+    MANUTENCAO: 'Categorias de manutencao',
+    IMPOSTO: 'Categorias de imposto',
+  }
+  return mapa[grupoDespesaAtivo.value]
 })
 
 const ehCorrida = computed(() =>
@@ -109,6 +119,7 @@ function alterarTipo(novoTipo: TipoLancamento) {
   periodo.value = 'DIARIO'
   erro.value = ''
   sucesso.value = false
+  mensagemSucesso.value = ''
   if (novoTipo === 'DESPESA') grupoDespesaAtivo.value = 'GERAL'
   resetarSelecaoCategorias()
 }
@@ -134,6 +145,7 @@ function formatarValorCategoriaInput(catId: number, e: Event) {
 async function handleSubmit() {
   erro.value = ''
   sucesso.value = false
+  mensagemSucesso.value = ''
 
   if (categoriasSelecionadas.value.length === 0) {
     erro.value = 'Selecione pelo menos uma categoria.'
@@ -171,7 +183,7 @@ async function handleSubmit() {
 
   enviando.value = true
   try {
-    await criarLancamentosLote(
+    const retorno = await criarLancamentosLote(
       categoriasComValor.map((item) => ({
         tipo: tipo.value,
         categoria_id: item.catId,
@@ -186,10 +198,16 @@ async function handleSubmit() {
         moto_usuario_id: motoId.value,
       }))
     )
+    const totalFormatado = Number(retorno.total_valor).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })
+    mensagemSucesso.value = `${retorno.quantidade} lançamento(s) registrados • Total ${totalFormatado}`
     sucesso.value = true
     limparFormularioAposSucesso()
     setTimeout(() => {
       sucesso.value = false
+      mensagemSucesso.value = ''
     }, 1800)
   } catch {
     erro.value = 'Erro ao registrar lançamento. Tente novamente.'
@@ -336,7 +354,7 @@ onMounted(carregar)
 
             <div v-if="tipo === 'DESPESA'" class="pt-1 border-t border-outline-variant/40">
               <p class="font-label text-[9px] font-bold tracking-[0.14em] uppercase text-on-surface-variant pt-2">
-                Categorias do grupo selecionado
+                {{ fraseGrupoDespesa }}
               </p>
             </div>
 
@@ -350,7 +368,7 @@ onMounted(carregar)
                 ? tipo === 'GANHO'
                   ? 'bg-primary-container/15 text-primary-container border-primary-container'
                   : 'bg-secondary/15 text-secondary border-secondary'
-                : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline'"
+                : 'bg-surface-container-high text-on-surface-variant border-transparent hover:border-outline'"
               @click="alternarCategoria(cat.id)"
             >
               <div class="flex items-center gap-2 min-w-0">
@@ -556,7 +574,7 @@ onMounted(carregar)
             : 'bg-primary-container/20 text-primary-container border-primary-container'"
         >
           <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
-          Lançamentos registrados! Pode lançar outros.
+          {{ mensagemSucesso || 'Lançamentos registrados! Pode lançar outros.' }}
         </div>
 
         <!-- Botão -->

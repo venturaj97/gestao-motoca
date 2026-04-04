@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, status
@@ -7,10 +8,12 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
+from app.models.categoria import Categoria
 from app.routers._errors import raise_mapped_error
 from app.schemas.lancamento import (
     LancamentoCriar,
     LancamentoLoteCriar,
+    LancamentoLoteItemResumo,
     LancamentoLoteResposta,
     LancamentoResposta,
 )
@@ -84,16 +87,47 @@ def rota_criar_lancamentos_em_lote(
     usuario: Usuario = Depends(get_usuario_logado),
 ):
     criados = []
+    primeiro_tipo: str | None = None
+    primeira_data: date | None = None
     try:
         for item in dados.itens:
             item_usuario = item.model_copy(update={"usuario_id": usuario.id})
             lanc = criar_lancamento(db, item_usuario, auto_commit=False)
             criados.append(lanc)
+            if primeiro_tipo is None:
+                primeiro_tipo = lanc.tipo
+            if primeira_data is None:
+                primeira_data = lanc.data_lancamento
 
         db.commit()
         for lanc in criados:
             db.refresh(lanc)
-        return LancamentoLoteResposta(quantidade=len(criados), lancamentos=criados)
+
+        categorias_ids = {lanc.categoria_id for lanc in criados}
+        categorias = db.query(Categoria).filter(Categoria.id.in_(categorias_ids)).all()
+        nome_por_id = {c.id: c.nome for c in categorias}
+
+        itens_resumo = [
+            LancamentoLoteItemResumo(
+                categoria_id=lanc.categoria_id,
+                categoria_nome=nome_por_id.get(lanc.categoria_id, f"Categoria {lanc.categoria_id}"),
+                valor=Decimal(lanc.valor),
+            )
+            for lanc in criados
+        ]
+        total_valor = sum((Decimal(lanc.valor) for lanc in criados), Decimal("0"))
+        tipo_final = primeiro_tipo or "DESPESA"
+        data_final = primeira_data or date.today()
+
+        return LancamentoLoteResposta(
+            quantidade=len(criados),
+            tipo=tipo_final,
+            data_lancamento=data_final,
+            total_valor=total_valor,
+            mensagem=f"{len(criados)} lancamento(s) registrado(s) com sucesso.",
+            itens_resumo=itens_resumo,
+            lancamentos=criados,
+        )
     except ValueError as e:
         db.rollback()
         _erros_lancamento_valor(e)

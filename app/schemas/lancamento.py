@@ -41,6 +41,17 @@ class LancamentoLoteCriar(BaseModel):
     itens: list[LancamentoCriar] = Field(min_length=1)
 
 
+class LancamentoLoteItemResumo(BaseModel):
+    categoria_id: int
+    categoria_nome: str
+    valor: Decimal
+
+
 class LancamentoLoteResposta(BaseModel):
     quantidade: int
+    tipo: str
+    data_lancamento: date
+    total_valor: Decimal
+    mensagem: str
+    itens_resumo: list[LancamentoLoteItemResumo]
     lancamentos: list[LancamentoResposta]

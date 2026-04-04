@@ -12,6 +12,15 @@ export interface FiltrosLancamento {
 
 export interface LancamentoLoteResposta {
   quantidade: number
+  tipo: 'GANHO' | 'DESPESA'
+  data_lancamento: string
+  total_valor: string
+  mensagem: string
+  itens_resumo: Array<{
+    categoria_id: number
+    categoria_nome: string
+    valor: string
+  }>
   lancamentos: LancamentoResposta[]
 }
 
