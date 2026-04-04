@@ -370,27 +370,88 @@ onMounted(async () => {
       </div>
 
       <section v-if="abaAtiva === 'MOTO'" class="space-y-3">
-        <div v-if="moto" class="bg-surface-container p-4 space-y-2 border-l-2 border-primary-container">
-          <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">MOTO ATIVA</p>
-          <p class="font-headline font-bold text-xl">{{ [moto.marca_manual, moto.modelo_manual].filter(Boolean).join(' ') || 'Moto' }}</p>
-          <p class="font-label text-xs text-on-surface-variant">{{ formatarKm(moto.km_atual) }}</p>
-          <p class="font-label text-xs text-on-surface-variant">Cor: {{ moto.cor || '—' }}</p>
+        <div v-if="!moto" class="flex flex-col items-center justify-center py-12 gap-4 text-on-surface-variant bg-surface-container p-5">
+          <span class="material-symbols-outlined text-5xl opacity-30">two_wheeler</span>
+          <p class="font-label text-xs tracking-widest uppercase">Nenhuma moto vinculada</p>
+          <button
+            class="btn-primary h-11 w-auto px-6 text-xs"
+            @click="router.push({ name: 'vincular-moto' })"
+          >
+            <span class="material-symbols-outlined text-sm">link</span>
+            VINCULAR MOTO
+          </button>
         </div>
+
+        <template v-else>
+          <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase">
+            MOTO ATIVA
+          </p>
+
+          <div class="bg-surface-container-low p-4 relative border-l-4 border-primary-container overflow-hidden">
+            <span class="material-symbols-outlined absolute right-4 top-4 text-5xl text-primary-container opacity-10">two_wheeler</span>
+
+            <div class="space-y-3">
+              <div>
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-1">QUILOMETRAGEM</p>
+                <p class="font-headline font-black text-2xl text-on-surface">
+                  {{ moto.km_atual !== null ? formatarKm(moto.km_atual) : '—' }}
+                </p>
+              </div>
+
+              <div class="h-[1px] bg-surface-container"></div>
+
+              <div v-if="moto.placa" class="flex justify-between items-center">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">PLACA</p>
+                <p class="font-headline font-black text-base tracking-widest text-on-surface">{{ moto.placa }}</p>
+              </div>
+
+              <div class="flex justify-between items-center">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">COR</p>
+                <p class="font-label text-xs font-bold text-on-surface uppercase">{{ moto.cor || '—' }}</p>
+              </div>
+            </div>
+          </div>
+        </template>
 
         <div v-if="erroMoto" class="bg-error-container text-on-error-container text-xs px-3 py-2">{{ erroMoto }}</div>
         <div v-if="sucessoMoto" class="bg-primary-container/20 text-primary-container text-xs px-3 py-2">{{ sucessoMoto }}</div>
 
-        <div v-if="editandoMoto" class="bg-surface-container p-3 space-y-2">
-          <input v-model="kmAtual" type="number" min="0" placeholder="KM atual" class="tactical-input py-2 text-sm" />
-          <input v-model="cor" type="text" placeholder="Cor" class="tactical-input py-2 text-sm" />
-          <div class="grid grid-cols-2 gap-2">
-            <button class="h-10 border border-outline-variant text-xs uppercase font-label" @click="cancelarEdicaoMoto">Cancelar</button>
-            <button class="h-10 bg-primary-container text-on-primary-fixed text-xs uppercase font-label" @click="salvarMoto" :disabled="enviandoMoto">
+        <div v-if="editandoMoto && moto" class="bg-surface-container-low border-l-4 border-outline-variant p-4 space-y-3">
+          <p class="font-label text-[9px] font-bold tracking-[0.25em] text-primary-container uppercase">ATUALIZAR DADOS DA MOTO</p>
+          <div class="grid grid-cols-2 gap-2 bg-surface-container p-2 border border-outline-variant">
+            <div>
+              <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">KM ATUAL</p>
+              <p class="font-headline text-sm font-bold text-on-surface">
+                {{ moto.km_atual !== null ? formatarKm(moto.km_atual) : '—' }}
+              </p>
+            </div>
+            <div>
+              <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">COR ATUAL</p>
+              <p class="font-label text-xs font-bold text-on-surface uppercase">{{ moto.cor || '—' }}</p>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">NOVO KM</label>
+            <div class="relative">
+              <input v-model="kmAtual" type="number" min="0" :placeholder="moto.km_atual?.toString() ?? '0'" class="tactical-input py-2.5 pl-3 pr-12 text-sm" />
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs font-bold">KM</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">COR</label>
+            <input v-model="cor" type="text" placeholder="Ex: Preta, Vermelha" class="tactical-input py-2.5 px-3 text-sm" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button class="h-10 border border-outline-variant bg-surface-container text-xs uppercase font-label" @click="cancelarEdicaoMoto">Cancelar</button>
+            <button class="h-10 bg-primary-container text-on-primary-fixed text-xs uppercase font-label font-bold" @click="salvarMoto" :disabled="enviandoMoto">
               {{ enviandoMoto ? 'Salvando...' : 'Salvar' }}
             </button>
           </div>
         </div>
-        <button v-else class="h-10 w-full border border-outline-variant text-xs uppercase font-label bg-surface-container" @click="iniciarEdicaoMoto">
+        <button v-else-if="moto" class="h-10 w-full border border-outline-variant text-xs uppercase font-label bg-surface-container hover:bg-surface-container-high" @click="iniciarEdicaoMoto">
           Editar dados da moto
         </button>
       </section>
