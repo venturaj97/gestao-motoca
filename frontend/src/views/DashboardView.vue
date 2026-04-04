@@ -36,17 +36,12 @@ const nomeMoto = computed(() => {
 const ganho    = computed(() => visao.value?.ganho?.total_periodo    ?? '0.00')
 const despesa  = computed(() => visao.value?.despesa?.total_periodo  ?? '0.00')
 const saldo    = computed(() => visao.value?.saldo_mes               ?? '0.00')
-const kmAtual  = computed(() => motoAtiva.value?.km_atual            ?? null)
 
 // ── Formatações ───────────────────────────────────────────────
 function formatarReais(valor: string | number): string {
   const n = typeof valor === 'string' ? parseFloat(valor) : valor
   if (isNaN(n)) return 'R$ 0,00'
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function formatarKm(km: number): string {
-  return km.toLocaleString('pt-BR') + ' KM'
 }
 
 const hojeFormatado = computed(() => {
@@ -205,7 +200,7 @@ onMounted(carregar)
           </div>
         </div>
 
-        <!-- ── Monitor tático (link) ──────────────────────────  -->
+        <!-- ── Histórico detalhado (link) ────────────────────── -->
         <button
           class="w-full flex items-center justify-between p-4 bg-surface-container border border-outline-variant
                  hover:bg-surface-container-high transition-all active:scale-[0.98] group"
@@ -213,12 +208,9 @@ onMounted(carregar)
         >
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-primary-container">analytics</span>
-            <span class="font-label text-xs font-bold tracking-[0.2em] uppercase">MONITOR TÁTICO</span>
+            <span class="font-label text-xs font-bold tracking-[0.2em] uppercase">HISTÓRICO DETALHADO</span>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="font-label text-[9px] tracking-tight text-on-surface-variant">LIVE DATA</span>
-            <span class="material-symbols-outlined text-sm animate-pulse text-primary-container">sensors</span>
-          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-sm">chevron_right</span>
         </button>
 
         <!-- ── Grid de métricas secundárias ──────────────────── -->
@@ -235,16 +227,6 @@ onMounted(carregar)
             <p class="font-headline font-bold text-lg text-secondary">{{ formatarReais(despesa) }}</p>
           </div>
 
-          <!-- KM atual (ocupa linha inteira) -->
-          <div class="bg-surface-container p-4 col-span-2 flex justify-between items-center border-l-4 border-primary-container">
-            <div>
-              <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant mb-1 uppercase">KM ATUAL</p>
-              <p class="font-headline font-bold text-lg text-on-surface">
-                {{ kmAtual !== null ? formatarKm(kmAtual) : '—' }}
-              </p>
-            </div>
-            <span class="material-symbols-outlined text-primary-container opacity-40 text-4xl">speed</span>
-          </div>
         </div>
 
         <!-- ── Ações rápidas ──────────────────────────────────── -->
@@ -272,7 +254,7 @@ onMounted(carregar)
             <button
               class="flex flex-col items-center justify-center gap-3 bg-surface-container-high py-6
                      hover:bg-surface-bright transition-colors active:scale-[0.97] group"
-              @click="router.push({ name: 'lancar' })"
+              @click="router.push({ name: 'lancar', query: { tipo: 'DESPESA' } })"
             >
               <div class="w-12 h-12 bg-secondary-container/20 flex items-center justify-center text-secondary">
                 <span class="material-symbols-outlined text-2xl">remove_circle</span>
@@ -281,24 +263,6 @@ onMounted(carregar)
                            group-hover:text-secondary transition-colors uppercase">
                 LANÇAR DESPESA
               </span>
-            </button>
-
-            <!-- Manutenção -->
-            <button
-              class="flex items-center gap-3 bg-surface-container p-4 hover:bg-surface-bright transition-colors group active:scale-[0.97]"
-              @click="router.push({ name: 'manutencao' })"
-            >
-              <span class="material-symbols-outlined text-primary-container text-xl group-hover:scale-110 transition-transform">build</span>
-              <span class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">MANUTENÇÃO</span>
-            </button>
-
-            <!-- Abastecer -->
-            <button
-              class="flex items-center gap-3 bg-surface-container p-4 hover:bg-surface-bright transition-colors group active:scale-[0.97]"
-              @click="router.push({ name: 'abastecer' })"
-            >
-              <span class="material-symbols-outlined text-primary-container text-xl group-hover:scale-110 transition-transform">local_gas_station</span>
-              <span class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">ABASTECER</span>
             </button>
           </div>
         </section>
