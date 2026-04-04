@@ -331,6 +331,23 @@ onMounted(() => {
         >
           APLICAR PERÍODO
         </button>
+
+        <div class="flex justify-end">
+          <button
+            class="h-8 px-2.5 flex items-center gap-1.5 bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            @click="mostrarFiltros = !mostrarFiltros"
+          >
+            <span class="material-symbols-outlined text-sm">tune</span>
+            <span class="font-label text-[9px] font-bold tracking-widest uppercase">Filtros</span>
+            <span
+              v-if="filtrosAtivos.length"
+              class="w-1.5 h-1.5 rounded-full bg-primary-container"
+            />
+            <span class="material-symbols-outlined text-sm">
+              {{ mostrarFiltros ? 'expand_less' : 'expand_more' }}
+            </span>
+          </button>
+        </div>
       </div>
 
       <!-- Filtro de tipo -->
@@ -350,54 +367,45 @@ onMounted(() => {
       </div>
 
       <!-- Filtros -->
-      <div class="space-y-2">
-        <button
-          class="w-full h-10 flex items-center justify-between px-3 bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors"
-          @click="mostrarFiltros = !mostrarFiltros"
-        >
-          <span class="font-label text-[9px] font-bold tracking-widest uppercase">FILTROS</span>
-          <span class="material-symbols-outlined text-base">
-            {{ mostrarFiltros ? 'expand_less' : 'expand_more' }}
-          </span>
-        </button>
-
-        <div v-if="mostrarFiltros" class="space-y-2 bg-surface-container p-3 border border-outline-variant">
+      <div
+        v-if="mostrarFiltros"
+        class="space-y-2 bg-surface-container p-3 border border-outline-variant"
+      >
+        <input
+          v-model="filtroCategoriaNome"
+          type="text"
+          placeholder="Categoria (ex: combustível)"
+          class="tactical-input py-2.5 px-2 text-sm"
+        />
+        <div class="grid grid-cols-2 gap-2">
           <input
-            v-model="filtroCategoriaNome"
+            v-model="filtroValorMin"
             type="text"
-            placeholder="Categoria (ex: combustível)"
+            inputmode="decimal"
+            placeholder="Valor mínimo"
             class="tactical-input py-2.5 px-2 text-sm"
           />
-          <div class="grid grid-cols-2 gap-2">
-            <input
-              v-model="filtroValorMin"
-              type="text"
-              inputmode="decimal"
-              placeholder="Valor mínimo"
-              class="tactical-input py-2.5 px-2 text-sm"
-            />
-            <input
-              v-model="filtroValorMax"
-              type="text"
-              inputmode="decimal"
-              placeholder="Valor máximo"
-              class="tactical-input py-2.5 px-2 text-sm"
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-bright transition-colors"
-              @click="limparFiltrosAvancados"
-            >
-              LIMPAR
-            </button>
-            <button
-              class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-primary-container bg-primary-container text-on-primary-fixed hover:brightness-110 transition-all"
-              @click="aplicarFiltrosAvancados"
-            >
-              APLICAR
-            </button>
-          </div>
+          <input
+            v-model="filtroValorMax"
+            type="text"
+            inputmode="decimal"
+            placeholder="Valor máximo"
+            class="tactical-input py-2.5 px-2 text-sm"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-bright transition-colors"
+            @click="limparFiltrosAvancados"
+          >
+            LIMPAR
+          </button>
+          <button
+            class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-primary-container bg-primary-container text-on-primary-fixed hover:brightness-110 transition-all"
+            @click="aplicarFiltrosAvancados"
+          >
+            APLICAR
+          </button>
         </div>
       </div>
 
