@@ -4,6 +4,7 @@ from sqlalchemy import select
 from app.models.usuario import Usuario
 from app.schemas.usuario import UsuarioCriar
 from app.core.security import gerar_hash_senha, verificar_senha
+from app.services.categoria_service import garantir_categorias_iniciais_usuario
 
 
 def criar_usuario(db: Session, dados: UsuarioCriar) -> Usuario:
@@ -23,8 +24,10 @@ def criar_usuario(db: Session, dados: UsuarioCriar) -> Usuario:
         email=email_normalizado,
         senha=gerar_hash_senha(dados.senha),
     )
-    
+
     db.add(usuario)
+    db.flush()
+    garantir_categorias_iniciais_usuario(db, usuario.id)
     db.commit()
     db.refresh(usuario)
     return usuario

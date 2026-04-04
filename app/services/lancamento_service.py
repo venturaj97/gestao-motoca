@@ -109,7 +109,10 @@ def criar_lancamento(db: Session, dados: LancamentoCriar, auto_commit: bool = Tr
 
     # valida categoria
     categoria = db.execute(
-        select(Categoria).where(Categoria.id == dados.categoria_id)
+        select(Categoria).where(
+            Categoria.id == dados.categoria_id,
+            Categoria.usuario_id == dados.usuario_id,
+        )
     ).scalar_one_or_none()
 
     if not categoria:
@@ -212,7 +215,10 @@ def atualizar_lancamento(
             raise ValueError("lancamento_vinculado_apenas_despesa")
 
     categoria = db.execute(
-        select(Categoria).where(Categoria.id == dados.categoria_id)
+        select(Categoria).where(
+            Categoria.id == dados.categoria_id,
+            Categoria.usuario_id == dados.usuario_id,
+        )
     ).scalar_one_or_none()
     if not categoria:
         raise ValueError("categoria_nao_encontrada")

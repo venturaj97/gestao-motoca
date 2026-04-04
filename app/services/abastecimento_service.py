@@ -25,7 +25,10 @@ def _calcular_valor_litro(valor_total: Decimal, litros: Decimal) -> Decimal:
 def criar_abastecimento(db: Session, dados: AbastecimentoCriar) -> Abastecimento:
     # valida categoria (precisa ser DESPESA, normalmente combustivel)
     categoria = db.execute(
-        select(Categoria).where(Categoria.id == dados.categoria_id)
+        select(Categoria).where(
+            Categoria.id == dados.categoria_id,
+            Categoria.usuario_id == dados.usuario_id,
+        )
     ).scalar_one_or_none()
 
     if not categoria:
@@ -115,7 +118,10 @@ def atualizar_abastecimento(
         raise ValueError("abastecimento_nao_encontrado")
 
     categoria = db.execute(
-        select(Categoria).where(Categoria.id == dados.categoria_id)
+        select(Categoria).where(
+            Categoria.id == dados.categoria_id,
+            Categoria.usuario_id == dados.usuario_id,
+        )
     ).scalar_one_or_none()
 
     if not categoria:

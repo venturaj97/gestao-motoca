@@ -1,28 +1,106 @@
-from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.models.categoria import Categoria
 from app.schemas.categoria import CategoriaCriar
 
+TIPOS_VALIDOS = {"GANHO", "DESPESA"}
+GRUPOS_DESPESA_VALIDOS = {"GERAL", "MANUTENCAO", "ABASTECIMENTO", "IMPOSTO"}
 
-def listar_categorias(db: Session):
+CATEGORIAS_PADRAO = [
+    {"nome": "Entregas (App)", "tipo": "GANHO", "grupo_despesa": None},
+    {"nome": "Entregas Particulares", "tipo": "GANHO", "grupo_despesa": None},
+    {"nome": "Outros Ganhos", "tipo": "GANHO", "grupo_despesa": None},
+    {"nome": "Almoco", "tipo": "DESPESA", "grupo_despesa": "GERAL"},
+    {"nome": "Cafe", "tipo": "DESPESA", "grupo_despesa": "GERAL"},
+    {"nome": "Combustivel", "tipo": "DESPESA", "grupo_despesa": "ABASTECIMENTO"},
+    {"nome": "Troca de Oleo", "tipo": "DESPESA", "grupo_despesa": "MANUTENCAO"},
+    {"nome": "Relacao", "tipo": "DESPESA", "grupo_despesa": "MANUTENCAO"},
+    {"nome": "Pecas / Equipamentos", "tipo": "DESPESA", "grupo_despesa": "MANUTENCAO"},
+    {"nome": "Financiamento", "tipo": "DESPESA", "grupo_despesa": "IMPOSTO"},
+    {"nome": "Seguro da Moto", "tipo": "DESPESA", "grupo_despesa": "IMPOSTO"},
+    {"nome": "IPVA", "tipo": "DESPESA", "grupo_despesa": "IMPOSTO"},
+    {"nome": "Multas", "tipo": "DESPESA", "grupo_despesa": "IMPOSTO"},
+]
+
+
+def _normalizar_tipo(valor: str) -> str:
+    tipo = valor.upper().strip()
+    if tipo not in TIPOS_VALIDOS:
+        raise ValueError("tipo_invalido")
+    return tipo
+
+
+def _normalizar_grupo_despesa(tipo: str, grupo_despesa: str | None) -> str | None:
+    if tipo == "GANHO":
+        if grupo_despesa is not None:
+            raise ValueError("grupo_despesa_nao_permitido_para_ganho")
+        return None
+
+    if grupo_despesa is None:
+        raise ValueError("grupo_despesa_obrigatorio")
+
+    grupo = grupo_despesa.upper().strip()
+    if grupo not in GRUPOS_DESPESA_VALIDOS:
+        raise ValueError("grupo_despesa_invalido")
+    return grupo
+
+
+def garantir_categorias_iniciais_usuario(db: Session, usuario_id: int) -> None:
+    existentes = db.execute(
+        select(Categoria.nome, Categoria.tipo).where(Categoria.usuario_id == usuario_id)
+    ).all()
+    chave_existente = {(nome, tipo) for nome, tipo in existentes}
+
+    for cat in CATEGORIAS_PADRAO:
+        chave = (cat["nome"], cat["tipo"])
+        if chave in chave_existente:
+            continue
+        db.add(
+            Categoria(
+                usuario_id=usuario_id,
+                nome=cat["nome"],
+                tipo=cat["tipo"],
+                grupo_despesa=cat["grupo_despesa"],
+            )
+        )
+
+
+def listar_categorias(db: Session, usuario_id: int):
+    categorias_usuario = db.execute(
+        select(Categoria)
+        .where(
+            Categoria.usuario_id == usuario_id,
+            Categoria.ativo == True,  # noqa: E712
+        )
+        .order_by(Categoria.tipo, Categoria.nome)
+    ).scalars().all()
+
+    if categorias_usuario:
+        return categorias_usuario
+
+    garantir_categorias_iniciais_usuario(db, usuario_id)
+    db.commit()
+
     return db.execute(
         select(Categoria)
-        .where(Categoria.ativo == True)  # noqa: E712
+        .where(
+            Categoria.usuario_id == usuario_id,
+            Categoria.ativo == True,  # noqa: E712
+        )
         .order_by(Categoria.tipo, Categoria.nome)
     ).scalars().all()
 
 
-def criar_categoria(db: Session, dados: CategoriaCriar) -> Categoria:
-    tipo = dados.tipo.upper()
-
-    if tipo not in ["GANHO", "DESPESA"]:
-        raise ValueError("tipo_invalido")
+def criar_categoria(db: Session, usuario_id: int, dados: CategoriaCriar) -> Categoria:
+    tipo = _normalizar_tipo(dados.tipo)
+    grupo_despesa = _normalizar_grupo_despesa(tipo, dados.grupo_despesa)
 
     existe = db.execute(
         select(Categoria).where(
+            Categoria.usuario_id == usuario_id,
             Categoria.nome == dados.nome,
-            Categoria.tipo == tipo
+            Categoria.tipo == tipo,
         )
     ).scalar_one_or_none()
 
@@ -30,12 +108,13 @@ def criar_categoria(db: Session, dados: CategoriaCriar) -> Categoria:
         raise ValueError("categoria_ja_existe")
 
     categoria = Categoria(
+        usuario_id=usuario_id,
         nome=dados.nome,
-        tipo=tipo
+        tipo=tipo,
+        grupo_despesa=grupo_despesa,
     )
 
     db.add(categoria)
     db.commit()
     db.refresh(categoria)
-
     return categoria

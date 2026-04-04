@@ -10,9 +10,28 @@ export interface FiltrosLancamento {
   data_fim?: string
 }
 
+export interface LancamentoLoteResposta {
+  quantidade: number
+  tipo: 'GANHO' | 'DESPESA'
+  data_lancamento: string
+  total_valor: string
+  mensagem: string
+  itens_resumo: Array<{
+    categoria_id: number
+    categoria_nome: string
+    valor: string
+  }>
+  lancamentos: LancamentoResposta[]
+}
+
 // POST /lancamentos
 export async function criarLancamento(dados: LancamentoCriar): Promise<LancamentoResposta> {
   const res = await api.post<LancamentoResposta>('/lancamentos', dados)
+  return res.data
+}
+
+export async function criarLancamentosLote(itens: LancamentoCriar[]): Promise<LancamentoLoteResposta> {
+  const res = await api.post<LancamentoLoteResposta>('/lancamentos/lote', { itens })
   return res.data
 }
 

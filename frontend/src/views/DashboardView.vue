@@ -16,6 +16,12 @@ const visao        = ref<VisaoMesResposta | null>(null)
 const carregando   = ref(true)
 const erroCarregar = ref('')
 
+type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
+
+const modoPeriodo = ref<ModoPeriodo>('HOJE')
+const dataInicio = ref('')
+const dataFim = ref('')
+
 // ── Dados derivados do usuário e da moto ─────────────────────
 const primeiroNome = computed(() => {
   const nome = auth.usuario?.nome ?? ''
@@ -36,17 +42,12 @@ const nomeMoto = computed(() => {
 const ganho    = computed(() => visao.value?.ganho?.total_periodo    ?? '0.00')
 const despesa  = computed(() => visao.value?.despesa?.total_periodo  ?? '0.00')
 const saldo    = computed(() => visao.value?.saldo_mes               ?? '0.00')
-const kmAtual  = computed(() => motoAtiva.value?.km_atual            ?? null)
 
 // ── Formatações ───────────────────────────────────────────────
 function formatarReais(valor: string | number): string {
   const n = typeof valor === 'string' ? parseFloat(valor) : valor
   if (isNaN(n)) return 'R$ 0,00'
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function formatarKm(km: number): string {
-  return km.toLocaleString('pt-BR') + ' KM'
 }
 
 const hojeFormatado = computed(() => {
@@ -63,15 +64,118 @@ const saldoPositivo = computed(() => {
 // ── Alertas de manutenção (usa resumo_executivo do backend) ───
 const alertas = computed(() => visao.value?.resumo_executivo ?? [])
 
+const tituloSaldo = computed(() => {
+  if (modoPeriodo.value === 'HOJE') return 'SALDO DE HOJE'
+  if (modoPeriodo.value === 'SEMANA') return 'SALDO DA SEMANA'
+  if (modoPeriodo.value === 'PERSONALIZADO') return 'SALDO DO PERÍODO'
+  return 'SALDO DO MÊS'
+})
+
+const faixaPeriodo = computed(() => {
+  if (!dataInicio.value || !dataFim.value) return ''
+  const inicio = formatarIsoParaBr(dataInicio.value)
+  const fim = formatarIsoParaBr(dataFim.value)
+  return inicio === fim ? inicio : `${inicio} até ${fim}`
+})
+
+function formatarDataIso(data: Date): string {
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
+function formatarIsoParaBr(iso: string): string {
+  const [ano, mes, dia] = iso.split('-')
+  if (!ano || !mes || !dia) return iso
+  return `${dia}/${mes}/${ano}`
+}
+
+function obterInicioSemanaAtual(): Date {
+  const hoje = new Date()
+  const inicio = new Date(hoje)
+  const diaSemana = inicio.getDay() // domingo=0
+  const deslocamento = diaSemana === 0 ? 6 : diaSemana - 1 // segunda=0
+  inicio.setDate(inicio.getDate() - deslocamento)
+  return inicio
+}
+
+function obterFimSemanaAtual(): Date {
+  const inicio = obterInicioSemanaAtual()
+  const fim = new Date(inicio)
+  fim.setDate(inicio.getDate() + 6)
+  return fim
+}
+
+function obterInicioMesAtual(): Date {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+}
+
+function obterFimMesAtual(): Date {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+}
+
+function aplicarPeriodoRapido(modo: Exclude<ModoPeriodo, 'PERSONALIZADO'>): void {
+  modoPeriodo.value = modo
+  const hoje = new Date()
+
+  if (modo === 'HOJE') {
+    const isoHoje = formatarDataIso(hoje)
+    dataInicio.value = isoHoje
+    dataFim.value = isoHoje
+    carregar()
+    return
+  }
+
+  if (modo === 'SEMANA') {
+    dataInicio.value = formatarDataIso(obterInicioSemanaAtual())
+    dataFim.value = formatarDataIso(obterFimSemanaAtual())
+    carregar()
+    return
+  }
+
+  dataInicio.value = formatarDataIso(obterInicioMesAtual())
+  dataFim.value = formatarDataIso(obterFimMesAtual())
+  carregar()
+}
+
+function aplicarPeriodoPersonalizado(): void {
+  if (!dataInicio.value || !dataFim.value) {
+    erroCarregar.value = 'Selecione data de início e fim.'
+    return
+  }
+  if (dataInicio.value > dataFim.value) {
+    erroCarregar.value = 'Data inicial não pode ser maior que a data final.'
+    return
+  }
+  modoPeriodo.value = 'PERSONALIZADO'
+  carregar()
+}
+
 // ── Carregar dados ────────────────────────────────────────────
 async function carregar() {
   carregando.value   = true
   erroCarregar.value = ''
   try {
     const motoId = motoAtiva.value?.id
-    visao.value  = await obterVisaoMes(undefined, undefined, motoId)
+    if (modoPeriodo.value === 'MES') {
+      const inicioMes = obterInicioMesAtual()
+      visao.value = await obterVisaoMes({
+        ano: inicioMes.getFullYear(),
+        mes: inicioMes.getMonth() + 1,
+        motoUsuarioId: motoId,
+      })
+    } else {
+      visao.value = await obterVisaoMes({
+        dataInicio: dataInicio.value,
+        dataFim: dataFim.value,
+        motoUsuarioId: motoId,
+      })
+    }
   } catch {
-    erroCarregar.value = 'Não foi possível carregar os dados do mês.'
+    erroCarregar.value = 'Não foi possível carregar os dados do período.'
   } finally {
     carregando.value = false
   }
@@ -101,7 +205,9 @@ function navIconStyle(name: string): Record<string, string> {
   return isActive(name) ? { fontVariationSettings: '"FILL" 1' } : {}
 }
 
-onMounted(carregar)
+onMounted(() => {
+  aplicarPeriodoRapido('HOJE')
+})
 </script>
 
 <template>
@@ -158,6 +264,67 @@ onMounted(carregar)
         </p>
       </section>
 
+      <!-- Filtro de período -->
+      <section class="space-y-3 bg-surface-container p-4">
+        <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+          PERÍODO DA VISÃO
+        </p>
+
+        <div class="grid grid-cols-3 gap-2">
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'HOJE'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('HOJE')"
+          >
+            HOJE
+          </button>
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'SEMANA'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('SEMANA')"
+          >
+            SEMANA
+          </button>
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'MES'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('MES')"
+          >
+            MÊS
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+            PERSONALIZADO
+          </p>
+          <div class="grid grid-cols-2 gap-2">
+            <input
+              v-model="dataInicio"
+              type="date"
+              class="w-full bg-background border border-outline-variant px-2 py-2 text-xs text-on-surface"
+            />
+            <input
+              v-model="dataFim"
+              type="date"
+              class="w-full bg-background border border-outline-variant px-2 py-2 text-xs text-on-surface"
+            />
+          </div>
+          <button
+            class="w-full py-2 bg-surface-container-high border border-outline-variant text-on-surface font-label text-[9px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-colors"
+            @click="aplicarPeriodoPersonalizado"
+          >
+            APLICAR PERÍODO
+          </button>
+        </div>
+      </section>
+
       <!-- Erro de carregamento -->
       <div v-if="erroCarregar" class="bg-error-container text-on-error-container font-label text-xs px-4 py-3 flex items-center gap-2">
         <span class="material-symbols-outlined text-sm">warning</span>
@@ -184,7 +351,10 @@ onMounted(carregar)
           <div class="absolute top-0 right-0 w-40 h-40 bg-primary-container/10 blur-3xl rounded-full -mr-20 -mt-20 pointer-events-none"></div>
 
           <p class="font-label text-[9px] font-bold tracking-[0.3em] text-on-surface-variant uppercase mb-2">
-            SALDO DO MÊS
+            {{ tituloSaldo }}
+          </p>
+          <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-2">
+            {{ faixaPeriodo }}
           </p>
           <div class="flex items-baseline gap-2">
             <span
@@ -205,7 +375,7 @@ onMounted(carregar)
           </div>
         </div>
 
-        <!-- ── Monitor tático (link) ──────────────────────────  -->
+        <!-- ── Histórico detalhado (link) ────────────────────── -->
         <button
           class="w-full flex items-center justify-between p-4 bg-surface-container border border-outline-variant
                  hover:bg-surface-container-high transition-all active:scale-[0.98] group"
@@ -213,12 +383,9 @@ onMounted(carregar)
         >
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-primary-container">analytics</span>
-            <span class="font-label text-xs font-bold tracking-[0.2em] uppercase">MONITOR TÁTICO</span>
+            <span class="font-label text-xs font-bold tracking-[0.2em] uppercase">HISTÓRICO DETALHADO</span>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="font-label text-[9px] tracking-tight text-on-surface-variant">LIVE DATA</span>
-            <span class="material-symbols-outlined text-sm animate-pulse text-primary-container">sensors</span>
-          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-sm">chevron_right</span>
         </button>
 
         <!-- ── Grid de métricas secundárias ──────────────────── -->
@@ -235,16 +402,6 @@ onMounted(carregar)
             <p class="font-headline font-bold text-lg text-secondary">{{ formatarReais(despesa) }}</p>
           </div>
 
-          <!-- KM atual (ocupa linha inteira) -->
-          <div class="bg-surface-container p-4 col-span-2 flex justify-between items-center border-l-4 border-primary-container">
-            <div>
-              <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant mb-1 uppercase">KM ATUAL</p>
-              <p class="font-headline font-bold text-lg text-on-surface">
-                {{ kmAtual !== null ? formatarKm(kmAtual) : '—' }}
-              </p>
-            </div>
-            <span class="material-symbols-outlined text-primary-container opacity-40 text-4xl">speed</span>
-          </div>
         </div>
 
         <!-- ── Ações rápidas ──────────────────────────────────── -->
@@ -272,7 +429,7 @@ onMounted(carregar)
             <button
               class="flex flex-col items-center justify-center gap-3 bg-surface-container-high py-6
                      hover:bg-surface-bright transition-colors active:scale-[0.97] group"
-              @click="router.push({ name: 'lancar' })"
+              @click="router.push({ name: 'lancar', query: { tipo: 'DESPESA' } })"
             >
               <div class="w-12 h-12 bg-secondary-container/20 flex items-center justify-center text-secondary">
                 <span class="material-symbols-outlined text-2xl">remove_circle</span>
@@ -281,24 +438,6 @@ onMounted(carregar)
                            group-hover:text-secondary transition-colors uppercase">
                 LANÇAR DESPESA
               </span>
-            </button>
-
-            <!-- Manutenção -->
-            <button
-              class="flex items-center gap-3 bg-surface-container p-4 hover:bg-surface-bright transition-colors group active:scale-[0.97]"
-              @click="router.push({ name: 'manutencao' })"
-            >
-              <span class="material-symbols-outlined text-primary-container text-xl group-hover:scale-110 transition-transform">build</span>
-              <span class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">MANUTENÇÃO</span>
-            </button>
-
-            <!-- Abastecer -->
-            <button
-              class="flex items-center gap-3 bg-surface-container p-4 hover:bg-surface-bright transition-colors group active:scale-[0.97]"
-              @click="router.push({ name: 'abastecer' })"
-            >
-              <span class="material-symbols-outlined text-primary-container text-xl group-hover:scale-110 transition-transform">local_gas_station</span>
-              <span class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">ABASTECER</span>
             </button>
           </div>
         </section>
@@ -309,7 +448,7 @@ onMounted(carregar)
           class="bg-surface-container-lowest p-5 border-l-4 border-secondary"
         >
           <p class="font-label text-[9px] font-bold tracking-widest text-secondary uppercase mb-2">
-            ALERTAS DO MÊS
+            ALERTAS DO PERÍODO
           </p>
           <ul class="space-y-1.5">
             <li

@@ -3,9 +3,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 import { useMotoStore } from '@/stores/moto'
-import { criarLancamento } from '@/api/lancamentos'
+import { criarLancamentosLote } from '@/api/lancamentos'
 import { listarCategorias } from '@/api/categorias'
-import type { CategoriaResposta, TipoLancamento, PeriodoLancamento } from '@/types'
+import type { CategoriaResposta, TipoLancamento, PeriodoLancamento, GrupoDespesa } from '@/types'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -13,7 +13,6 @@ const motoStore = useMotoStore()
 
 // Tipo inicial via query param (?tipo=GANHO ou ?tipo=DESPESA)
 const tipoInicial = (route.query.tipo as TipoLancamento) || 'GANHO'
-type GrupoDespesa = 'GERAL' | 'ABASTECIMENTO' | 'MANUTENCAO'
 
 // ── Estado ─────────────────────────────────────────────────────
 const tipo          = ref<TipoLancamento>(tipoInicial)
@@ -35,6 +34,9 @@ const carregando    = ref(false)
 const enviando      = ref(false)
 const erro          = ref('')
 const sucesso       = ref(false)
+const mensagemSucesso = ref('')
+const MAX_VALOR_CENTAVOS = 99_999_999 // 999.999,99
+const MAX_DIGITOS_VALOR = String(MAX_VALOR_CENTAVOS).length
 
 // ── Computed ────────────────────────────────────────────────────
 const categoriasFiltradas = computed(() =>
@@ -47,34 +49,38 @@ const categoriasSelecionadasDetalhes = computed(() =>
 
 const totalSelecionado = computed(() =>
   categoriasSelecionadasDetalhes.value.reduce((acc, cat) => {
-    const valor = parseFloat((valoresPorCategoria.value[cat.id] || '').replace(',', '.'))
-    return acc + (isNaN(valor) ? 0 : valor)
+    const valor = valorTextoParaNumero(valoresPorCategoria.value[cat.id] || '')
+    return acc + valor
   }, 0)
 )
 
 const categoriasDespesaPorGrupo = computed(() => {
-  const todas = categoriasFiltradas.value
-  const abastecimento = todas.filter((c) => {
-    const n = c.nome.toLowerCase()
-    return n.includes('combust') || n.includes('gasolina') || n.includes('etanol') || n.includes('abastec')
-  })
-  const manutencao = todas.filter((c) => {
-    const n = c.nome.toLowerCase()
-    return n.includes('manut') || n.includes('oleo') || n.includes('pneu') || n.includes('oficina') || n.includes('revis')
-  })
-  const idsEspecial = new Set([...abastecimento, ...manutencao].map((c) => c.id))
-  const geral = todas.filter((c) => !idsEspecial.has(c.id))
+  const todas = categoriasFiltradas.value.filter((c) => c.tipo === 'DESPESA')
+  const abastecimento = todas.filter((c) => c.grupo_despesa === 'ABASTECIMENTO')
+  const manutencao = todas.filter((c) => c.grupo_despesa === 'MANUTENCAO')
+  const imposto = todas.filter((c) => c.grupo_despesa === 'IMPOSTO')
+  const geral = todas.filter((c) => c.grupo_despesa === 'GERAL' || c.grupo_despesa === null)
 
   return {
     ABASTECIMENTO: abastecimento,
     MANUTENCAO: manutencao,
+    IMPOSTO: imposto,
     GERAL: geral,
   } as Record<GrupoDespesa, CategoriaResposta[]>
 })
 
 const categoriasVisiveis = computed(() => {
-  if (tipo.value === 'GANHO') return categoriasFiltradas.value
+  if (tipo.value === 'GANHO') return categoriasFiltradas.value.filter((c) => c.tipo === 'GANHO')
   return categoriasDespesaPorGrupo.value[grupoDespesaAtivo.value]
+})
+const fraseGrupoDespesa = computed(() => {
+  const mapa: Record<GrupoDespesa, string> = {
+    GERAL: 'Categorias do dia a dia',
+    ABASTECIMENTO: 'Categorias de abastecimento',
+    MANUTENCAO: 'Categorias de manutencao',
+    IMPOSTO: 'Categorias de imposto',
+  }
+  return mapa[grupoDespesaAtivo.value]
 })
 
 const ehCorrida = computed(() =>
@@ -115,6 +121,7 @@ function alterarTipo(novoTipo: TipoLancamento) {
   periodo.value = 'DIARIO'
   erro.value = ''
   sucesso.value = false
+  mensagemSucesso.value = ''
   if (novoTipo === 'DESPESA') grupoDespesaAtivo.value = 'GERAL'
   resetarSelecaoCategorias()
 }
@@ -132,14 +139,40 @@ function alternarCategoria(catId: number) {
 
 function formatarValorCategoriaInput(catId: number, e: Event) {
   const input = e.target as HTMLInputElement
-  input.value = input.value.replace(/[^0-9.,]/g, '')
-  valoresPorCategoria.value[catId] = input.value
+  const centavos = textoParaCentavos(input.value)
+  valoresPorCategoria.value[catId] = centavos > 0 ? centavosParaTexto(centavos) : ''
+}
+
+function handlePasteValorCategoria(catId: number, e: ClipboardEvent) {
+  const texto = e.clipboardData?.getData('text') ?? ''
+  const centavos = textoParaCentavos(texto)
+  valoresPorCategoria.value[catId] = centavos > 0 ? centavosParaTexto(centavos) : ''
+}
+
+function textoParaCentavos(valor: string): number {
+  const apenasDigitos = valor.replace(/\D/g, '').slice(0, MAX_DIGITOS_VALOR)
+  if (!apenasDigitos) return 0
+  const bruto = parseInt(apenasDigitos, 10)
+  if (isNaN(bruto) || bruto <= 0) return 0
+  return Math.min(bruto, MAX_VALOR_CENTAVOS)
+}
+
+function centavosParaTexto(centavos: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(centavos / 100)
+}
+
+function valorTextoParaNumero(valor: string): number {
+  return textoParaCentavos(valor) / 100
 }
 
 // ── Submissão ───────────────────────────────────────────────────
 async function handleSubmit() {
   erro.value = ''
   sucesso.value = false
+  mensagemSucesso.value = ''
 
   if (categoriasSelecionadas.value.length === 0) {
     erro.value = 'Selecione pelo menos uma categoria.'
@@ -164,7 +197,7 @@ async function handleSubmit() {
 
   const categoriasComValor = categoriasSelecionadas.value.map((catId) => {
     const bruto = valoresPorCategoria.value[catId] || ''
-    const valorNum = parseFloat(bruto.replace(',', '.'))
+    const valorNum = valorTextoParaNumero(bruto)
     return { catId, valorNum }
   })
 
@@ -177,8 +210,8 @@ async function handleSubmit() {
 
   enviando.value = true
   try {
-    for (const item of categoriasComValor) {
-      await criarLancamento({
+    const retorno = await criarLancamentosLote(
+      categoriasComValor.map((item) => ({
         tipo: tipo.value,
         categoria_id: item.catId,
         valor: item.valorNum,
@@ -190,12 +223,18 @@ async function handleSubmit() {
           ? parseFloat(kmCorrida.value) : undefined,
         data_lancamento: dataLancamento.value,
         moto_usuario_id: motoId.value,
-      })
-    }
+      }))
+    )
+    const totalFormatado = Number(retorno.total_valor).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })
+    mensagemSucesso.value = `${retorno.quantidade} lançamento(s) registrados • Total ${totalFormatado}`
     sucesso.value = true
     limparFormularioAposSucesso()
     setTimeout(() => {
       sucesso.value = false
+      mensagemSucesso.value = ''
     }, 1800)
   } catch {
     erro.value = 'Erro ao registrar lançamento. Tente novamente.'
@@ -297,12 +336,12 @@ onMounted(carregar)
           </label>
           <div v-if="carregando" class="h-12 bg-surface-container-low animate-pulse" />
           <div v-else class="space-y-3">
-            <div v-if="tipo === 'DESPESA'" class="grid grid-cols-3 gap-2">
+            <div v-if="tipo === 'DESPESA'" class="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
                 :class="grupoDespesaAtivo === 'GERAL'
-                  ? 'bg-surface-bright text-on-surface border-outline'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
                   : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
                 @click="grupoDespesaAtivo = 'GERAL'"
               >
@@ -312,7 +351,7 @@ onMounted(carregar)
                 type="button"
                 class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
                 :class="grupoDespesaAtivo === 'ABASTECIMENTO'
-                  ? 'bg-surface-bright text-on-surface border-outline'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
                   : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
                 @click="grupoDespesaAtivo = 'ABASTECIMENTO'"
               >
@@ -322,30 +361,51 @@ onMounted(carregar)
                 type="button"
                 class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
                 :class="grupoDespesaAtivo === 'MANUTENCAO'
-                  ? 'bg-surface-bright text-on-surface border-outline'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
                   : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
                 @click="grupoDespesaAtivo = 'MANUTENCAO'"
               >
                 MANUTENÇÃO
               </button>
+              <button
+                type="button"
+                class="h-9 font-label text-[9px] font-bold tracking-[0.12em] uppercase transition-all border-b-2"
+                :class="grupoDespesaAtivo === 'IMPOSTO'
+                  ? 'bg-surface-bright text-on-surface border-secondary'
+                  : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline-variant'"
+                @click="grupoDespesaAtivo = 'IMPOSTO'"
+              >
+                IMPOSTO
+              </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
+            <div v-if="tipo === 'DESPESA'" class="pt-1 border-t border-outline-variant/40">
+              <p class="font-label text-[9px] font-bold tracking-[0.14em] uppercase text-on-surface-variant pt-2">
+                {{ fraseGrupoDespesa }}
+              </p>
+            </div>
+
+            <div class="space-y-2">
             <button
               v-for="cat in categoriasVisiveis"
               :key="cat.id"
               type="button"
-              class="h-11 px-3 font-label text-[10px] font-bold tracking-wider uppercase transition-all text-left border-l-2 flex items-center justify-between gap-2"
+              class="w-full h-11 px-3 font-label text-[10px] font-bold tracking-wider uppercase transition-all text-left border-b-2 flex items-center justify-between gap-2"
               :class="categoriasSelecionadas.includes(cat.id)
                 ? tipo === 'GANHO'
-                  ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-                  : 'bg-secondary text-on-secondary border-secondary'
-                : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline'"
+                  ? 'bg-primary-container/15 text-primary-container border-primary-container'
+                  : 'bg-secondary/15 text-secondary border-secondary'
+                : 'bg-surface-container-high text-on-surface-variant border-transparent hover:border-outline'"
               @click="alternarCategoria(cat.id)"
             >
-              <span class="truncate">{{ cat.nome }}</span>
-              <span class="material-symbols-outlined text-sm">
-                {{ categoriasSelecionadas.includes(cat.id) ? 'check_box' : 'check_box_outline_blank' }}
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-sm">
+                  {{ categoriasSelecionadas.includes(cat.id) ? 'check_box' : 'check_box_outline_blank' }}
+                </span>
+                <span class="truncate">{{ cat.nome }}</span>
+              </div>
+              <span class="font-label text-[9px] tracking-widest">
+                {{ categoriasSelecionadas.includes(cat.id) ? 'OK' : '' }}
               </span>
             </button>
             </div>
@@ -372,11 +432,13 @@ onMounted(carregar)
                     <span class="absolute left-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs">R$</span>
                     <input
                       :value="valoresPorCategoria[cat.id] || ''"
-                      inputmode="decimal"
+                      inputmode="numeric"
                       placeholder="0,00"
+                      maxlength="10"
                       class="tactical-input pl-8 py-2 text-sm font-bold"
                       :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
                       @input="formatarValorCategoriaInput(cat.id, $event)"
+                      @paste.prevent="handlePasteValorCategoria(cat.id, $event)"
                     />
                   </div>
                 </div>
@@ -541,7 +603,7 @@ onMounted(carregar)
             : 'bg-primary-container/20 text-primary-container border-primary-container'"
         >
           <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
-          Lançamentos registrados! Pode lançar outros.
+          {{ mensagemSucesso || 'Lançamentos registrados! Pode lançar outros.' }}
         </div>
 
         <!-- Botão -->

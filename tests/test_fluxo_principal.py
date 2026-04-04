@@ -93,9 +93,11 @@ def test_fluxo_moto_por_placa_cache_lancamento_e_manutencao(db_session, monkeypa
 
     categoria = criar_categoria(
         db_session,
+        usuario.id,
         CategoriaCriar(
-            nome="Combustivel",
+            nome="Combustivel Teste",
             tipo="DESPESA",
+            grupo_despesa="ABASTECIMENTO",
         ),
     )
 
