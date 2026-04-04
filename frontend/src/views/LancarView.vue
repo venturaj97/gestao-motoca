@@ -6,6 +6,7 @@ import { useMotoStore } from '@/stores/moto'
 import { criarLancamentosLote } from '@/api/lancamentos'
 import { listarCategorias } from '@/api/categorias'
 import type { CategoriaResposta, TipoLancamento, PeriodoLancamento, GrupoDespesa } from '@/types'
+import LancarDateInput from '@/components/LancarDateInput.vue'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -570,21 +571,10 @@ onMounted(carregar)
             </button>
           </div>
 
-          <!-- Input Customizado com Ícone -->
-          <div class="relative group">
-            <div
-              class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-on-surface-variant transition-colors"
-              :class="tipo === 'DESPESA' ? 'group-focus-within:text-secondary' : 'group-focus-within:text-primary-container'"
-            >
-              <span class="material-symbols-outlined text-lg">calendar_month</span>
-            </div>
-            <input 
-              v-model="dataLancamento" 
-              type="date"
-              class="tactical-input pl-12 py-4 text-lg font-bold tracking-tight uppercase"
-              :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
-            />
-          </div>
+          <LancarDateInput
+            v-model="dataLancamento"
+            :tone="tipo === 'DESPESA' ? 'despesa' : 'ganho'"
+          />
         </div>
 
         <!-- Erro -->

@@ -5,6 +5,7 @@ import { useMotoStore } from '@/stores/moto'
 import { criarManutencao } from '@/api/manutencoes'
 import { listarCategorias } from '@/api/categorias'
 import type { CategoriaResposta } from '@/types'
+import AppDateInput from '@/components/AppDateInput.vue'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -233,7 +234,7 @@ onMounted(carregar)
         <!-- Data -->
         <div>
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">DATA</label>
-          <input v-model="dataManutencao" type="date" class="tactical-input py-3 text-base" />
+          <AppDateInput v-model="dataManutencao" tone="despesa" />
         </div>
 
         <!-- Erro -->

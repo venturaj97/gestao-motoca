@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listarLancamentos } from '@/api/lancamentos'
 import type { LancamentoResposta, TipoLancamento } from '@/types'
+import AppDateInput from '@/components/AppDateInput.vue'
 
 const router   = useRouter()
 const route    = useRoute()
@@ -242,8 +243,8 @@ onMounted(() => {
           </button>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <input v-model="dataInicio" type="date" class="tactical-input py-2 text-sm" />
-          <input v-model="dataFim" type="date" class="tactical-input py-2 text-sm" />
+          <AppDateInput v-model="dataInicio" tone="system" />
+          <AppDateInput v-model="dataFim" tone="system" />
         </div>
         <button
           class="w-full py-2 bg-surface-container-high border border-outline-variant text-on-surface font-label text-[9px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-colors"
