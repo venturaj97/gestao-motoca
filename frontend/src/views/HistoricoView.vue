@@ -14,6 +14,8 @@ const erro         = ref('')
 const filtroTipo   = ref<TipoLancamento | 'TODOS'>('TODOS')
 const dataInicio   = ref('')
 const dataFim      = ref('')
+type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
+const modoPeriodo = ref<ModoPeriodo>('HOJE')
 
 // ── Computed ────────────────────────────────────────────────────
 const lancamentosFiltrados = computed(() => {
@@ -32,6 +34,13 @@ const totalDespesas = computed(() =>
     .filter(l => l.tipo === 'DESPESA')
     .reduce((acc, l) => acc + parseFloat(l.valor), 0)
 )
+
+const faixaPeriodo = computed(() => {
+  if (!dataInicio.value || !dataFim.value) return ''
+  const inicio = formatarIsoParaBr(dataInicio.value)
+  const fim = formatarIsoParaBr(dataFim.value)
+  return inicio === fim ? inicio : `${inicio} até ${fim}`
+})
 
 // ── Carregar ────────────────────────────────────────────────────
 async function carregar() {
@@ -61,6 +70,79 @@ function formatarData(iso: string): string {
   }).toUpperCase()
 }
 
+function formatarDataIso(data: Date): string {
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
+function formatarIsoParaBr(iso: string): string {
+  const [ano, mes, dia] = iso.split('-')
+  if (!ano || !mes || !dia) return iso
+  return `${dia}/${mes}/${ano}`
+}
+
+function obterInicioSemanaAtual(): Date {
+  const hoje = new Date()
+  const inicio = new Date(hoje)
+  const diaSemana = inicio.getDay()
+  const deslocamento = diaSemana === 0 ? 6 : diaSemana - 1
+  inicio.setDate(inicio.getDate() - deslocamento)
+  return inicio
+}
+
+function obterFimSemanaAtual(): Date {
+  const inicio = obterInicioSemanaAtual()
+  const fim = new Date(inicio)
+  fim.setDate(inicio.getDate() + 6)
+  return fim
+}
+
+function obterInicioMesAtual(): Date {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+}
+
+function obterFimMesAtual(): Date {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+}
+
+function aplicarPeriodoRapido(modo: Exclude<ModoPeriodo, 'PERSONALIZADO'>): void {
+  modoPeriodo.value = modo
+  const hoje = new Date()
+  if (modo === 'HOJE') {
+    const isoHoje = formatarDataIso(hoje)
+    dataInicio.value = isoHoje
+    dataFim.value = isoHoje
+    carregar()
+    return
+  }
+  if (modo === 'SEMANA') {
+    dataInicio.value = formatarDataIso(obterInicioSemanaAtual())
+    dataFim.value = formatarDataIso(obterFimSemanaAtual())
+    carregar()
+    return
+  }
+  dataInicio.value = formatarDataIso(obterInicioMesAtual())
+  dataFim.value = formatarDataIso(obterFimMesAtual())
+  carregar()
+}
+
+function aplicarPeriodoPersonalizado(): void {
+  if (!dataInicio.value || !dataFim.value) {
+    erro.value = 'Selecione data de início e fim.'
+    return
+  }
+  if (dataInicio.value > dataFim.value) {
+    erro.value = 'Data inicial não pode ser maior que a data final.'
+    return
+  }
+  modoPeriodo.value = 'PERSONALIZADO'
+  carregar()
+}
+
 function formatarDiaSemana(ds: string | null): string {
   if (!ds) return ''
   const map: Record<string, string> = {
@@ -82,7 +164,9 @@ function navIconStyle(name: string) {
   return isActive(name) ? { fontVariationSettings: '"FILL" 1' } : {}
 }
 
-onMounted(carregar)
+onMounted(() => {
+  aplicarPeriodoRapido('HOJE')
+})
 </script>
 
 <template>
@@ -104,8 +188,11 @@ onMounted(carregar)
 
       <!-- Título -->
       <div>
-        <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">MONITOR TÁTICO</p>
+        <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">HISTÓRICO DETALHADO</p>
         <h2 class="font-headline font-extrabold text-4xl tracking-tighter uppercase leading-none">HISTÓRICO</h2>
+        <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mt-1">
+          {{ faixaPeriodo }}
+        </p>
       </div>
 
       <!-- Resumo rápido -->
@@ -121,19 +208,49 @@ onMounted(carregar)
       </div>
 
       <!-- Filtro de período -->
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block font-label text-[9px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">DE</label>
-          <input v-model="dataInicio" type="date"
-            class="tactical-input py-2 text-sm"
-            @change="carregar" />
+      <div class="space-y-3 bg-surface-container p-3">
+        <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+          PERÍODO DO HISTÓRICO
+        </p>
+        <div class="grid grid-cols-3 gap-2">
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'HOJE'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('HOJE')"
+          >
+            HOJE
+          </button>
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'SEMANA'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('SEMANA')"
+          >
+            SEMANA
+          </button>
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'MES'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('MES')"
+          >
+            MÊS
+          </button>
         </div>
-        <div>
-          <label class="block font-label text-[9px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">ATÉ</label>
-          <input v-model="dataFim" type="date"
-            class="tactical-input py-2 text-sm"
-            @change="carregar" />
+        <div class="grid grid-cols-2 gap-2">
+          <input v-model="dataInicio" type="date" class="tactical-input py-2 text-sm" />
+          <input v-model="dataFim" type="date" class="tactical-input py-2 text-sm" />
         </div>
+        <button
+          class="w-full py-2 bg-surface-container-high border border-outline-variant text-on-surface font-label text-[9px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-colors"
+          @click="aplicarPeriodoPersonalizado"
+        >
+          APLICAR PERÍODO
+        </button>
       </div>
 
       <!-- Filtro de tipo -->
