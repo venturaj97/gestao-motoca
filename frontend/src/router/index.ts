@@ -54,9 +54,10 @@ const router = createRouter({
       component: () => import('@/views/ManutencaoView.vue'),
     },
     {
-      path: '/moto',
-      name: 'moto',
-      component: () => import('@/views/MinhaMotaView.vue'),
+      path: '/configuracoes',
+      alias: ['/moto'],
+      name: 'configuracoes',
+      component: () => import('@/views/ConfiguracoesView.vue'),
     },
     {
       path: '/moto/cadastrar',

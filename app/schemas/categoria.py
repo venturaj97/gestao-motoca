@@ -17,3 +17,9 @@ class CategoriaCriar(BaseModel):
     nome: str = Field(min_length=2, max_length=100)
     tipo: str
     grupo_despesa: str | None = None
+
+
+class CategoriaAtualizar(BaseModel):
+    nome: str | None = Field(default=None, min_length=2, max_length=100)
+    grupo_despesa: str | None = None
+    ativo: bool | None = None

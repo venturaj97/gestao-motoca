@@ -95,6 +95,18 @@ export interface CategoriaResposta {
   ativo: boolean
 }
 
+export interface CategoriaCriar {
+  nome: string
+  tipo: TipoLancamento
+  grupo_despesa?: GrupoDespesa | null
+}
+
+export interface CategoriaAtualizar {
+  nome?: string
+  grupo_despesa?: GrupoDespesa | null
+  ativo?: boolean
+}
+
 // === LANÇAMENTO ===
 export interface LancamentoCriar {
   categoria_id: number
@@ -116,6 +128,7 @@ export interface LancamentoResposta {
   moto_usuario_id: number | null
   tipo: TipoLancamento
   valor: string
+  descricao: string | null
   dia_semana: string | null
   periodo: PeriodoLancamento | null
   minutos_corrida: number | null

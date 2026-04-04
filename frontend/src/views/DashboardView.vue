@@ -195,7 +195,7 @@ const navItems = [
   { name: 'historico',  label: 'Histórico', icon: 'history'         },
   { name: 'lancar',     label: 'Lançar',    icon: 'add_box'         },
   { name: 'manutencao', label: 'Manutenção',icon: 'build'           },
-  { name: 'moto',       label: 'Moto',      icon: 'motorcycle'      },
+  { name: 'configuracoes', label: 'Config', icon: 'settings' },
 ]
 
 function isActive(name: string) {

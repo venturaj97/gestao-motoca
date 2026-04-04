@@ -2,7 +2,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.categoria import Categoria
-from app.schemas.categoria import CategoriaCriar
+from app.models.lancamento import Lancamento
+from app.schemas.categoria import CategoriaCriar, CategoriaAtualizar
 
 TIPOS_VALIDOS = {"GANHO", "DESPESA"}
 GRUPOS_DESPESA_VALIDOS = {"GERAL", "MANUTENCAO", "ABASTECIMENTO", "IMPOSTO"}
@@ -118,3 +119,73 @@ def criar_categoria(db: Session, usuario_id: int, dados: CategoriaCriar) -> Cate
     db.commit()
     db.refresh(categoria)
     return categoria
+
+
+def atualizar_categoria(db: Session, usuario_id: int, categoria_id: int, dados: CategoriaAtualizar) -> Categoria:
+    categoria = db.execute(
+        select(Categoria).where(
+            Categoria.id == categoria_id,
+            Categoria.usuario_id == usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not categoria:
+        raise ValueError("categoria_nao_encontrada")
+
+    novo_nome = categoria.nome
+    if dados.nome is not None:
+        novo_nome = dados.nome.strip()
+        if not novo_nome:
+            raise ValueError("nome_obrigatorio")
+
+    novo_grupo = categoria.grupo_despesa
+    if dados.grupo_despesa is not None:
+        novo_grupo = _normalizar_grupo_despesa(categoria.tipo, dados.grupo_despesa)
+    elif categoria.tipo == "DESPESA" and novo_grupo is None:
+        raise ValueError("grupo_despesa_obrigatorio")
+
+    conflito = db.execute(
+        select(Categoria).where(
+            Categoria.usuario_id == usuario_id,
+            Categoria.nome == novo_nome,
+            Categoria.tipo == categoria.tipo,
+            Categoria.id != categoria.id,
+        )
+    ).scalar_one_or_none()
+    if conflito:
+        raise ValueError("categoria_ja_existe")
+
+    categoria.nome = novo_nome
+    categoria.grupo_despesa = novo_grupo
+    if dados.ativo is not None:
+        categoria.ativo = dados.ativo
+
+    db.commit()
+    db.refresh(categoria)
+    return categoria
+
+
+def excluir_categoria(db: Session, usuario_id: int, categoria_id: int) -> None:
+    categoria = db.execute(
+        select(Categoria).where(
+            Categoria.id == categoria_id,
+            Categoria.usuario_id == usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not categoria:
+        raise ValueError("categoria_nao_encontrada")
+
+    uso = db.execute(
+        select(Lancamento.id).where(
+            Lancamento.usuario_id == usuario_id,
+            Lancamento.categoria_id == categoria_id,
+        ).limit(1)
+    ).scalar_one_or_none()
+
+    if uso is not None:
+        # Exclusao logica para preservar historico
+        categoria.ativo = False
+        db.commit()
+        return
+
+    db.delete(categoria)
+    db.commit()
