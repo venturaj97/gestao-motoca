@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 import { useMotoStore } from '@/stores/moto'
-import { criarLancamento } from '@/api/lancamentos'
+import { criarLancamentosLote } from '@/api/lancamentos'
 import { listarCategorias } from '@/api/categorias'
 import type { CategoriaResposta, TipoLancamento, PeriodoLancamento, GrupoDespesa } from '@/types'
 
@@ -69,15 +69,6 @@ const categoriasDespesaPorGrupo = computed(() => {
 const categoriasVisiveis = computed(() => {
   if (tipo.value === 'GANHO') return categoriasFiltradas.value.filter((c) => c.tipo === 'GANHO')
   return categoriasDespesaPorGrupo.value[grupoDespesaAtivo.value]
-})
-const tituloGrupoDespesaAtivo = computed(() => {
-  const mapa: Record<GrupoDespesa, string> = {
-    GERAL: 'Dia a dia',
-    ABASTECIMENTO: 'Abastecer',
-    MANUTENCAO: 'Manutencao',
-    IMPOSTO: 'Imposto',
-  }
-  return mapa[grupoDespesaAtivo.value]
 })
 
 const ehCorrida = computed(() =>
@@ -180,8 +171,8 @@ async function handleSubmit() {
 
   enviando.value = true
   try {
-    for (const item of categoriasComValor) {
-      await criarLancamento({
+    await criarLancamentosLote(
+      categoriasComValor.map((item) => ({
         tipo: tipo.value,
         categoria_id: item.catId,
         valor: item.valorNum,
@@ -193,8 +184,8 @@ async function handleSubmit() {
           ? parseFloat(kmCorrida.value) : undefined,
         data_lancamento: dataLancamento.value,
         moto_usuario_id: motoId.value,
-      })
-    }
+      }))
+    )
     sucesso.value = true
     limparFormularioAposSucesso()
     setTimeout(() => {
@@ -343,15 +334,9 @@ onMounted(carregar)
               </button>
             </div>
 
-            <div
-              v-if="tipo === 'DESPESA'"
-              class="px-3 py-2 bg-surface-container-low border-l-2 border-secondary"
-            >
-              <p class="font-label text-[9px] tracking-[0.14em] uppercase text-on-surface-variant">
-                Grupo ativo
-              </p>
-              <p class="font-label text-[11px] font-bold tracking-wider uppercase text-on-surface">
-                {{ tituloGrupoDespesaAtivo }}
+            <div v-if="tipo === 'DESPESA'" class="pt-1 border-t border-outline-variant/40">
+              <p class="font-label text-[9px] font-bold tracking-[0.14em] uppercase text-on-surface-variant pt-2">
+                Categorias do grupo selecionado
               </p>
             </div>
 

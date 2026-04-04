@@ -8,7 +8,12 @@ from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
 from app.routers._errors import raise_mapped_error
-from app.schemas.lancamento import LancamentoCriar, LancamentoResposta
+from app.schemas.lancamento import (
+    LancamentoCriar,
+    LancamentoLoteCriar,
+    LancamentoLoteResposta,
+    LancamentoResposta,
+)
 from app.services.lancamento_service import (
     atualizar_lancamento,
     criar_lancamento,
@@ -70,6 +75,31 @@ def rota_criar_lancamento(
         return criar_lancamento(db, dados_com_usuario)
     except ValueError as e:
         _erros_lancamento_valor(e)
+
+
+@router.post("/lote", response_model=LancamentoLoteResposta, status_code=status.HTTP_201_CREATED)
+def rota_criar_lancamentos_em_lote(
+    dados: LancamentoLoteCriar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    criados = []
+    try:
+        for item in dados.itens:
+            item_usuario = item.model_copy(update={"usuario_id": usuario.id})
+            lanc = criar_lancamento(db, item_usuario, auto_commit=False)
+            criados.append(lanc)
+
+        db.commit()
+        for lanc in criados:
+            db.refresh(lanc)
+        return LancamentoLoteResposta(quantidade=len(criados), lancamentos=criados)
+    except ValueError as e:
+        db.rollback()
+        _erros_lancamento_valor(e)
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.put("/{lancamento_id}", response_model=LancamentoResposta)

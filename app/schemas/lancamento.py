@@ -35,3 +35,12 @@ class LancamentoResposta(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class LancamentoLoteCriar(BaseModel):
+    itens: list[LancamentoCriar] = Field(min_length=1)
+
+
+class LancamentoLoteResposta(BaseModel):
+    quantidade: int
+    lancamentos: list[LancamentoResposta]
