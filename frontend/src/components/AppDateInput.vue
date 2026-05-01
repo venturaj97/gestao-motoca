@@ -3,6 +3,8 @@ withDefaults(
   defineProps<{
     modelValue: string
     tone?: 'system' | 'despesa'
+    min?: string
+    max?: string
   }>(),
   {
     tone: 'system',
@@ -23,6 +25,8 @@ function onInput(event: Event) {
     <input
       type="date"
       :value="modelValue"
+      :min="min"
+      :max="max"
       class="app-date-input w-full bg-background border border-outline-variant px-2 py-2 pr-8 text-xs text-on-surface"
       @input="onInput"
     />

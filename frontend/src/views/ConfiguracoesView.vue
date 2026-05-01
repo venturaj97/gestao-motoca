@@ -561,8 +561,8 @@ onMounted(async () => {
             <button class="h-9 text-[9px] uppercase border border-outline-variant" @click="periodoRapidoLancamentos(30)">30 dias</button>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <AppDateInput v-model="lancDataInicio" tone="system" />
-            <AppDateInput v-model="lancDataFim" tone="system" />
+            <AppDateInput v-model="lancDataInicio" tone="system" :max="lancDataFim || undefined" />
+            <AppDateInput v-model="lancDataFim" tone="system" :min="lancDataInicio || undefined" />
           </div>
           <div class="grid grid-cols-2 gap-2">
             <select v-model="lancTipoFiltro" class="tactical-input py-2 text-sm">

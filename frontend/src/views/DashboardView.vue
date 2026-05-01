@@ -306,8 +306,8 @@ onMounted(() => {
             PERSONALIZADO
           </p>
           <div class="grid grid-cols-2 gap-2">
-            <AppDateInput v-model="dataInicio" tone="system" />
-            <AppDateInput v-model="dataFim" tone="system" />
+            <AppDateInput v-model="dataInicio" tone="system" :max="dataFim || undefined" />
+            <AppDateInput v-model="dataFim" tone="system" :min="dataInicio || undefined" />
           </div>
           <button
             class="w-full py-2 bg-surface-container-high border border-outline-variant text-on-surface font-label text-[9px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-colors"
