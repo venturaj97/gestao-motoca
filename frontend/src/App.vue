@@ -7,7 +7,7 @@ const theme = useThemeStore()
 </script>
 
 <template>
-  <div :class="{ dark: theme.escuro }">
+  <div class="app-shell" :class="{ dark: theme.escuro }">
     <RouterView />
     <ThemeToggle />
   </div>

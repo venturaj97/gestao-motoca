@@ -147,6 +147,10 @@
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   }
 
+  .app-shell header {
+    padding-right: max(4.75rem, env(safe-area-inset-right));
+  }
+
   /* Background grid tático (pontilhado) */
   .tactical-grid {
     background-image: radial-gradient(circle, rgb(var(--color-surface-container-high)) 1px, transparent 1px);
