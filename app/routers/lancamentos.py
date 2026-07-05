@@ -12,6 +12,7 @@ from app.models.categoria import Categoria
 from app.routers._errors import raise_mapped_error
 from app.schemas.lancamento import (
     LancamentoCriar,
+    LancamentoListaPaginadaResposta,
     LancamentoLoteCriar,
     LancamentoLoteItemResumo,
     LancamentoLoteResposta,
@@ -63,6 +64,7 @@ def _erros_lancamento_valor(e: ValueError) -> None:
             422,
             "Este lancamento esta vinculado a abastecimento ou manutencao: mantenha tipo DESPESA e categoria de despesa",
         ),
+        "intervalo_valor_invalido": (422, "valor_min nao pode ser maior que valor_max"),
     }
     raise_mapped_error(e, erros)
 
@@ -162,12 +164,39 @@ def rota_excluir_lancamento(
         _erros_lancamento_valor(e)
 
 
-@router.get("", response_model=list[LancamentoResposta])
+@router.get("", response_model=LancamentoListaPaginadaResposta)
 def rota_listar_lancamentos(
     tipo: Optional[str] = Query(default=None),
     data_inicio: Optional[date] = Query(default=None),
     data_fim: Optional[date] = Query(default=None),
+    categoria_nome: Optional[str] = Query(default=None, min_length=1, max_length=60),
+    valor_min: Optional[Decimal] = Query(default=None, ge=0),
+    valor_max: Optional[Decimal] = Query(default=None, ge=0),
+    pagina: int = Query(default=1, ge=1),
+    limite: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_usuario_logado),
 ):
-    return listar_lancamentos(db, usuario.id, tipo, data_inicio, data_fim)
+    try:
+        itens, total = listar_lancamentos(
+            db=db,
+            usuario_id=usuario.id,
+            tipo=tipo,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            categoria_nome=categoria_nome,
+            valor_min=valor_min,
+            valor_max=valor_max,
+            pagina=pagina,
+            limite=limite,
+        )
+        total_paginas = (total + limite - 1) // limite if total > 0 else 1
+        return {
+            "itens": itens,
+            "total": total,
+            "pagina": pagina,
+            "limite": limite,
+            "total_paginas": total_paginas,
+        }
+    except ValueError as e:
+        _erros_lancamento_valor(e)

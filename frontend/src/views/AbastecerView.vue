@@ -5,6 +5,7 @@ import { useMotoStore } from '@/stores/moto'
 import { criarAbastecimento } from '@/api/abastecimentos'
 import { listarCategorias } from '@/api/categorias'
 import type { CategoriaResposta } from '@/types'
+import AppDateInput from '@/components/AppDateInput.vue'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -112,7 +113,7 @@ const navItems = [
   { name: 'historico',  label: 'Histórico', icon: 'history'    },
   { name: 'lancar',     label: 'Lançar',    icon: 'add_box'    },
   { name: 'manutencao', label: 'Manutenção',icon: 'build'      },
-  { name: 'moto',       label: 'Moto',      icon: 'motorcycle' },
+  { name: 'configuracoes', label: 'Config', icon: 'settings' },
 ]
 function isActive(name: string) { return route.name === name }
 function navIconStyle(name: string) {
@@ -242,7 +243,7 @@ onMounted(carregar)
         <!-- Data -->
         <div>
           <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">DATA</label>
-          <input v-model="dataAbastecimento" type="date" class="tactical-input py-3 text-base" />
+          <AppDateInput v-model="dataAbastecimento" tone="despesa" />
         </div>
 
         <!-- Erro -->

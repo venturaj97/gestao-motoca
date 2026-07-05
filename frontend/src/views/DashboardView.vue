@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useMotoStore } from '@/stores/moto'
 import { obterVisaoMes } from '@/api/visaoMes'
 import type { VisaoMesResposta } from '@/types'
+import AppDateInput from '@/components/AppDateInput.vue'
 
 const router  = useRouter()
 const route   = useRoute()
@@ -194,7 +195,7 @@ const navItems = [
   { name: 'historico',  label: 'Histórico', icon: 'history'         },
   { name: 'lancar',     label: 'Lançar',    icon: 'add_box'         },
   { name: 'manutencao', label: 'Manutenção',icon: 'build'           },
-  { name: 'moto',       label: 'Moto',      icon: 'motorcycle'      },
+  { name: 'configuracoes', label: 'Config', icon: 'settings' },
 ]
 
 function isActive(name: string) {
@@ -305,16 +306,8 @@ onMounted(() => {
             PERSONALIZADO
           </p>
           <div class="grid grid-cols-2 gap-2">
-            <input
-              v-model="dataInicio"
-              type="date"
-              class="w-full bg-background border border-outline-variant px-2 py-2 text-xs text-on-surface"
-            />
-            <input
-              v-model="dataFim"
-              type="date"
-              class="w-full bg-background border border-outline-variant px-2 py-2 text-xs text-on-surface"
-            />
+            <AppDateInput v-model="dataInicio" tone="system" :max="dataFim || undefined" />
+            <AppDateInput v-model="dataFim" tone="system" :min="dataInicio || undefined" />
           </div>
           <button
             class="w-full py-2 bg-surface-container-high border border-outline-variant text-on-surface font-label text-[9px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-colors"

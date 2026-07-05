@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listarLancamentos } from '@/api/lancamentos'
 import type { LancamentoResposta, TipoLancamento } from '@/types'
+import AppDateInput from '@/components/AppDateInput.vue'
 
 const router   = useRouter()
 const route    = useRoute()
@@ -14,12 +15,22 @@ const erro         = ref('')
 const filtroTipo   = ref<TipoLancamento | 'TODOS'>('TODOS')
 const dataInicio   = ref('')
 const dataFim      = ref('')
+const paginaAtual  = ref(1)
+const totalRegistros = ref(0)
+const totalPaginas = ref(1)
+const mostrarFiltros = ref(false)
+const filtroCategoriaNome = ref('')
+const filtroValorMin = ref('')
+const filtroValorMax = ref('')
+type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
+const modoPeriodo = ref<ModoPeriodo>('HOJE')
 
 // ── Computed ────────────────────────────────────────────────────
-const lancamentosFiltrados = computed(() => {
-  if (filtroTipo.value === 'TODOS') return lancamentos.value
-  return lancamentos.value.filter(l => l.tipo === filtroTipo.value)
-})
+const lancamentosFiltrados = computed(() => lancamentos.value)
+
+const tipoFiltroApi = computed(() =>
+  filtroTipo.value === 'TODOS' ? undefined : filtroTipo.value
+)
 
 const totalGanhos = computed(() =>
   lancamentos.value
@@ -33,15 +44,54 @@ const totalDespesas = computed(() =>
     .reduce((acc, l) => acc + parseFloat(l.valor), 0)
 )
 
+const faixaPeriodo = computed(() => {
+  if (!dataInicio.value || !dataFim.value) return ''
+  const inicio = formatarIsoParaBr(dataInicio.value)
+  const fim = formatarIsoParaBr(dataFim.value)
+  return inicio === fim ? inicio : `${inicio} até ${fim}`
+})
+
+const filtrosAtivos = computed(() => {
+  const chips: Array<{ chave: 'categoria' | 'min' | 'max'; texto: string }> = []
+  if (filtroCategoriaNome.value.trim()) {
+    chips.push({ chave: 'categoria', texto: `Categoria: ${filtroCategoriaNome.value.trim()}` })
+  }
+  if (filtroValorMin.value.trim()) {
+    chips.push({ chave: 'min', texto: `Min: R$ ${filtroValorMin.value.trim()}` })
+  }
+  if (filtroValorMax.value.trim()) {
+    chips.push({ chave: 'max', texto: `Max: R$ ${filtroValorMax.value.trim()}` })
+  }
+  return chips
+})
+
+function paraNumeroFiltro(valor: string): number | undefined {
+  const txt = valor.trim()
+  if (!txt) return undefined
+  const n = Number(txt.replace(',', '.'))
+  if (Number.isNaN(n) || n < 0) return undefined
+  return n
+}
+
 // ── Carregar ────────────────────────────────────────────────────
-async function carregar() {
+async function carregar(pagina = paginaAtual.value) {
   carregando.value = true
   erro.value = ''
   try {
-    lancamentos.value = await listarLancamentos({
+    const resposta = await listarLancamentos({
+      tipo: tipoFiltroApi.value,
       data_inicio: dataInicio.value || undefined,
       data_fim: dataFim.value || undefined,
+      categoria_nome: filtroCategoriaNome.value.trim() || undefined,
+      valor_min: paraNumeroFiltro(filtroValorMin.value),
+      valor_max: paraNumeroFiltro(filtroValorMax.value),
+      pagina,
+      limite: 10,
     })
+    lancamentos.value = resposta.itens
+    totalRegistros.value = resposta.total
+    paginaAtual.value = resposta.pagina
+    totalPaginas.value = resposta.total_paginas
   } catch {
     erro.value = 'Erro ao carregar histórico.'
   } finally {
@@ -61,11 +111,123 @@ function formatarData(iso: string): string {
   }).toUpperCase()
 }
 
+function formatarDataIso(data: Date): string {
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
+function formatarIsoParaBr(iso: string): string {
+  const [ano, mes, dia] = iso.split('-')
+  if (!ano || !mes || !dia) return iso
+  return `${dia}/${mes}/${ano}`
+}
+
+function obterInicioSemanaAtual(): Date {
+  const hoje = new Date()
+  const inicio = new Date(hoje)
+  const diaSemana = inicio.getDay()
+  const deslocamento = diaSemana === 0 ? 6 : diaSemana - 1
+  inicio.setDate(inicio.getDate() - deslocamento)
+  return inicio
+}
+
+function obterFimSemanaAtual(): Date {
+  const inicio = obterInicioSemanaAtual()
+  const fim = new Date(inicio)
+  fim.setDate(inicio.getDate() + 6)
+  return fim
+}
+
+function obterInicioMesAtual(): Date {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+}
+
+function obterFimMesAtual(): Date {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+}
+
+function aplicarPeriodoRapido(modo: Exclude<ModoPeriodo, 'PERSONALIZADO'>): void {
+  modoPeriodo.value = modo
+  const hoje = new Date()
+  if (modo === 'HOJE') {
+    const isoHoje = formatarDataIso(hoje)
+    dataInicio.value = isoHoje
+    dataFim.value = isoHoje
+    carregar(1)
+    return
+  }
+  if (modo === 'SEMANA') {
+    dataInicio.value = formatarDataIso(obterInicioSemanaAtual())
+    dataFim.value = formatarDataIso(obterFimSemanaAtual())
+    carregar(1)
+    return
+  }
+  dataInicio.value = formatarDataIso(obterInicioMesAtual())
+  dataFim.value = formatarDataIso(obterFimMesAtual())
+  carregar(1)
+}
+
+function aplicarPeriodoPersonalizado(): void {
+  if (!dataInicio.value || !dataFim.value) {
+    erro.value = 'Selecione data de início e fim.'
+    return
+  }
+  if (dataInicio.value > dataFim.value) {
+    erro.value = 'Data inicial não pode ser maior que a data final.'
+    return
+  }
+  modoPeriodo.value = 'PERSONALIZADO'
+  carregar(1)
+}
+
+function mudarTipoFiltro(tipo: TipoLancamento | 'TODOS') {
+  filtroTipo.value = tipo
+  carregar(1)
+}
+
+function aplicarFiltrosAvancados() {
+  const min = paraNumeroFiltro(filtroValorMin.value)
+  const max = paraNumeroFiltro(filtroValorMax.value)
+  if (min !== undefined && max !== undefined && min > max) {
+    erro.value = 'Valor mínimo não pode ser maior que o valor máximo.'
+    return
+  }
+  carregar(1)
+}
+
+function limparFiltrosAvancados() {
+  filtroCategoriaNome.value = ''
+  filtroValorMin.value = ''
+  filtroValorMax.value = ''
+  carregar(1)
+}
+
+function removerFiltro(chave: 'categoria' | 'min' | 'max') {
+  if (chave === 'categoria') filtroCategoriaNome.value = ''
+  if (chave === 'min') filtroValorMin.value = ''
+  if (chave === 'max') filtroValorMax.value = ''
+  carregar(1)
+}
+
+function paginaAnterior() {
+  if (paginaAtual.value <= 1) return
+  carregar(paginaAtual.value - 1)
+}
+
+function proximaPagina() {
+  if (paginaAtual.value >= totalPaginas.value) return
+  carregar(paginaAtual.value + 1)
+}
+
 function formatarDiaSemana(ds: string | null): string {
   if (!ds) return ''
   const map: Record<string, string> = {
-    'MONDAY': 'SEG', 'TUESDAY': 'TER', 'WEDNESDAY': 'QUA',
-    'THURSDAY': 'QUI', 'FRIDAY': 'SEX', 'SATURDAY': 'SAB', 'SUNDAY': 'DOM'
+    'SEGUNDA': 'SEG', 'TERCA': 'TER', 'QUARTA': 'QUA',
+    'QUINTA': 'QUI', 'SEXTA': 'SEX', 'SABADO': 'SAB', 'DOMINGO': 'DOM'
   }
   return map[ds] ?? ds.slice(0, 3)
 }
@@ -75,14 +237,16 @@ const navItems = [
   { name: 'historico',  label: 'Histórico', icon: 'history'    },
   { name: 'lancar',     label: 'Lançar',    icon: 'add_box'    },
   { name: 'manutencao', label: 'Manutenção',icon: 'build'      },
-  { name: 'moto',       label: 'Moto',      icon: 'motorcycle' },
+  { name: 'configuracoes', label: 'Config', icon: 'settings' },
 ]
 function isActive(name: string) { return route.name === name }
 function navIconStyle(name: string) {
   return isActive(name) ? { fontVariationSettings: '"FILL" 1' } : {}
 }
 
-onMounted(carregar)
+onMounted(() => {
+  aplicarPeriodoRapido('HOJE')
+})
 </script>
 
 <template>
@@ -95,7 +259,7 @@ onMounted(carregar)
       </div>
       <button class="text-on-surface-variant hover:text-primary-container transition-colors"
         :class="{ 'animate-spin': carregando }"
-        @click="carregar">
+        @click="carregar()">
         <span class="material-symbols-outlined text-xl">refresh</span>
       </button>
     </header>
@@ -104,8 +268,11 @@ onMounted(carregar)
 
       <!-- Título -->
       <div>
-        <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">MONITOR TÁTICO</p>
+        <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">HISTÓRICO DETALHADO</p>
         <h2 class="font-headline font-extrabold text-4xl tracking-tighter uppercase leading-none">HISTÓRICO</h2>
+        <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mt-1">
+          {{ faixaPeriodo }}
+        </p>
       </div>
 
       <!-- Resumo rápido -->
@@ -121,18 +288,65 @@ onMounted(carregar)
       </div>
 
       <!-- Filtro de período -->
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block font-label text-[9px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">DE</label>
-          <input v-model="dataInicio" type="date"
-            class="tactical-input py-2 text-sm"
-            @change="carregar" />
+      <div class="space-y-3 bg-surface-container p-3">
+        <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+          PERÍODO DO HISTÓRICO
+        </p>
+        <div class="grid grid-cols-3 gap-2">
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'HOJE'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('HOJE')"
+          >
+            HOJE
+          </button>
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'SEMANA'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('SEMANA')"
+          >
+            SEMANA
+          </button>
+          <button
+            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            :class="modoPeriodo === 'MES'
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+            @click="aplicarPeriodoRapido('MES')"
+          >
+            MÊS
+          </button>
         </div>
-        <div>
-          <label class="block font-label text-[9px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">ATÉ</label>
-          <input v-model="dataFim" type="date"
-            class="tactical-input py-2 text-sm"
-            @change="carregar" />
+        <div class="grid grid-cols-2 gap-2">
+          <AppDateInput v-model="dataInicio" tone="system" :max="dataFim || undefined" />
+          <AppDateInput v-model="dataFim" tone="system" :min="dataInicio || undefined" />
+        </div>
+        <button
+          class="w-full py-2 bg-surface-container-high border border-outline-variant text-on-surface font-label text-[9px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-colors"
+          @click="aplicarPeriodoPersonalizado"
+        >
+          APLICAR PERÍODO
+        </button>
+
+        <div class="flex justify-end">
+          <button
+            class="h-8 px-2.5 flex items-center gap-1.5 bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            @click="mostrarFiltros = !mostrarFiltros"
+          >
+            <span class="material-symbols-outlined text-sm">tune</span>
+            <span class="font-label text-[9px] font-bold tracking-widest uppercase">Filtros</span>
+            <span
+              v-if="filtrosAtivos.length"
+              class="w-1.5 h-1.5 rounded-full bg-primary-container"
+            />
+            <span class="material-symbols-outlined text-sm">
+              {{ mostrarFiltros ? 'expand_less' : 'expand_more' }}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -147,8 +361,63 @@ onMounted(carregar)
                 ? 'bg-secondary text-on-secondary border-secondary'
                 : 'bg-surface-container-high text-on-surface border-outline'
             : 'bg-surface-container text-on-surface-variant border-transparent hover:border-outline'"
-          @click="filtroTipo = t as any">
+          @click="mudarTipoFiltro(t as TipoLancamento | 'TODOS')">
           {{ t === 'TODOS' ? 'TODOS' : t === 'GANHO' ? 'GANHOS' : 'DESPESAS' }}
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div
+        v-if="mostrarFiltros"
+        class="space-y-2 bg-surface-container p-3 border border-outline-variant"
+      >
+        <input
+          v-model="filtroCategoriaNome"
+          type="text"
+          placeholder="Categoria (ex: combustível)"
+          class="tactical-input py-2.5 px-2 text-sm"
+        />
+        <div class="grid grid-cols-2 gap-2">
+          <input
+            v-model="filtroValorMin"
+            type="text"
+            inputmode="decimal"
+            placeholder="Valor mínimo"
+            class="tactical-input py-2.5 px-2 text-sm"
+          />
+          <input
+            v-model="filtroValorMax"
+            type="text"
+            inputmode="decimal"
+            placeholder="Valor máximo"
+            class="tactical-input py-2.5 px-2 text-sm"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-bright transition-colors"
+            @click="limparFiltrosAvancados"
+          >
+            LIMPAR
+          </button>
+          <button
+            class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border border-primary-container bg-primary-container text-on-primary-fixed hover:brightness-110 transition-all"
+            @click="aplicarFiltrosAvancados"
+          >
+            APLICAR
+          </button>
+        </div>
+      </div>
+
+      <div v-if="filtrosAtivos.length" class="flex flex-wrap gap-2">
+        <button
+          v-for="chip in filtrosAtivos"
+          :key="chip.chave"
+          class="h-7 px-2 flex items-center gap-1 bg-surface-container border border-outline-variant text-on-surface-variant font-label text-[9px] uppercase tracking-wider"
+          @click="removerFiltro(chip.chave)"
+        >
+          <span>{{ chip.texto }}</span>
+          <span class="material-symbols-outlined text-xs">close</span>
         </button>
       </div>
 
@@ -197,6 +466,9 @@ onMounted(carregar)
                 <span v-if="l.dia_semana" class="opacity-60">· {{ formatarDiaSemana(l.dia_semana) }}</span>
                 <span v-if="l.periodo" class="opacity-60">· {{ l.periodo }}</span>
               </p>
+              <p v-if="l.categoria_nome" class="font-label text-[9px] text-on-surface-variant uppercase opacity-80">
+                {{ l.categoria_nome }}
+              </p>
               <!-- Infos adicionais -->
               <p v-if="l.km_corrida" class="font-label text-[9px] text-on-surface-variant">
                 {{ parseFloat(l.km_corrida).toFixed(1) }} km
@@ -216,8 +488,31 @@ onMounted(carregar)
       <!-- Contagem -->
       <p v-if="lancamentosFiltrados.length > 0"
         class="text-center font-label text-[9px] text-on-surface-variant uppercase tracking-widest py-2">
-        {{ lancamentosFiltrados.length }} registro{{ lancamentosFiltrados.length > 1 ? 's' : '' }}
+        {{ totalRegistros }} registro{{ totalRegistros > 1 ? 's' : '' }}
       </p>
+
+      <div
+        v-if="totalPaginas > 1"
+        class="flex items-center justify-center gap-3"
+      >
+        <button
+          class="w-10 h-9 flex items-center justify-center border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
+          :disabled="paginaAtual <= 1 || carregando"
+          @click="paginaAnterior"
+        >
+          <span class="material-symbols-outlined text-base">chevron_left</span>
+        </button>
+        <p class="text-center font-label text-[9px] text-on-surface-variant uppercase tracking-widest">
+          PÁG {{ paginaAtual }} / {{ totalPaginas }}
+        </p>
+        <button
+          class="w-10 h-9 flex items-center justify-center border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40"
+          :disabled="paginaAtual >= totalPaginas || carregando"
+          @click="proximaPagina"
+        >
+          <span class="material-symbols-outlined text-base">chevron_right</span>
+        </button>
+      </div>
 
     </main>
 

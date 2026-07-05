@@ -95,6 +95,18 @@ export interface CategoriaResposta {
   ativo: boolean
 }
 
+export interface CategoriaCriar {
+  nome: string
+  tipo: TipoLancamento
+  grupo_despesa?: GrupoDespesa | null
+}
+
+export interface CategoriaAtualizar {
+  nome?: string
+  grupo_despesa?: GrupoDespesa | null
+  ativo?: boolean
+}
+
 // === LANÇAMENTO ===
 export interface LancamentoCriar {
   categoria_id: number
@@ -112,15 +124,25 @@ export interface LancamentoResposta {
   id: number
   usuario_id: number
   categoria_id: number
+  categoria_nome: string | null
   moto_usuario_id: number | null
   tipo: TipoLancamento
   valor: string
+  descricao: string | null
   dia_semana: string | null
   periodo: PeriodoLancamento | null
   minutos_corrida: number | null
   km_corrida: string | null
   data_lancamento: string
   data_criacao: string
+}
+
+export interface LancamentoListaPaginadaResposta {
+  itens: LancamentoResposta[]
+  total: number
+  pagina: number
+  limite: number
+  total_paginas: number
 }
 
 // === ABASTECIMENTO ===

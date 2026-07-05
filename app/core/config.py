@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     )
     auth_algorithm: str = Field(default="HS256", validation_alias="AUTH_ALGORITHM")
     auth_token_exp_minutos: int = Field(default=1440, validation_alias="AUTH_TOKEN_EXP_MINUTOS")
+    cors_origins: list[str] = Field(
+        default=[
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+            "http://127.0.0.1:5175",
+            "http://localhost:4173",
+        ],
+        validation_alias="CORS_ORIGINS",
+    )
 
     @property
     def database_url(self) -> str:
