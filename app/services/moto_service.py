@@ -250,7 +250,7 @@ def excluir_moto_usuario(db: Session, moto_usuario_id: int, usuario_id: int) -> 
 def _normalizar_placa(placa: str) -> str:
     placa_normalizada = placa.strip().upper().replace("-", "")
     if not PLACA_RE.match(placa_normalizada):
-        raise ConsultaPlacaErro(401, "Placa Invalida favor usar o formato AAA0X00 ou AAA9999")
+        raise ConsultaPlacaErro(422, "Placa Invalida favor usar o formato AAA0X00 ou AAA9999")
     return placa_normalizada
 
 

@@ -226,8 +226,8 @@ function proximaPagina() {
 function formatarDiaSemana(ds: string | null): string {
   if (!ds) return ''
   const map: Record<string, string> = {
-    'MONDAY': 'SEG', 'TUESDAY': 'TER', 'WEDNESDAY': 'QUA',
-    'THURSDAY': 'QUI', 'FRIDAY': 'SEX', 'SATURDAY': 'SAB', 'SUNDAY': 'DOM'
+    'SEGUNDA': 'SEG', 'TERCA': 'TER', 'QUARTA': 'QUA',
+    'QUINTA': 'QUI', 'SEXTA': 'SEX', 'SABADO': 'SAB', 'DOMINGO': 'DOM'
   }
   return map[ds] ?? ds.slice(0, 3)
 }
