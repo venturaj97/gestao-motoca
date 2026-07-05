@@ -7,6 +7,12 @@ const router = createRouter({
   routes: [
     // === Rotas públicas ===
     {
+      path: '/inicio',
+      name: 'inicio',
+      component: () => import('@/views/InicioView.vue'),
+      meta: { publica: true },
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
@@ -84,8 +90,8 @@ router.beforeEach(async (to) => {
     return // deixa passar
   }
 
-  // 2. Não autenticado: vai para login
-  if (!auth.estaLogado) return { name: 'login' }
+  // 2. Não autenticado: vai para a entrada pública
+  if (!auth.estaLogado) return { name: 'inicio' }
 
   // 3. Autenticado: carrega dados se ainda não carregou
   if (!auth.usuario) await auth.carregarUsuario()
