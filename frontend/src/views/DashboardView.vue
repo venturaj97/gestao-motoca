@@ -273,28 +273,28 @@ onMounted(() => {
 
         <div class="grid grid-cols-3 gap-2">
           <button
-            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
             :class="modoPeriodo === 'HOJE'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
             @click="aplicarPeriodoRapido('HOJE')"
           >
             HOJE
           </button>
           <button
-            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
             :class="modoPeriodo === 'SEMANA'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
             @click="aplicarPeriodoRapido('SEMANA')"
           >
             SEMANA
           </button>
           <button
-            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
             :class="modoPeriodo === 'MES'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
             @click="aplicarPeriodoRapido('MES')"
           >
             MÊS
@@ -406,32 +406,38 @@ onMounted(() => {
           <div class="grid grid-cols-2 gap-3">
             <!-- Lançar Ganho -->
             <button
-              class="flex flex-col items-center justify-center gap-3 bg-surface-container-high py-6
-                     hover:bg-surface-bright transition-colors active:scale-[0.97] group"
+              class="flex items-center gap-3 bg-white dark:bg-surface-container border-2 border-outline-variant hover:border-primary-container dark:hover:border-primary-container p-4 shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.96] group relative cursor-pointer text-left"
               @click="router.push({ name: 'lancar' })"
             >
-              <div class="w-12 h-12 bg-primary-container/10 flex items-center justify-center text-primary-container">
+              <div class="w-12 h-12 bg-primary-container text-on-primary-fixed flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 shrink-0">
                 <span class="material-symbols-outlined text-2xl">add_circle</span>
               </div>
-              <span class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant
-                           group-hover:text-primary-container transition-colors uppercase">
-                LANÇAR GANHO
-              </span>
+              <div class="flex flex-col overflow-hidden">
+                <span class="font-headline font-black text-xs tracking-wider text-on-surface group-hover:text-primary-container transition-colors uppercase truncate">
+                  LANÇAR GANHO
+                </span>
+                <span class="font-label text-[9px] text-on-surface-variant uppercase truncate">
+                  Corrida, entrega...
+                </span>
+              </div>
             </button>
 
             <!-- Lançar Despesa -->
             <button
-              class="flex flex-col items-center justify-center gap-3 bg-surface-container-high py-6
-                     hover:bg-surface-bright transition-colors active:scale-[0.97] group"
+              class="flex items-center gap-3 bg-white dark:bg-surface-container border-2 border-outline-variant hover:border-secondary p-4 shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.96] group relative cursor-pointer text-left"
               @click="router.push({ name: 'lancar', query: { tipo: 'DESPESA' } })"
             >
-              <div class="w-12 h-12 bg-secondary-container/20 flex items-center justify-center text-secondary">
+              <div class="w-12 h-12 bg-secondary text-on-secondary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 shrink-0">
                 <span class="material-symbols-outlined text-2xl">remove_circle</span>
               </div>
-              <span class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant
-                           group-hover:text-secondary transition-colors uppercase">
-                LANÇAR DESPESA
-              </span>
+              <div class="flex flex-col overflow-hidden">
+                <span class="font-headline font-black text-xs tracking-wider text-on-surface group-hover:text-secondary transition-colors uppercase truncate">
+                  LANÇAR DESPESA
+                </span>
+                <span class="font-label text-[9px] text-on-surface-variant uppercase truncate">
+                  Gasolina, peça...
+                </span>
+              </div>
             </button>
           </div>
         </section>
@@ -460,7 +466,7 @@ onMounted(() => {
     </main>
 
     <!-- ══ Bottom Navigation Bar ═══════════════════════════════ -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-background border-t-4 border-surface-container grid grid-cols-5">
+    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">
       <button
         v-for="item in navItems"
         :key="item.name"
