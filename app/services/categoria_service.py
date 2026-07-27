@@ -9,9 +9,9 @@ TIPOS_VALIDOS = {"GANHO", "DESPESA"}
 GRUPOS_DESPESA_VALIDOS = {"GERAL", "MANUTENCAO", "ABASTECIMENTO", "IMPOSTO"}
 
 CATEGORIAS_PADRAO = [
-    {"nome": "Entregas (App)", "tipo": "GANHO", "grupo_despesa": None},
-    {"nome": "Entregas Particulares", "tipo": "GANHO", "grupo_despesa": None},
-    {"nome": "Outros Ganhos", "tipo": "GANHO", "grupo_despesa": None},
+    {"nome": "Entrega (App)", "tipo": "GANHO", "grupo_despesa": None},
+    {"nome": "Passageiro", "tipo": "GANHO", "grupo_despesa": None},
+    {"nome": "Outros", "tipo": "GANHO", "grupo_despesa": None},
     {"nome": "Almoco", "tipo": "DESPESA", "grupo_despesa": "GERAL"},
     {"nome": "Cafe", "tipo": "DESPESA", "grupo_despesa": "GERAL"},
     {"nome": "Combustivel", "tipo": "DESPESA", "grupo_despesa": "ABASTECIMENTO"},

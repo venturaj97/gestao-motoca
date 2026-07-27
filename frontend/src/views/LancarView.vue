@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 
 import { useMotoStore } from '@/stores/moto'
 import { criarLancamentosLote } from '@/api/lancamentos'
+import { criarAbastecimento } from '@/api/abastecimentos'
 import { listarCategorias } from '@/api/categorias'
 import type { CategoriaResposta, TipoLancamento, PeriodoLancamento, GrupoDespesa } from '@/types'
 import LancarDateInput from '@/components/LancarDateInput.vue'
@@ -33,6 +34,7 @@ const dataLancamento = ref(hoje)
 // Estado para lançamento simples (valor único)
 const valorUnico        = ref('')
 const categoriaUnicaId = ref<number | null>(null)
+const litros            = ref('')
 
 // Estado para modo detalhado (múltiplas categorias / corridas)
 const categoriasSelecionadas = ref<number[]>([])
@@ -84,6 +86,14 @@ const ehDetalhado = computed(() => periodo.value === 'CORRIDA')
 const ehSimples   = computed(() => periodo.value === 'DIARIO')
 const motoId      = computed(() => motoStore.motoAtiva?.id)
 
+const ehCombustivel = computed(() => {
+  if (tipo.value !== 'DESPESA' || !categoriaUnicaId.value) return false
+  const cat = categoriasFiltradas.value.find(c => c.id === categoriaUnicaId.value)
+  if (!cat) return false
+  const nome = cat.nome.toLowerCase()
+  return cat.grupo_despesa === 'ABASTECIMENTO' || nome.includes('combustivel') || nome.includes('combustível') || nome.includes('gasolina')
+})
+
 const valorUnicoNumero = computed(() => textoParaCentavos(valorUnico.value) / 100)
 
 function selecionarCategoriaPadrao() {
@@ -111,6 +121,7 @@ watch(categoriasFiltradas, () => {
 
 watch(tipo, () => {
   periodo.value = 'DIARIO'
+  litros.value = ''
   selecionarCategoriaPadrao()
 })
 
@@ -160,6 +171,7 @@ function alterarTipo(novoTipo: TipoLancamento) {
   periodo.value = 'DIARIO'
   erro.value = ''
   sucesso.value = false
+  litros.value = ''
   if (novoTipo === 'DESPESA') grupoDespesaAtivo.value = 'GERAL'
   categoriasSelecionadas.value = []
   valoresPorCategoria.value = {}
@@ -183,7 +195,17 @@ async function handleSubmit() {
 
   if (ehSimples.value) {
     if (valorUnicoNumero.value <= 0) { erro.value = 'Informe o valor do lançamento.'; return }
-    if (!categoriaUnicaId.value) { erro.value = 'Nenhuma categoria disponível.'; return }
+    if (tipo.value === 'DESPESA' && !categoriaUnicaId.value) {
+      erro.value = 'Selecione uma categoria para a despesa.'
+      return
+    }
+    if (ehCombustivel.value) {
+      const litrosNum = parseFloat(litros.value)
+      if (isNaN(litrosNum) || litrosNum <= 0) {
+        erro.value = 'Informe a quantidade de litros abastecidos.'
+        return
+      }
+    }
     if (!dataLancamento.value) { erro.value = 'A data do lançamento é obrigatória.'; return }
     await enviarSimples()
     return
@@ -233,20 +255,34 @@ async function enviarSimples() {
   if (!categoriaUnicaId.value) return
   enviando.value = true
   try {
-    const retorno = await criarLancamentosLote([{
-      tipo: tipo.value,
-      categoria_id: categoriaUnicaId.value,
-      valor: valorUnicoNumero.value,
-      descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
-      periodo: tipo.value === 'GANHO' ? 'DIARIO' : undefined,
-      data_lancamento: dataLancamento.value,
-      moto_usuario_id: motoId.value,
-    }])
-    if (tipo.value === 'GANHO' && categoriaUnicaId.value) {
-      localStorage.setItem('ultima_categoria_ganho_id', String(categoriaUnicaId.value))
+    const litrosNum = parseFloat(litros.value)
+    if (tipo.value === 'DESPESA' && ehCombustivel.value && !isNaN(litrosNum) && litrosNum > 0) {
+      await criarAbastecimento({
+        categoria_id: categoriaUnicaId.value,
+        valor_total: valorUnicoNumero.value,
+        litros: litrosNum,
+        data_abastecimento: dataLancamento.value,
+        descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
+        moto_usuario_id: motoId.value,
+      })
+      mostrarSucesso(1, valorUnicoNumero.value)
+    } else {
+      const retorno = await criarLancamentosLote([{
+        tipo: tipo.value,
+        categoria_id: categoriaUnicaId.value,
+        valor: valorUnicoNumero.value,
+        descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
+        periodo: tipo.value === 'GANHO' ? 'DIARIO' : undefined,
+        data_lancamento: dataLancamento.value,
+        moto_usuario_id: motoId.value,
+      }])
+      if (tipo.value === 'GANHO' && categoriaUnicaId.value) {
+        localStorage.setItem('ultima_categoria_ganho_id', String(categoriaUnicaId.value))
+      }
+      mostrarSucesso(retorno.quantidade, Number(retorno.total_valor))
     }
-    mostrarSucesso(retorno.quantidade, Number(retorno.total_valor))
     valorUnico.value = ''
+    litros.value = ''
     mostrarDescricao.value = false
     descricao.value = ''
   } catch {
@@ -417,21 +453,41 @@ onMounted(carregar)
             <LancarDateInput v-model="dataLancamento" :tone="tipo === 'DESPESA' ? 'despesa' : 'ganho'" />
           </div>
 
-          <!-- Categoria (opcional) -->
+          <!-- Categoria -->
           <div v-if="!carregando && categoriasFiltradas.length > 0">
             <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
               CATEGORIA
-              <span class="font-normal normal-case tracking-normal text-[9px] ml-1 opacity-60">(opcional)</span>
+              <span v-if="tipo === 'GANHO'" class="font-normal normal-case tracking-normal text-[9px] ml-1 opacity-60">(opcional)</span>
+              <span v-else class="font-normal text-secondary text-[9px] ml-1">*obrigatório</span>
             </label>
             <select
               v-model="categoriaUnicaId"
               class="tactical-input w-full py-3 text-sm font-bold bg-surface-container"
               :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
             >
+              <option v-if="tipo === 'DESPESA'" :value="null" disabled>Selecione uma categoria...</option>
               <option v-for="cat in categoriasFiltradas" :key="cat.id" :value="cat.id">
                 {{ cat.nome }}
               </option>
             </select>
+          </div>
+
+          <!-- Campo Litros (apenas para Combustível / Abastecimento em DESPESA) -->
+          <div v-if="ehCombustivel">
+            <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
+              LITROS <span class="font-normal text-secondary text-[9px] ml-1">*obrigatório</span>
+            </label>
+            <div class="relative">
+              <input
+                v-model="litros"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ex: 5.50"
+                class="tactical-input w-full py-3 px-4 text-base font-bold bg-surface-container focus:!border-secondary"
+              />
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs font-bold">L</span>
+            </div>
           </div>
 
         </template>
