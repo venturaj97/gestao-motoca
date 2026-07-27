@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import heroUrl from '@/assets/hero.png'
 
 const router = useRouter()
 
@@ -26,11 +25,9 @@ const recursos = [
 <template>
   <main class="min-h-screen bg-background text-on-background font-body">
     <section class="relative overflow-hidden">
-      <img
-        :src="heroUrl"
-        alt=""
-        class="absolute inset-0 h-full w-full object-cover opacity-20 dark:opacity-28"
-      />
+      <div
+        class="absolute inset-0 bg-gradient-to-br from-primary-container/20 via-background to-surface opacity-60"
+      ></div>
       <div class="absolute inset-0 bg-background/86 dark:bg-background/82"></div>
 
       <header class="relative z-10 flex items-center justify-between px-4 pt-4 sm:px-8 sm:pt-6">
