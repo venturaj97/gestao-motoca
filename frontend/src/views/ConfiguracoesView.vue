@@ -584,7 +584,10 @@ onMounted(async () => {
               <option value="GANHO">GANHO</option>
               <option value="DESPESA">DESPESA</option>
             </select>
-            <button class="h-10 bg-surface-container-high border border-outline-variant text-xs uppercase" @click="carregarLancamentos(1)">Aplicar</button>
+            <button class="h-10 bg-white dark:bg-surface-container-high border border-outline dark:border-outline-variant text-on-surface font-label text-xs font-bold uppercase hover:bg-surface-variant dark:hover:bg-surface-bright transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1" @click="carregarLancamentos(1)">
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              Aplicar
+            </button>
           </div>
         </div>
 

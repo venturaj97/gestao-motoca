@@ -310,9 +310,10 @@ onMounted(() => {
             <AppDateInput v-model="dataFim" tone="system" :min="dataInicio || undefined" />
           </div>
           <button
-            class="w-full py-2 bg-surface-container-high border border-outline-variant text-on-surface font-label text-[9px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-colors"
+            class="w-full py-2.5 bg-white dark:bg-surface-container-high border border-outline dark:border-outline-variant text-on-surface font-label text-[10px] font-bold tracking-widest uppercase hover:bg-surface-variant dark:hover:bg-surface-bright transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
             @click="aplicarPeriodoPersonalizado"
           >
+            <span class="material-symbols-outlined text-sm">check_circle</span>
             APLICAR PERÍODO
           </button>
         </div>

@@ -7,57 +7,57 @@
 
 @layer base {
   :root {
-    --color-primary: 57 80 0;
-    --color-primary-container: 198 239 0;
-    --color-primary-fixed: 78 102 0;
-    --color-primary-fixed-dim: 91 116 0;
-    --color-primary-dim: 91 116 0;
+    --color-primary: 22 163 74;
+    --color-primary-container: 22 163 74;
+    --color-primary-fixed: 22 163 74;
+    --color-primary-fixed-dim: 21 128 61;
+    --color-primary-dim: 21 128 61;
     --color-on-primary: 255 255 255;
-    --color-on-primary-container: 45 58 0;
-    --color-on-primary-fixed: 35 45 0;
-    --color-on-primary-fixed-variant: 64 82 0;
-    --color-secondary: 196 0 62;
-    --color-secondary-dim: 159 0 52;
-    --color-secondary-container: 255 216 220;
-    --color-secondary-fixed: 126 0 40;
-    --color-secondary-fixed-dim: 158 0 51;
+    --color-on-primary-container: 255 255 255;
+    --color-on-primary-fixed: 255 255 255;
+    --color-on-primary-fixed-variant: 240 253 244;
+    --color-secondary: 220 38 38;
+    --color-secondary-dim: 185 28 28;
+    --color-secondary-container: 254 226 226;
+    --color-secondary-fixed: 220 38 38;
+    --color-secondary-fixed-dim: 185 28 28;
     --color-on-secondary: 255 255 255;
-    --color-on-secondary-container: 82 0 24;
+    --color-on-secondary-container: 153 27 27;
     --color-on-secondary-fixed: 255 255 255;
-    --color-on-secondary-fixed-variant: 255 238 240;
-    --color-tertiary: 66 65 69;
-    --color-tertiary-dim: 97 96 100;
-    --color-tertiary-container: 231 228 233;
-    --color-tertiary-fixed: 66 65 69;
-    --color-tertiary-fixed-dim: 96 95 99;
+    --color-on-secondary-fixed-variant: 254 242 242;
+    --color-tertiary: 71 85 105;
+    --color-tertiary-dim: 100 116 139;
+    --color-tertiary-container: 241 245 249;
+    --color-tertiary-fixed: 71 85 105;
+    --color-tertiary-fixed-dim: 100 116 139;
     --color-on-tertiary: 255 255 255;
-    --color-on-tertiary-container: 47 46 50;
+    --color-on-tertiary-container: 30 41 59;
     --color-on-tertiary-fixed: 255 255 255;
-    --color-on-tertiary-fixed-variant: 244 241 245;
-    --color-background: 238 237 232;
-    --color-surface: 238 237 232;
-    --color-surface-dim: 205 204 199;
-    --color-surface-bright: 248 247 243;
-    --color-surface-variant: 220 219 214;
-    --color-surface-container-lowest: 244 243 239;
-    --color-surface-container-low: 232 231 226;
-    --color-surface-container: 224 223 218;
-    --color-surface-container-high: 215 214 209;
-    --color-surface-container-highest: 207 206 201;
-    --color-surface-tint: 57 80 0;
-    --color-on-background: 28 28 29;
-    --color-on-surface: 28 28 29;
-    --color-on-surface-variant: 74 73 75;
-    --color-inverse-surface: 48 48 50;
-    --color-inverse-on-surface: 246 243 246;
+    --color-on-tertiary-fixed-variant: 248 250 252;
+    --color-background: 248 250 252;
+    --color-surface: 255 255 255;
+    --color-surface-dim: 228 228 231;
+    --color-surface-bright: 255 255 255;
+    --color-surface-variant: 240 240 243;
+    --color-surface-container-lowest: 255 255 255;
+    --color-surface-container-low: 255 255 255;
+    --color-surface-container: 255 255 255;
+    --color-surface-container-high: 226 232 240;
+    --color-surface-container-highest: 212 212 216;
+    --color-surface-tint: 22 163 74;
+    --color-on-background: 24 24 27;
+    --color-on-surface: 24 24 27;
+    --color-on-surface-variant: 71 85 105;
+    --color-inverse-surface: 39 39 42;
+    --color-inverse-on-surface: 248 250 252;
     --color-inverse-primary: 202 253 0;
-    --color-outline: 103 102 104;
-    --color-outline-variant: 174 172 175;
-    --color-error: 186 26 26;
-    --color-error-dim: 147 0 10;
-    --color-error-container: 255 218 214;
+    --color-outline: 148 163 184;
+    --color-outline-variant: 203 213 225;
+    --color-error: 220 38 38;
+    --color-error-dim: 185 28 28;
+    --color-error-container: 254 226 226;
     --color-on-error: 255 255 255;
-    --color-on-error-container: 65 0 2;
+    --color-on-error-container: 153 27 27;
   }
 
   .dark {
@@ -168,12 +168,23 @@
            focus:border-primary-container focus:ring-0 focus:outline-none
            text-on-surface font-headline font-medium tracking-wide
            placeholder:text-outline transition-colors;
-    box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.10);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.03);
+  }
+
+  .dark .tactical-input {
+    box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.20);
   }
 
   /* Linha escanável (histórico) */
   .scannable-row {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgb(var(--color-outline-variant) / 0.6);
+  }
+
+  /* Cartões em Branco Puro com sombra marcada no Modo Claro para alta visibilidade e profundidade */
+  html:not(.dark) .bg-surface-container,
+  html:not(.dark) .bg-surface-container-low {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    border: none;
   }
 
   /* Botão tático primário */

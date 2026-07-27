@@ -82,7 +82,6 @@ const totalSelecionado = computed(() =>
     acc + valorTextoParaNumero(valoresPorCategoria.value[cat.id] || ''), 0)
 )
 
-const ehDetalhado = computed(() => periodo.value === 'CORRIDA')
 const ehSimples   = computed(() => periodo.value === 'DIARIO')
 const motoId      = computed(() => motoStore.motoAtiva?.id)
 
