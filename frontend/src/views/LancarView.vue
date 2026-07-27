@@ -86,16 +86,32 @@ const motoId      = computed(() => motoStore.motoAtiva?.id)
 
 const valorUnicoNumero = computed(() => textoParaCentavos(valorUnico.value) / 100)
 
-// Auto-seleciona primeira categoria
-watch(categoriasFiltradas, (lista) => {
-  if (!lista.find(c => c.id === categoriaUnicaId.value)) {
-    categoriaUnicaId.value = lista[0]?.id ?? null
+function selecionarCategoriaPadrao() {
+  const lista = categoriasFiltradas.value
+  if (lista.length === 0) {
+    categoriaUnicaId.value = null
+    return
   }
+  if (tipo.value === 'GANHO') {
+    const salvo = localStorage.getItem('ultima_categoria_ganho_id')
+    if (salvo) {
+      const idSalvo = parseInt(salvo, 10)
+      if (lista.some(c => c.id === idSalvo)) {
+        categoriaUnicaId.value = idSalvo
+        return
+      }
+    }
+  }
+  categoriaUnicaId.value = lista[0]?.id ?? null
+}
+
+watch(categoriasFiltradas, () => {
+  selecionarCategoriaPadrao()
 }, { immediate: true })
 
 watch(tipo, () => {
   periodo.value = 'DIARIO'
-  categoriaUnicaId.value = categoriasFiltradas.value[0]?.id ?? null
+  selecionarCategoriaPadrao()
 })
 
 // ── Carregar ────────────────────────────────────────────────────
@@ -226,6 +242,9 @@ async function enviarSimples() {
       data_lancamento: dataLancamento.value,
       moto_usuario_id: motoId.value,
     }])
+    if (tipo.value === 'GANHO' && categoriaUnicaId.value) {
+      localStorage.setItem('ultima_categoria_ganho_id', String(categoriaUnicaId.value))
+    }
     mostrarSucesso(retorno.quantidade, Number(retorno.total_valor))
     valorUnico.value = ''
     mostrarDescricao.value = false
