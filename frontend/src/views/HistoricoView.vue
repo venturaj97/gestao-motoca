@@ -294,28 +294,28 @@ onMounted(() => {
         </p>
         <div class="grid grid-cols-3 gap-2">
           <button
-            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
             :class="modoPeriodo === 'HOJE'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
             @click="aplicarPeriodoRapido('HOJE')"
           >
             HOJE
           </button>
           <button
-            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
             :class="modoPeriodo === 'SEMANA'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
             @click="aplicarPeriodoRapido('SEMANA')"
           >
             SEMANA
           </button>
           <button
-            class="py-2 font-label text-[9px] font-bold tracking-widest uppercase border"
+            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
             :class="modoPeriodo === 'MES'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container'
-              : 'bg-surface-container-high text-on-surface-variant border-outline-variant'"
+              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
             @click="aplicarPeriodoRapido('MES')"
           >
             MÊS
@@ -518,7 +518,7 @@ onMounted(() => {
     </main>
 
     <!-- Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-background border-t-4 border-surface-container grid grid-cols-5">
+    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">
       <button v-for="item in navItems" :key="item.name"
         class="flex flex-col items-center justify-center h-full w-full transition-colors duration-100"
         :class="isActive(item.name)

@@ -279,7 +279,7 @@ onMounted(carregar)
     </main>
 
     <!-- Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-background border-t-4 border-surface-container grid grid-cols-5">
+    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">
       <button v-for="item in navItems" :key="item.name"
         class="flex flex-col items-center justify-center h-full w-full transition-colors duration-100"
         :class="isActive(item.name)
