@@ -192,13 +192,27 @@ async function removerCategoria(id: number) {
   }
 }
 
+function formatarDataIsoLocal(d: Date = new Date()): string {
+  const ano = d.getFullYear()
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
+function formatarIsoParaBr(iso: string): string {
+  if (!iso) return ''
+  const [ano, mes, dia] = iso.split('-')
+  if (!ano || !mes || !dia) return iso
+  return `${dia}/${mes}/${ano}`
+}
+
 const lancamentos = ref<LancamentoResposta[]>([])
 const carregandoLancamentos = ref(false)
 const erroLancamento = ref('')
 const sucessoLancamento = ref('')
 const lancTipoFiltro = ref<TipoLancamento | 'TODOS'>('TODOS')
-const lancDataInicio = ref(new Date().toISOString().slice(0, 10))
-const lancDataFim = ref(new Date().toISOString().slice(0, 10))
+const lancDataInicio = ref(formatarDataIsoLocal())
+const lancDataFim = ref(formatarDataIsoLocal())
 const lancPagina = ref(1)
 const lancTotalPaginas = ref(1)
 const lancTotal = ref(0)
@@ -312,8 +326,8 @@ function periodoRapidoLancamentos(dias: number) {
   const fim = new Date()
   const ini = new Date()
   ini.setDate(fim.getDate() - dias)
-  lancDataFim.value = fim.toISOString().slice(0, 10)
-  lancDataInicio.value = ini.toISOString().slice(0, 10)
+  lancDataFim.value = formatarDataIsoLocal(fim)
+  lancDataInicio.value = formatarDataIsoLocal(ini)
   carregarLancamentos(1)
 }
 
@@ -570,7 +584,10 @@ onMounted(async () => {
               <option value="GANHO">GANHO</option>
               <option value="DESPESA">DESPESA</option>
             </select>
-            <button class="h-10 bg-surface-container-high border border-outline-variant text-xs uppercase" @click="carregarLancamentos(1)">Aplicar</button>
+            <button class="h-10 bg-white dark:bg-surface-container-high border border-outline dark:border-outline-variant text-on-surface font-label text-xs font-bold uppercase hover:bg-surface-variant dark:hover:bg-surface-bright transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1" @click="carregarLancamentos(1)">
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              Aplicar
+            </button>
           </div>
         </div>
 
@@ -588,7 +605,7 @@ onMounted(async () => {
           >
             <div v-if="editLancId !== l.id" class="flex items-start justify-between gap-2">
               <div>
-                <p class="font-label text-[9px] text-on-surface-variant uppercase">{{ l.data_lancamento }} · {{ l.tipo }}</p>
+                <p class="font-label text-[9px] text-on-surface-variant uppercase">{{ formatarIsoParaBr(l.data_lancamento) }} · {{ l.tipo }}</p>
                 <p class="font-label text-xs">{{ l.categoria_nome || 'Sem categoria' }}</p>
                 <p v-if="l.descricao" class="font-label text-[10px] text-on-surface-variant">{{ l.descricao }}</p>
                 <span

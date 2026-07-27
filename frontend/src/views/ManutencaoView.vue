@@ -18,7 +18,12 @@ const kmAtual         = ref('')
 const descricaoServico = ref('')
 const oficina         = ref('')
 const tipoServico     = ref('')
-const dataManutencao  = ref(new Date().toISOString().slice(0, 10))
+function hojeLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const dataManutencao  = ref(hojeLocal())
 
 const categoriasFiltradas = ref<CategoriaResposta[]>([])
 const carregando = ref(false)
@@ -93,7 +98,7 @@ function prepararNovaManutencao() {
   descricaoServico.value = ''
   oficina.value = ''
   tipoServico.value = ''
-  dataManutencao.value = new Date().toISOString().slice(0, 10)
+  dataManutencao.value = hojeLocal()
   sucesso.value = false
   perguntarNovaManutencao.value = false
 }

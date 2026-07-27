@@ -19,7 +19,12 @@ const kmAtual          = ref('')
 const posto            = ref('')
 const tipoCombustivel  = ref('')
 const descricao        = ref('')
-const dataAbastecimento = ref(new Date().toISOString().slice(0, 10))
+function hojeLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const dataAbastecimento = ref(hojeLocal())
 
 const categoriasFiltradas = ref<CategoriaResposta[]>([])
 const carregando   = ref(false)

@@ -27,12 +27,12 @@ function onInput(event: Event) {
       :value="modelValue"
       :min="min"
       :max="max"
-      class="app-date-input w-full bg-background border border-outline-variant px-2 py-2 pr-8 text-xs text-on-surface"
+      class="app-date-input w-full bg-white dark:bg-background border border-outline-variant px-2 py-2 pr-8 text-xs text-on-surface font-medium shadow-2xs"
       @input="onInput"
     />
     <span
       class="material-symbols-outlined app-date-icon"
-      :class="tone === 'despesa' ? 'text-secondary' : 'text-primary-container'"
+      :class="tone === 'despesa' ? 'text-secondary' : 'text-on-surface-variant dark:text-primary-container'"
     >
       calendar_month
     </span>
