@@ -113,20 +113,53 @@ Analisando o histórico recente de commits na branch `inicio-front` / `main`:
 ## 🚀 Como Executar e Verificar o Projeto
 
 ### Backend (Python/FastAPI)
+### 1. Opção Recomendada: Usando Docker (Mais Fácil)
+Você não precisa se preocupar com Python local nem instalar banco de dados, o Docker sobe o banco PostgreSQL e o Backend juntos:
+
 ```bash
-# Ativar venv e rodar o servidor de desenvolvimento
-.venv/bin/uvicorn app.main:app --reload --port 8000
+# Subir o banco de dados e o backend FastAPI juntos
+docker compose up --build
 
-# Executar suíte de testes unitários do backend
-.venv/bin/pytest
+# Para rodar em segundo plano (detached):
+docker compose up -d
 ```
+> O backend estará acessível automaticamente em `http://localhost:8000`.
 
-### Frontend (Vue 3 / Vite)
+---
+
+### 2. Opção Alternativa: Usando Python / Virtualenv Local (`.venv`)
+
+Se preferir rodar sem Docker diretamente na sua máquina:
+
+1. **Ativar o ambiente virtual (virtualenv):**  
+   No terminal Linux/macOS, use o comando `source` (não execute o arquivo `.activate` diretamente):
+   ```bash
+   source .venv/bin/activate
+   ```
+
+2. **Subir o servidor de desenvolvimento (Uvicorn):**  
+   Use a sintaxe de módulo `app.main:app` (que aponta para a variável `app` dentro de `app/main.py`):
+   ```bash
+   # Com a venv ativada:
+   uvicorn app.main:app --reload --port 8000
+
+   # Ou chamando a venv diretamente em um único comando:
+   .venv/bin/uvicorn app.main:app --reload --port 8000
+   ```
+
+3. **Executar a suíte de testes unitários:**
+   ```bash
+   .venv/bin/pytest
+   ```
+
+---
+
+### 3. Frontend (Vue 3 / Vite)
 ```bash
 # Entrar na pasta do frontend
 cd frontend
 
-# Iniciar servidor de desenvolvimento
+# Iniciar servidor de desenvolvimento (http://localhost:5173)
 npm run dev
 
 # Executar checagem de tipos (TypeScript) e build de produção
