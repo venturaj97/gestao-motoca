@@ -7,12 +7,14 @@
 ## 1. 🔐 Módulo de Autenticação e Usuários
 
 * **Objetivo:** Garantir a segurança do acesso, gestão de perfil e criação do ambiente inicial do motoboy.
-* **Endpoints principais:** `POST /usuarios`, `POST /auth/login`, `GET /auth/me`
+* **Endpoints principais:** `POST /usuarios`, `POST /auth/login`, `GET /auth/me`, `POST /auth/solicitar-recuperacao`, `POST /auth/redefinir-senha`, `PUT /auth/alterar-senha`
 * **Funcionamento:**
   1. **Cadastro:** O usuário informa nome, e-mail e senha. A senha é criptografada com `bcrypt`.
   2. **Categorias Padrão Automáticas:** No momento do cadastro, o sistema gera automaticamente uma lista de categorias iniciais para o usuário (combustível, troca de óleo, refeição, corridas de aplicativo, etc.).
   3. **Autenticação:** Ao realizar login, o backend gera um token **JWT (Bearer Token)** válido por 24 horas.
-  4. **Proteção de Rotas:** Todas as chamadas subsequentes ao backend enviam o token no cabeçalho `Authorization: Bearer <token>`, identificando quem é o usuário logado via `Depends(get_usuario_logado)`.
+  4. **Recuperação de Senha por E-mail:** O entregador pode solicitar um código PIN de 6 dígitos via e-mail para redefinir sua senha caso a tenha esquecido.
+  5. **Alteração de Senha:** O entregador logado pode alterar sua senha na aba "Senha" das Configurações fornecendo a senha atual.
+  6. **Proteção de Rotas:** Todas as chamadas subsequentes ao backend enviam o token no cabeçalho `Authorization: Bearer <token>`, identificando quem é o usuário logado via `Depends(get_usuario_logado)`.
 
 ---
 

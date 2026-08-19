@@ -16,12 +16,56 @@ import type {
 } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 
+import { alterarSenhaLogado } from '@/api/recuperacao'
+
 const router = useRouter()
 const route = useRoute()
 const motoStore = useMotoStore()
 
-type AbaConfig = 'MOTO' | 'CATEGORIAS' | 'LANCAMENTOS'
+type AbaConfig = 'MOTO' | 'CATEGORIAS' | 'LANCAMENTOS' | 'SEGURANCA'
 const abaAtiva = ref<AbaConfig>('MOTO')
+
+// Estados para alteração de senha estando logado
+const senhaAtual = ref('')
+const novaSenha = ref('')
+const confirmaNovaSenha = ref('')
+const enviandoSenha = ref(false)
+const erroSenha = ref('')
+const sucessoSenha = ref('')
+
+async function handleAlterarSenha() {
+  if (!senhaAtual.value || !novaSenha.value) {
+    erroSenha.value = 'Preencha a senha atual e a nova senha.'
+    return
+  }
+  if (novaSenha.value !== confirmaNovaSenha.value) {
+    erroSenha.value = 'A confirmação de senha não confere.'
+    return
+  }
+  if (novaSenha.value.length < 6) {
+    erroSenha.value = 'A nova senha deve ter no mínimo 6 caracteres.'
+    return
+  }
+
+  erroSenha.value = ''
+  sucessoSenha.value = ''
+  enviandoSenha.value = true
+
+  try {
+    const res = await alterarSenhaLogado({
+      senha_atual: senhaAtual.value,
+      nova_senha: novaSenha.value,
+    })
+    sucessoSenha.value = res.mensagem || 'Senha alterada com sucesso.'
+    senhaAtual.value = ''
+    novaSenha.value = ''
+    confirmaNovaSenha.value = ''
+  } catch (e: any) {
+    erroSenha.value = e?.response?.data?.detail || 'Erro ao alterar senha. Verifique a senha atual.'
+  } finally {
+    enviandoSenha.value = false
+  }
+}
 
 const navItems = [
   { name: 'dashboard', label: 'Início', icon: 'dashboard' },
@@ -365,7 +409,7 @@ onMounted(async () => {
         <h2 class="font-headline font-extrabold text-3xl uppercase tracking-tight">CONFIGURAÇÕES</h2>
       </div>
 
-      <div class="grid grid-cols-3 gap-2">
+      <div class="grid grid-cols-4 gap-1.5">
         <button
           class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border"
           :class="abaAtiva === 'MOTO' ? 'bg-primary-container text-on-primary-fixed border-primary-container' : 'bg-surface-container text-on-surface-variant border-outline-variant'"
@@ -381,6 +425,11 @@ onMounted(async () => {
           :class="abaAtiva === 'LANCAMENTOS' ? 'bg-primary-container text-on-primary-fixed border-primary-container' : 'bg-surface-container text-on-surface-variant border-outline-variant'"
           @click="abaAtiva = 'LANCAMENTOS'"
         >LANÇAMENTOS</button>
+        <button
+          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border"
+          :class="abaAtiva === 'SEGURANCA' ? 'bg-primary-container text-on-primary-fixed border-primary-container' : 'bg-surface-container text-on-surface-variant border-outline-variant'"
+          @click="abaAtiva = 'SEGURANCA'"
+        >SENHA</button>
       </div>
 
       <section v-if="abaAtiva === 'MOTO'" class="space-y-3">
@@ -660,6 +709,68 @@ onMounted(async () => {
           <button class="w-9 h-9 border border-outline-variant" :disabled="lancPagina >= lancTotalPaginas" @click="carregarLancamentos(lancPagina + 1)">
             <span class="material-symbols-outlined text-base">chevron_right</span>
           </button>
+        </div>
+      </section>
+
+      <section v-if="abaAtiva === 'SEGURANCA'" class="space-y-4">
+        <div class="bg-surface-container-low p-5 border-l-4 border-primary-container space-y-4">
+          <div>
+            <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">SEGURANÇA E CONTA</p>
+            <h3 class="font-headline font-black text-xl text-on-surface uppercase">ALTERAR MINHA SENHA</h3>
+          </div>
+
+          <form class="space-y-4" @submit.prevent="handleAlterarSenha">
+            <div>
+              <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">SENHA ATUAL</label>
+              <input
+                v-model="senhaAtual"
+                type="password"
+                required
+                placeholder="••••••••"
+                class="tactical-input h-11 px-3"
+              />
+            </div>
+
+            <div>
+              <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">NOVA SENHA</label>
+              <input
+                v-model="novaSenha"
+                type="password"
+                required
+                minlength="6"
+                placeholder="••••••••"
+                class="tactical-input h-11 px-3"
+              />
+            </div>
+
+            <div>
+              <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">CONFIRMAR NOVA SENHA</label>
+              <input
+                v-model="confirmaNovaSenha"
+                type="password"
+                required
+                minlength="6"
+                placeholder="••••••••"
+                class="tactical-input h-11 px-3"
+              />
+            </div>
+
+            <div v-if="erroSenha" class="bg-error-container text-on-error-container text-xs p-3 font-label">
+              {{ erroSenha }}
+            </div>
+            <div v-if="sucessoSenha" class="bg-primary-container/20 text-primary-fixed border-l-2 border-primary-fixed text-xs p-3 font-label">
+              {{ sucessoSenha }}
+            </div>
+
+            <button
+              type="submit"
+              :disabled="enviandoSenha"
+              class="btn-primary h-12 w-full text-xs tracking-widest uppercase disabled:opacity-50"
+            >
+              <span v-if="enviandoSenha" class="material-symbols-outlined animate-spin mr-1">refresh</span>
+              ATUALIZAR SENHA
+            </button>
+          </form>
         </div>
       </section>
     </main>

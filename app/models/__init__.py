@@ -8,6 +8,7 @@ from .lancamento import Lancamento
 from .abastecimento import Abastecimento
 from .manutencao import Manutencao
 from .meta import Meta
+from .recuperacao_senha import RecuperacaoSenha
 
 __all__ = [
     "Usuario",
@@ -20,4 +21,6 @@ __all__ = [
     "Abastecimento",
     "Manutencao",
     "Meta",
+    "RecuperacaoSenha",
 ]
+

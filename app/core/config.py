@@ -37,6 +37,13 @@ class Settings(BaseSettings):
         validation_alias="CORS_ORIGINS",
     )
 
+    smtp_host: str = Field(default="smtp.gmail.com", validation_alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, validation_alias="SMTP_PORT")
+    smtp_user: str = Field(default="", validation_alias="SMTP_USER")
+    smtp_password: str = Field(default="", validation_alias="SMTP_PASSWORD")
+    smtp_from: str = Field(default="", validation_alias="SMTP_FROM")
+    smtp_tls: bool = Field(default=True, validation_alias="SMTP_TLS")
+
     @property
     def database_url(self) -> str:
         return (

@@ -16,7 +16,13 @@ from app.routers.visao_mes import router as visao_mes_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # schema passa a ser controlado por Alembic (migrations)
+    try:
+        from app.database.base import Base
+        from app.database.session import engine
+        import app.models  # noqa: F401
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Erro ao verificar tabelas: {e}")
     yield
 
 app = FastAPI(lifespan=lifespan)
