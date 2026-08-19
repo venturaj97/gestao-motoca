@@ -54,7 +54,11 @@ O **Gestão Motoca** é um sistema web de controle financeiro projetado especifi
 6. **🎨 Eliminação de FOUT (Flash de Texto Não Estilizado) nos Ícones**
    - Adicionados `preconnect` e links diretos do Google Fonts no [index.html](file:///home/jv/gm/gestao-motoca/frontend/index.html) e estilização de contenção de ligaturas no [style.css](file:///home/jv/gm/gestao-motoca/frontend/src/style.css), eliminando a exibição de nomes de variáveis/ícones (`mark_email_unread`, `verified`, `dashboard`, `refresh`, `logout`) durante a recarga de página.
 
-7. **Refatoração Visual e Correções Anteriores**
+7. **🗄️ Padronização Explícita das 4 Colunas Base no Banco de Dados**
+   - Declaradas diretamente em todos os modelos SQLAlchemy ([usuario.py](file:///home/jv/gm/gestao-motoca/app/models/usuario.py), [moto_usuario.py](file:///home/jv/gm/gestao-motoca/app/models/moto_usuario.py), [categoria.py](file:///home/jv/gm/gestao-motoca/app/models/categoria.py), [lancamento.py](file:///home/jv/gm/gestao-motoca/app/models/lancamento.py), [abastecimento.py](file:///home/jv/gm/gestao-motoca/app/models/abastecimento.py), [manutencao.py](file:///home/jv/gm/gestao-motoca/app/models/manutencao.py), [meta.py](file:///home/jv/gm/gestao-motoca/app/models/meta.py), [recuperacao_senha.py](file:///home/jv/gm/gestao-motoca/app/models/recuperacao_senha.py)) as 4 colunas padrão: `id`, `situacao` ('ATIVO'/'INATIVO'), `data` (atualização) e `data_criacao`.
+   - Migration Alembic: `0009_padronizacao_audit_mixin.py`.
+
+8. **Refatoração Visual e Correções Anteriores**
    - Refatoração do Modo Claro e resolução de bugs de fusos horários em formulários de datas.
    - Obrigatoriedade de seleção de Categoria no cadastro de despesas.
 

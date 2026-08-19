@@ -1,12 +1,12 @@
 from sqlalchemy import (
+    CheckConstraint,
     Column,
-    Integer,
-    Numeric,
     Date,
     DateTime,
-    String,
     ForeignKey,
-    CheckConstraint,
+    Integer,
+    Numeric,
+    String,
     func,
 )
 
@@ -53,10 +53,7 @@ class Manutencao(Base):
     descricao_servico = Column(String(255), nullable=True)
     oficina = Column(String(120), nullable=True)
     tipo_servico = Column(String(80), nullable=True)
-
-    data_criacao = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
+    situacao = Column(String(20), nullable=False, default="ATIVO", server_default="ATIVO")
+    data = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    data_criacao = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

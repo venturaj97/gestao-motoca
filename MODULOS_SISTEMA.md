@@ -110,4 +110,5 @@
 - **CORS Configurado:** Permite origens do frontend em desenvolvimento e produção.
 - **Tema Claro / Escuro (Light & Dark Mode):** Suporte nativo em todas as telas com alternância em 1 clique.
 - **Prevenção de FOUT nos Ícones (Google Fonts Preconnect & Anti-Ligature CSS):** Carregamento antecipado de fontes via `preconnect` no `index.html` e regras CSS de contenção em `style.css` para impedir o vazamento de texto bruto das variáveis de ícone (`mark_email_unread`, `verified`, `dashboard`) durante a recarga da página.
+- **Padronização Base de Banco de Dados (4 Colunas Padrão):** Todas as tabelas do sistema possuem declaradas explicitamente as colunas `id`, `situacao` (soft delete 'ATIVO'/'INATIVO'), `data` (timestamp de alteração) e `data_criacao` (timestamp de criação).
 - **Onboarding Automático:** Se o usuário logado não possuir moto, o router bloqueia o acesso e redireciona para `/vincular-moto`.

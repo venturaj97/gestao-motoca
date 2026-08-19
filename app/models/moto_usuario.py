@@ -1,13 +1,13 @@
 from sqlalchemy import (
-    String,
-    Integer,
-    DateTime,
-    func,
-    ForeignKey,
+    Boolean,
     CheckConstraint,
     Column,
-    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -55,10 +55,9 @@ class MotoUsuario(Base):
     # Varias motos podem estar ativas ao mesmo tempo; novas entram ativas por padrao
     ativa = Column(Boolean, nullable=False, server_default="true", default=True)
 
-    data_cadastro = Column(DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
+    situacao = Column(String(20), nullable=False, default="ATIVO", server_default="ATIVO")
+    data = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    data_criacao = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     usuario = relationship("Usuario")
     moto_versao = relationship("MotoVersao")

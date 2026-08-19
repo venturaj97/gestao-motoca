@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, Date, DateTime, ForeignKey, CheckConstraint, func
+from sqlalchemy import CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, Numeric, String, func
 
 from app.database.base import Base
 
@@ -52,4 +52,6 @@ class Lancamento(Base):
     km_corrida = Column(Numeric(8, 2), nullable=True)
 
     data_lancamento = Column(Date, nullable=False, server_default=func.current_date())
+    situacao = Column(String(20), nullable=False, default="ATIVO", server_default="ATIVO")
+    data = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     data_criacao = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

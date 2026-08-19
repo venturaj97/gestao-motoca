@@ -30,4 +30,6 @@ class Categoria(Base):
     tipo = Column(String(20), nullable=False)
     grupo_despesa = Column(String(20), nullable=True)
     ativo = Column(Boolean, nullable=False, server_default="true")
+    situacao = Column(String(20), nullable=False, default="ATIVO", server_default="ATIVO")
+    data = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     data_criacao = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
