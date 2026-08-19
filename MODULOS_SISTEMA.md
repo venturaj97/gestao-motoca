@@ -8,7 +8,7 @@
 
 * **Objetivo:** Garantir a segurança do acesso, gestão de perfil, renovação de sessão e criação do ambiente inicial do motoboy.
 * **Endpoints principais:**  
-  `POST /usuarios`, `POST /auth/login`, `GET /auth/me`, `POST /auth/refresh`, `POST /auth/solicitar-recuperacao`, `POST /auth/redefinir-senha`, `PUT /auth/alterar-senha`
+  `POST /usuarios`, `POST /auth/login`, `GET /auth/me`, `POST /auth/refresh`, `POST /auth/solicitar-recuperacao`, `POST /auth/redefinir-senha`, `PUT /auth/alterar-senha`, `POST /auth/enviar-confirmacao-email`, `POST /auth/confirmar-email`
 * **Funcionamento:**
   1. **Cadastro:** Nome, e-mail e senha. A senha é criptografada com `bcrypt`.
   2. **Categorias Padrão Automáticas:** No cadastro, o sistema gera automaticamente as categorias iniciais (combustível, troca de óleo, refeição, corridas de app, etc.).
@@ -19,7 +19,8 @@
   5. **Recuperação de Senha por E-mail (PIN 6 Dígitos):** Na tela de login, o usuário solicita um código PIN de 6 dígitos por e-mail (válido por 15 min) para redefinir a senha via Gmail/SMTP.
   6. **Alteração de Senha (Logado):** Na aba "Senha" das Configurações, o entregador altera sua senha confirmando a senha atual.
   7. **Validação Estrita & Normalização de E-mail:** Validação de formato via Pydantic (`EmailStr`) no backend com conversão para minúsculas e remoção de espaços (`strip/lowercase`), combinada com o atributo `novalidate` nos formulários Vue para eliminar balões cinzas nativos do navegador e exibir 100% dos alertas no estilo visual tático do app.
-  8. **Proteção de Rotas:** O cabeçalho `Authorization: Bearer <token>` é enviado em todas as chamadas autenticadas.
+  8. **Confirmação de E-mail Opcional (Soft Verification):** Ao se cadastrar, o entregador utiliza o app normalmente (`email_confirmado = False`). Um banner amarelo suave no topo do Dashboard ([ConfirmarEmailBanner.vue](file:///home/jv/gm/gestao-motoca/frontend/src/components/ConfirmarEmailBanner.vue)) sugere a confirmação do e-mail via PIN de 6 dígitos sem bloquear o uso. Validado o PIN, `email_confirmado` torna-se `True` e o banner desaparece.
+  9. **Proteção de Rotas:** O cabeçalho `Authorization: Bearer <token>` é enviado em todas as chamadas autenticadas.
 
 ---
 
@@ -108,4 +109,5 @@
 - **Health Check (`GET /saude`):** Endpoint simples de verificação do status da API.
 - **CORS Configurado:** Permite origens do frontend em desenvolvimento e produção.
 - **Tema Claro / Escuro (Light & Dark Mode):** Suporte nativo em todas as telas com alternância em 1 clique.
+- **Prevenção de FOUT nos Ícones (Google Fonts Preconnect & Anti-Ligature CSS):** Carregamento antecipado de fontes via `preconnect` no `index.html` e regras CSS de contenção em `style.css` para impedir o vazamento de texto bruto das variáveis de ícone (`mark_email_unread`, `verified`, `dashboard`) durante a recarga da página.
 - **Onboarding Automático:** Se o usuário logado não possuir moto, o router bloqueia o acesso e redireciona para `/vincular-moto`.

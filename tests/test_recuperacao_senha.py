@@ -66,3 +66,46 @@ async def test_fluxo_recuperacao_e_alteracao_de_senha(client, db_session):
         json={"email": email, "senha": "senhaSuperNova456"},
     )
     assert resp_login_final.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_fluxo_confirmacao_de_email(client, db_session):
+    email = "confirmaremail@test.com"
+    await client.post(
+        "/usuarios",
+        json={"nome": "Entregador Confirmar", "email": email, "senha": "senhaValida123"},
+    )
+    res_login = await client.post(
+        "/auth/login",
+        json={"email": email, "senha": "senhaValida123"},
+    )
+    token = res_login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Verifica se inicia com email_confirmado == False
+    res_me = await client.get("/auth/me", headers=headers)
+    assert res_me.status_code == 200
+    assert res_me.json()["email_confirmado"] is False
+
+    # Solicita envio do código de confirmação
+    res_envio = await client.post("/auth/enviar-confirmacao-email", headers=headers)
+    assert res_envio.status_code == 200
+
+    # Busca PIN no banco
+    rec = db_session.execute(
+        select(RecuperacaoSenha).where(RecuperacaoSenha.usado == False)  # noqa: E712
+    ).scalar_one_or_none()
+    assert rec is not None
+
+    # Confirma o e-mail enviando o PIN
+    res_confirm = await client.post(
+        "/auth/confirmar-email",
+        json={"codigo_pin": rec.codigo_pin},
+        headers=headers,
+    )
+    assert res_confirm.status_code == 200
+
+    # Verifica se agora email_confirmado == True
+    res_me_depois = await client.get("/auth/me", headers=headers)
+    assert res_me_depois.status_code == 200
+    assert res_me_depois.json()["email_confirmado"] is True

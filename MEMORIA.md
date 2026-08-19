@@ -47,7 +47,14 @@ O **Gestão Motoca** é um sistema web de controle financeiro projetado especifi
    - Backend: Validação Pydantic (`EmailStr`) e normalização automática para minúsculas com remoção de espaços em branco (`strip/lowercase`) em todos os schemas ([usuario.py](file:///home/jv/gm/gestao-motoca/app/schemas/usuario.py), [auth.py](file:///home/jv/gm/gestao-motoca/app/schemas/auth.py), [recuperacao_senha.py](file:///home/jv/gm/gestao-motoca/app/schemas/recuperacao_senha.py)).
    - Frontend: Adicionado `novalidate` nos formulários ([CadastroView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/CadastroView.vue), [LoginView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/LoginView.vue)) para eliminar balões cinzas nativos do navegador e exibir 100% dos erros na tarja tática vermelha do app.
 
-5. **Refatoração Visual e Correções Anteriores**
+5. **✉️ Confirmação de E-mail Opcional (Soft Verification)**
+   - Backend: Coluna `email_confirmado` na tabela `usuarios` (migration `0008_email_confirmado.py`). Endpoints `POST /auth/enviar-confirmacao-email` e `POST /auth/confirmar-email`.
+   - Frontend: Componente [ConfirmarEmailBanner.vue](file:///home/jv/gm/gestao-motoca/frontend/src/components/ConfirmarEmailBanner.vue) no topo do [DashboardView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/DashboardView.vue). Exibe banner amarelo suave convidando à confirmação via PIN 6 dígitos sem bloquear o uso do app.
+
+6. **🎨 Eliminação de FOUT (Flash de Texto Não Estilizado) nos Ícones**
+   - Adicionados `preconnect` e links diretos do Google Fonts no [index.html](file:///home/jv/gm/gestao-motoca/frontend/index.html) e estilização de contenção de ligaturas no [style.css](file:///home/jv/gm/gestao-motoca/frontend/src/style.css), eliminando a exibição de nomes de variáveis/ícones (`mark_email_unread`, `verified`, `dashboard`, `refresh`, `logout`) durante a recarga de página.
+
+7. **Refatoração Visual e Correções Anteriores**
    - Refatoração do Modo Claro e resolução de bugs de fusos horários em formulários de datas.
    - Obrigatoriedade de seleção de Categoria no cadastro de despesas.
 

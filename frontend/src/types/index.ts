@@ -20,12 +20,14 @@ export interface UsuarioLogadoResposta {
   id: number
   nome: string
   email: string
+  email_confirmado: boolean
 }
 
 export interface UsuarioResposta {
   id: number
   nome: string
   email: string
+  email_confirmado: boolean
 }
 
 // === MOTO ===
