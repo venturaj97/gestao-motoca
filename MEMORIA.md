@@ -51,7 +51,10 @@ O **Gestão Motoca** é um sistema web de controle financeiro projetado especifi
    - Backend: Coluna `email_confirmado` na tabela `usuarios` (migration `0008_email_confirmado.py`). Endpoints `POST /auth/enviar-confirmacao-email` e `POST /auth/confirmar-email`.
    - Frontend: Componente [ConfirmarEmailBanner.vue](file:///home/jv/gm/gestao-motoca/frontend/src/components/ConfirmarEmailBanner.vue) no topo do [DashboardView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/DashboardView.vue). Exibe banner amarelo suave convidando à confirmação via PIN 6 dígitos sem bloquear o uso do app.
 
-6. **Refatoração Visual e Correções Anteriores**
+6. **🎨 Eliminação de FOUT (Flash de Texto Não Estilizado) nos Ícones**
+   - Adicionados `preconnect` e links diretos do Google Fonts no [index.html](file:///home/jv/gm/gestao-motoca/frontend/index.html) e estilização de contenção de ligaturas no [style.css](file:///home/jv/gm/gestao-motoca/frontend/src/style.css), eliminando a exibição de nomes de variáveis/ícones (`mark_email_unread`, `verified`, `dashboard`, `refresh`, `logout`) durante a recarga de página.
+
+7. **Refatoração Visual e Correções Anteriores**
    - Refatoração do Modo Claro e resolução de bugs de fusos horários em formulários de datas.
    - Obrigatoriedade de seleção de Categoria no cadastro de despesas.
 
