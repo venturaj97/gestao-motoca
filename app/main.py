@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
         from app.database.base import Base
         from app.database.session import engine
         import app.models  # noqa: F401
+
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"Erro ao verificar tabelas: {e}")

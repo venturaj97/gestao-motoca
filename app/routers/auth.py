@@ -6,10 +6,18 @@ from app.core.security import gerar_token_acesso, gerar_token_refresh, validar_t
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
-from app.schemas.auth import LoginEntrada, RefreshEntrada, TokenResposta, UsuarioLogadoResposta
+from app.schemas.auth import (
+    ConfirmarEmailEntrada,
+    LoginEntrada,
+    RefreshEntrada,
+    TokenResposta,
+    UsuarioLogadoResposta,
+)
 from app.schemas.recuperacao_senha import AlterarSenhaLogado, RedefinirSenha, SolicitarRecuperacao
 from app.services.recuperacao_senha_service import (
     alterar_senha_usuario_logado,
+    confirmar_email_usuario,
+    enviar_codigo_confirmacao_email,
     redefinir_senha_com_codigo,
     solicitar_recuperacao_senha,
 )
@@ -53,7 +61,36 @@ def rota_me(usuario: Usuario = Depends(get_usuario_logado)):
         id=usuario.id,
         nome=usuario.nome,
         email=usuario.email,
+        email_confirmado=usuario.email_confirmado,
     )
+
+
+@router.post("/enviar-confirmacao-email")
+def rota_enviar_confirmacao_email(
+    usuario: Usuario = Depends(get_usuario_logado),
+    db: Session = Depends(get_db),
+):
+    if usuario.email_confirmado:
+        return {"mensagem": "O seu e-mail já está confirmado."}
+    enviar_codigo_confirmacao_email(db, usuario)
+    return {"mensagem": "Código de confirmação enviado para o seu e-mail."}
+
+
+@router.post("/confirmar-email")
+def rota_confirmar_email(
+    dados: ConfirmarEmailEntrada,
+    usuario: Usuario = Depends(get_usuario_logado),
+    db: Session = Depends(get_db),
+):
+    if usuario.email_confirmado:
+        return {"mensagem": "O seu e-mail já está confirmado."}
+    try:
+        confirmar_email_usuario(db, usuario, dados.codigo_pin)
+        return {"mensagem": "E-mail confirmado com sucesso!"}
+    except ValueError as e:
+        if str(e) == "codigo_invalido_ou_expirado":
+            raise HTTPException(status_code=400, detail="Código PIN inválido ou expirado.")
+        raise HTTPException(status_code=400, detail="Falha ao confirmar e-mail.")
 
 
 @router.post("/solicitar-recuperacao")

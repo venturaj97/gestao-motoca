@@ -6,6 +6,7 @@ import { useMotoStore } from '@/stores/moto'
 import { obterVisaoMes } from '@/api/visaoMes'
 import type { VisaoMesResposta } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
+import ConfirmarEmailBanner from '@/components/ConfirmarEmailBanner.vue'
 
 const router  = useRouter()
 const route   = useRoute()
@@ -250,6 +251,9 @@ onMounted(() => {
 
     <!-- ══ Conteúdo principal ══════════════════════════════════ -->
     <main class="px-5 py-5 space-y-6 max-w-md mx-auto">
+
+      <!-- Banner de Confirmação de E-mail (se pendente) -->
+      <ConfirmarEmailBanner />
 
       <!-- Boas-vindas -->
       <section class="space-y-0.5">

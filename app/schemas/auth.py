@@ -27,3 +27,8 @@ class UsuarioLogadoResposta(BaseModel):
     id: int
     nome: str
     email: EmailStr
+    email_confirmado: bool = False
+
+
+class ConfirmarEmailEntrada(BaseModel):
+    codigo_pin: str = Field(min_length=6, max_length=6)

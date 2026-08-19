@@ -87,3 +87,49 @@ def alterar_senha_usuario_logado(
 
     usuario.senha = gerar_hash_senha(nova_senha)
     db.commit()
+
+
+def enviar_codigo_confirmacao_email(db: Session, usuario: Usuario) -> None:
+    # Invalida requisições anteriores não utilizadas
+    anteriores = db.execute(
+        select(RecuperacaoSenha).where(
+            RecuperacaoSenha.usuario_id == usuario.id,
+            RecuperacaoSenha.usado == False,  # noqa: E712
+        )
+    ).scalars().all()
+    for ant in anteriores:
+        ant.usado = True
+
+    codigo_pin = f"{random.randint(100000, 999999)}"
+    expira_em = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+    recuperacao = RecuperacaoSenha(
+        usuario_id=usuario.id,
+        codigo_pin=codigo_pin,
+        expira_em=expira_em,
+        usado=False,
+    )
+    db.add(recuperacao)
+    db.commit()
+
+    # Reutiliza o serviço de e-mail enviando o PIN
+    enviar_email_codigo_recuperacao(usuario.email, codigo_pin)
+
+
+def confirmar_email_usuario(db: Session, usuario: Usuario, codigo_pin: str) -> None:
+    agora = datetime.now(timezone.utc)
+    recuperacao = db.execute(
+        select(RecuperacaoSenha).where(
+            RecuperacaoSenha.usuario_id == usuario.id,
+            RecuperacaoSenha.codigo_pin == codigo_pin.strip(),
+            RecuperacaoSenha.usado == False,  # noqa: E712
+            RecuperacaoSenha.expira_em >= agora,
+        )
+    ).scalar_one_or_none()
+
+    if not recuperacao:
+        raise ValueError("codigo_invalido_ou_expirado")
+
+    usuario.email_confirmado = True
+    recuperacao.usado = True
+    db.commit()

@@ -21,3 +21,13 @@ export async function alterarSenhaLogado(dados: {
   const res = await api.put<{ mensagem: string }>('/auth/alterar-senha', dados)
   return res.data
 }
+
+export async function solicitarConfirmacaoEmail(): Promise<{ mensagem: string }> {
+  const res = await api.post<{ mensagem: string }>('/auth/enviar-confirmacao-email')
+  return res.data
+}
+
+export async function confirmarEmail(codigo_pin: string): Promise<{ mensagem: string }> {
+  const res = await api.post<{ mensagem: string }>('/auth/confirmar-email', { codigo_pin })
+  return res.data
+}

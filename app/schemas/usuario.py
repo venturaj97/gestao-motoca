@@ -20,3 +20,4 @@ class UsuarioResposta(BaseModel):
     id: int
     nome: str
     email: EmailStr
+    email_confirmado: bool = False
