@@ -43,7 +43,11 @@ O **Gestão Motoca** é um sistema web de controle financeiro projetado especifi
    - Endpoint `POST /auth/refresh` valida o `refresh_token` e emite novo par.
    - Interceptor Axios em [client.ts](file:///home/jv/gm/gestao-motoca/frontend/src/api/client.ts) captura erro `401 Unauthorized` silenciosamente, renova os tokens e re-executa a chamada original sem deslogar o motoboy no celular.
 
-4. **Refatoração Visual e Correções Anteriores**
+4. **✉️ Validação Estrita & Normalização de E-mail (Unificação Visual)**
+   - Backend: Validação Pydantic (`EmailStr`) e normalização automática para minúsculas com remoção de espaços em branco (`strip/lowercase`) em todos os schemas ([usuario.py](file:///home/jv/gm/gestao-motoca/app/schemas/usuario.py), [auth.py](file:///home/jv/gm/gestao-motoca/app/schemas/auth.py), [recuperacao_senha.py](file:///home/jv/gm/gestao-motoca/app/schemas/recuperacao_senha.py)).
+   - Frontend: Adicionado `novalidate` nos formulários ([CadastroView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/CadastroView.vue), [LoginView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/LoginView.vue)) para eliminar balões cinzas nativos do navegador e exibir 100% dos erros na tarja tática vermelha do app.
+
+5. **Refatoração Visual e Correções Anteriores**
    - Refatoração do Modo Claro e resolução de bugs de fusos horários em formulários de datas.
    - Obrigatoriedade de seleção de Categoria no cadastro de despesas.
 

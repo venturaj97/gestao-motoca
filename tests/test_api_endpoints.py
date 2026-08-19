@@ -1,5 +1,6 @@
 from datetime import date
 
+# pyrefly: ignore [missing-import]
 import pytest
 
 

@@ -18,7 +18,8 @@
   4. **Renovação Automática de Sessão (Refresh Token):** O cliente Axios ([client.ts](file:///home/jv/gm/gestao-motoca/frontend/src/api/client.ts)) intercepta erros `401 Unauthorized` de forma silenciosa, chama `POST /auth/refresh` e re-executa a requisição original sem deslogar o entregador.
   5. **Recuperação de Senha por E-mail (PIN 6 Dígitos):** Na tela de login, o usuário solicita um código PIN de 6 dígitos por e-mail (válido por 15 min) para redefinir a senha via Gmail/SMTP.
   6. **Alteração de Senha (Logado):** Na aba "Senha" das Configurações, o entregador altera sua senha confirmando a senha atual.
-  7. **Proteção de Rotas:** O cabeçalho `Authorization: Bearer <token>` é enviado em todas as chamadas autenticadas.
+  7. **Validação Estrita & Normalização de E-mail:** Validação de formato via Pydantic (`EmailStr`) no backend com conversão para minúsculas e remoção de espaços (`strip/lowercase`), combinada com o atributo `novalidate` nos formulários Vue para eliminar balões cinzas nativos do navegador e exibir 100% dos alertas no estilo visual tático do app.
+  8. **Proteção de Rotas:** O cabeçalho `Authorization: Bearer <token>` é enviado em todas as chamadas autenticadas.
 
 ---
 

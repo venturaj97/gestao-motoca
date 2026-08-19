@@ -136,7 +136,7 @@ async function handleLogin() {
           <div class="h-1 w-12 bg-primary-container"></div>
         </div>
 
-        <form class="space-y-8" @submit.prevent="handleLogin">
+        <form novalidate class="space-y-8" @submit.prevent="handleLogin">
 
           <!-- Email -->
           <div class="group">
