@@ -90,7 +90,7 @@ async function handleLogin() {
   carregando.value = true
   try {
     const resposta = await login({ email: email.value, senha: senha.value })
-    authStore.salvarToken(resposta.access_token)
+    authStore.salvarToken(resposta.access_token, resposta.refresh_token)
     await authStore.carregarUsuario()
     router.push({ name: 'dashboard' })
   } catch (e: any) {

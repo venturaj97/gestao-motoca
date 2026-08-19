@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.security import gerar_token_acesso
+from app.core.security import gerar_token_acesso, gerar_token_refresh, validar_token_refresh
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
-from app.schemas.auth import LoginEntrada, TokenResposta, UsuarioLogadoResposta
+from app.schemas.auth import LoginEntrada, RefreshEntrada, TokenResposta, UsuarioLogadoResposta
 from app.schemas.recuperacao_senha import AlterarSenhaLogado, RedefinirSenha, SolicitarRecuperacao
 from app.services.recuperacao_senha_service import (
     alterar_senha_usuario_logado,
@@ -24,8 +25,26 @@ def rota_login(dados: LoginEntrada, db: Session = Depends(get_db)):
     except ValueError:
         raise HTTPException(status_code=401, detail="Email ou senha invalidos")
 
-    token = gerar_token_acesso(usuario.id, usuario.email)
-    return TokenResposta(access_token=token)
+    access_token = gerar_token_acesso(usuario.id, usuario.email)
+    refresh_token = gerar_token_refresh(usuario.id, usuario.email)
+    return TokenResposta(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/refresh", response_model=TokenResposta)
+def rota_refresh(dados: RefreshEntrada, db: Session = Depends(get_db)):
+    try:
+        payload = validar_token_refresh(dados.refresh_token)
+        usuario_id = int(payload["sub"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Refresh token invalido ou expirado")
+
+    usuario = db.execute(select(Usuario).where(Usuario.id == usuario_id)).scalar_one_or_none()
+    if not usuario:
+        raise HTTPException(status_code=401, detail="Usuario nao encontrado")
+
+    novo_access = gerar_token_acesso(usuario.id, usuario.email)
+    novo_refresh = gerar_token_refresh(usuario.id, usuario.email)
+    return TokenResposta(access_token=novo_access, refresh_token=novo_refresh)
 
 
 @router.get("/me", response_model=UsuarioLogadoResposta)

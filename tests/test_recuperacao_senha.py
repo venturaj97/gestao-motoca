@@ -1,4 +1,6 @@
+# pyrefly: ignore [missing-import]
 import pytest
+# pyrefly: ignore [missing-import]
 from sqlalchemy import select
 from app.models.recuperacao_senha import RecuperacaoSenha
 

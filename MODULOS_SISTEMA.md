@@ -1,107 +1,110 @@
 # 📦 Funcionamento dos Módulos — Gestão Motoca
 
-> **Documentação de Módulos:** Guia explicativo detalhado de como funciona cada módulo do sistema.
+> **Documentação de Módulos (Método KISS):** Registro direto e simples do funcionamento de todas as áreas e funcionalidades do sistema.
 
 ---
 
 ## 1. 🔐 Módulo de Autenticação e Usuários
 
-* **Objetivo:** Garantir a segurança do acesso, gestão de perfil e criação do ambiente inicial do motoboy.
-* **Endpoints principais:** `POST /usuarios`, `POST /auth/login`, `GET /auth/me`, `POST /auth/solicitar-recuperacao`, `POST /auth/redefinir-senha`, `PUT /auth/alterar-senha`
+* **Objetivo:** Garantir a segurança do acesso, gestão de perfil, renovação de sessão e criação do ambiente inicial do motoboy.
+* **Endpoints principais:**  
+  `POST /usuarios`, `POST /auth/login`, `GET /auth/me`, `POST /auth/refresh`, `POST /auth/solicitar-recuperacao`, `POST /auth/redefinir-senha`, `PUT /auth/alterar-senha`
 * **Funcionamento:**
-  1. **Cadastro:** O usuário informa nome, e-mail e senha. A senha é criptografada com `bcrypt`.
-  2. **Categorias Padrão Automáticas:** No momento do cadastro, o sistema gera automaticamente uma lista de categorias iniciais para o usuário (combustível, troca de óleo, refeição, corridas de aplicativo, etc.).
-  3. **Autenticação:** Ao realizar login, o backend gera um token **JWT (Bearer Token)** válido por 24 horas.
-  4. **Recuperação de Senha por E-mail:** O entregador pode solicitar um código PIN de 6 dígitos via e-mail para redefinir sua senha caso a tenha esquecido.
-  5. **Alteração de Senha:** O entregador logado pode alterar sua senha na aba "Senha" das Configurações fornecendo a senha atual.
-  6. **Proteção de Rotas:** Todas as chamadas subsequentes ao backend enviam o token no cabeçalho `Authorization: Bearer <token>`, identificando quem é o usuário logado via `Depends(get_usuario_logado)`.
+  1. **Cadastro:** Nome, e-mail e senha. A senha é criptografada com `bcrypt`.
+  2. **Categorias Padrão Automáticas:** No cadastro, o sistema gera automaticamente as categorias iniciais (combustível, troca de óleo, refeição, corridas de app, etc.).
+  3. **Autenticação (Par de Tokens):**  
+     - **`access_token`:** Válido por 24h para autorizar chamadas.
+     - **`refresh_token`:** Válido por 30 dias para renovar o acesso sem pedir senha.
+  4. **Renovação Automática de Sessão (Refresh Token):** O cliente Axios ([client.ts](file:///home/jv/gm/gestao-motoca/frontend/src/api/client.ts)) intercepta erros `401 Unauthorized` de forma silenciosa, chama `POST /auth/refresh` e re-executa a requisição original sem deslogar o entregador.
+  5. **Recuperação de Senha por E-mail (PIN 6 Dígitos):** Na tela de login, o usuário solicita um código PIN de 6 dígitos por e-mail (válido por 15 min) para redefinir a senha via Gmail/SMTP.
+  6. **Alteração de Senha (Logado):** Na aba "Senha" das Configurações, o entregador altera sua senha confirmando a senha atual.
+  7. **Proteção de Rotas:** O cabeçalho `Authorization: Bearer <token>` é enviado em todas as chamadas autenticadas.
 
 ---
 
 ## 2. 🏍️ Módulo de Gestão de Motos
 
-* **Objetivo:** Cadastrar e gerenciar as motos do usuário. É o módulo central do sistema, pois todas as movimentações financeiras exigem uma moto associada.
+* **Objetivo:** Cadastrar e gerenciar as motos do usuário. É o módulo central, pois todas as movimentações financeiras exigem uma moto associada.
 * **Endpoints principais:** `/motos/marcas`, `/motos/modelos`, `/motos/anos`, `/motos/consulta-placa/{placa}`, `/motos/minha`
 * **Formas de Cadastro:**
-  1. **Por Placa (API WDAPI):** O usuário digita a placa e o sistema consulta a API externa WDAPI. Os resultados são salvos em cache local (`motos_consultas_wdapi`) para evitar consultas repetidas e custos de API.
-  2. **Catálogo de Modelos:** O usuário navega pela hierarquia Marca $\rightarrow$ Modelo $\rightarrow$ Ano/Versão cadastrados no banco.
-  3. **Manual:** Digitação direta dos dados da moto.
+  1. **Por Placa (API WDAPI):** Consulta externa com cache local (`motos_consultas_wdapi`) para economizar chamadas de API.
+  2. **Catálogo de Modelos:** Escolha por Marca $\rightarrow$ Modelo $\rightarrow$ Ano/Versão.
+  3. **Manual:** Digitação livre de marca, modelo e ano.
 * **Regra de Moto Ativa:**
-  - O usuário precisa ter **pelo menos 1 moto cadastrada** para usar o sistema.
-  - Se possuir 2 ou mais motos, uma delas fica marcada como **ativa (`ativa = true`)**. Os lançamentos são automaticamente vinculados à moto ativa.
-  - O usuário pode alternar a moto ativa a qualquer momento na tela de Configurações.
+  - O usuário precisa ter **pelo menos 1 moto cadastrada**.
+  - Com 2+ motos, uma fica definida como **ativa (`ativa = true`)** e recebe os novos lançamentos.
+  - A moto ativa pode ser trocada em Configurações.
 
 ---
 
 ## 3. 📁 Módulo de Categorias
 
-* **Objetivo:** Classificar e organizar todas as receitas e despesas do motoboy.
+* **Objetivo:** Classificar e organizar receitas e despesas.
 * **Endpoints principais:** `GET /categorias`, `POST /categorias`, `PUT /categorias/{id}`, `DELETE /categorias/{id}`
 * **Estrutura:**
-  - **Tipo `GANHO`:** Categorias para faturamento (ex: *Entregas iFood/Uber*, *Entregas Particulares*, *Bônus/Gorjetas*).
-  - **Tipo `DESPESA`:** Subdivididas em grupos obrigatórios:
-    - `GERAL`: Alimentação (Almoço/Café), Telefone/Internet, Outros.
-    - `ABASTECIMENTO`: Combustível.
-    - `MANUTENCAO`: Troca de Óleo, Kit Relação, Pneus, Peças.
-    - `IMPOSTO`: Parcela da moto, Seguro, IPVA, Licenciamento, Multas.
-* **Regra de Exclusão Lógica:** Se uma categoria já possui lançamentos financeiros associados, ela não é excluída fisicamente do banco de dados. O sistema faz uma **exclusão lógica** (`ativo = false`), ocultando a categoria nos seletores mas mantendo a integridade dos relatórios passados.
+  - **Tipo `GANHO`:** Entregas App, Entregas Particulares, Bônus, etc.
+  - **Tipo `DESPESA`:** Divididas em grupos obrigatórios: `GERAL`, `ABASTECIMENTO`, `MANUTENCAO`, `IMPOSTO`.
+* **Exclusão Lógica:** Categorias com histórico passam para `ativo = false` em vez de serem apagadas do banco.
 
 ---
 
 ## 4. 💰 Módulo de Lançamentos
 
-* **Objetivo:** Registro e controle diário de todas as entradas e saídas de dinheiro.
+* **Objetivo:** Registro financeiro diário de entradas e saídas.
 * **Endpoints principais:** `GET /lancamentos`, `POST /lancamentos`, `POST /lancamentos/lote`, `PUT /lancamentos/{id}`, `DELETE /lancamentos/{id}`
 * **Regras de Negócio:**
-  - **Lançamento de Ganho:**
-    - Pode ser **Diário** (`periodo = DIARIO`), registrando o valor acumulado do dia.
-    - Pode ser por **Corrida** (`periodo = CORRIDA`), onde exige obrigatoriamente os minutos de duração (`minutos_corrida`) e os quilômetros rodados (`km_corrida`).
-  - **Lançamento de Despesa:** Exige obrigatoriamente a data, o valor e uma **categoria** de despesa válida.
-  - **Atribuição de Data:** O dia da semana (`dia_semana`) é calculado e preenchido automaticamente com base na data informada.
+  - **Ganho Diário (`periodo = DIARIO`):** Faturamento total do dia.
+  - **Ganho por Corrida (`periodo = CORRIDA`):** Faturamento com minutos e KM rodados.
+  - **Despesa:** Requer data, valor e **categoria obrigatória**.
+  - **Dia da Semana:** Preenchido automaticamente a partir da data.
 
 ---
 
 ## 5. ⛽ Módulo de Abastecimentos
 
-* **Objetivo:** Registrar o histórico detalhado de combustível e consumo da moto.
+* **Objetivo:** Registro detalhado de combustível e consumo.
 * **Endpoints principais:** `GET /abastecimentos`, `POST /abastecimentos`, `PUT /abastecimentos/{id}`, `DELETE /abastecimentos/{id}`
 * **Funcionamento:**
-  - O usuário informa: data, quilometragem atual (`km_atual`), litros abastecidos, valor total pago, preço do litro e o nome do posto.
-  - **Automação Financeira:** Ao criar um abastecimento, o sistema **gera automaticamente um lançamento de Despesa** no módulo de lançamentos na categoria "Combustível".
-  - **Quilometragem:** O `km_atual` informado atualiza automaticamente a quilometragem da moto ativa.
+  - Pede data, KM atual, litros, valor total, preço/litro e posto.
+  - **Automação:** Salva o abastecimento, **cria automaticamente a Despesa** em "Combustível" e atualiza o KM da moto ativa.
 
 ---
 
 ## 6. 🔧 Módulo de Manutenções
 
-* **Objetivo:** Controle de oficinas, peças trocadas e preventiva da moto.
+* **Objetivo:** Registro de peças, oficina e preventiva da moto.
 * **Endpoints principais:** `GET /manutencoes`, `POST /manutencoes`, `PUT /manutencoes/{id}`, `DELETE /manutencoes/{id}`
 * **Funcionamento:**
-  - O usuário informa: data, tipo da manutenção (troca de óleo, relação, pneus, freios, etc.), descrição do serviço, valor pago, quilometragem atual (`km_atual`) e local/oficina.
-  - **Automação Financeira:** Ao cadastrar uma manutenção, o sistema **cria automaticamente a Despesa financeira correspondente** vinculada à categoria correta.
+  - Pede data, tipo de serviço (óleo, pneus, relação, freios), descrição, valor, KM atual e oficina.
+  - **Automação:** Salva a manutenção e **cria automaticamente a Despesa financeira correspondente**.
 
 ---
 
 ## 7. 📊 Módulo Dashboard / Visão do Mês
 
-* **Objetivo:** Consolidar e apresentar os indicadores chave de desempenho (KPIs) financeiros e operacionais do entregador.
+* **Objetivo:** Apresentar os indicadores estratégicos de lucro real.
 * **Endpoints principais:** `GET /visao-mes`, `GET /indicadores/resumo`
-* **Métricas Apresentadas:**
+* **Métricas:**
   - **Lucro Real:** $\text{Faturamento Bruto} - \text{Total de Despesas}$.
-  - **Ticket Médio:** Valor médio faturado por corrida e por dia trabalhado.
-  - **Desempenho por Dia da Semana:** Identificação visual do melhor e do pior dia para trabalhar.
-  - **Rendimento da Moto:** Média de km por litro e custo por km rodado.
+  - **Ticket Médio:** Médias por corrida e por dia trabalhado.
+  - **Desempenho por Dia da Semana:** Melhor e pior dia de trabalho.
+  - **Rendimento da Moto:** Média de km/L e custo por km.
   - **Calendário Visual:** Exibição gráfica dos dias trabalhados no mês.
 
 ---
 
 ## 8. 🎯 Módulo de Metas
 
-* **Objetivo:** Definir metas de ganho e limites de gastos para manter o planejamento financeiro em dia.
+* **Objetivo:** Planejamento de faturamento e limites de gastos.
 * **Endpoints principais:** `GET /metas`, `POST /metas`, `PUT /metas/{id}`, `DELETE /metas/{id}`, `GET /metas/alertas`
-* **Tipos de Metas:**
-  - **Receita Mensal:** Meta de faturamento bruto no mês.
-  - **Lucro Mensal:** Meta de lucro líquido no mês.
-  - **Teto de Despesa Mensal:** Limite máximo de gastos no mês.
-  - **Meta Diária:** Objetivo de faturamento diário.
-* **Status:** Backend 100% construído e testado. Frontend pendente de implementação das views/cards.
+* **Tipos:** Receita Mensal, Lucro Mensal, Teto de Despesa, Meta Diária.
+* **Status:** Backend 100% pronto. Frontend pendente.
+
+---
+
+## ⚙️ Demais Funcionalidades e Utilitários
+
+- **Health Check (`GET /saude`):** Endpoint simples de verificação do status da API.
+- **CORS Configurado:** Permite origens do frontend em desenvolvimento e produção.
+- **Tema Claro / Escuro (Light & Dark Mode):** Suporte nativo em todas as telas com alternância em 1 clique.
+- **Onboarding Automático:** Se o usuário logado não possuir moto, o router bloqueia o acesso e redireciona para `/vincular-moto`.

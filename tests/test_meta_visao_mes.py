@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+# pyrefly: ignore [missing-import]
 import pytest
 
 from app.schemas.categoria import CategoriaCriar

@@ -31,6 +31,39 @@ async def test_auth_endpoints_criam_usuario_login_e_me(client):
 
 
 @pytest.mark.anyio
+async def test_refresh_token_gera_novos_tokens(client):
+    await client.post(
+        "/usuarios",
+        json={"nome": "Usuario Refresh", "email": "refresh@test.com", "senha": "senha123"},
+    )
+    res_login = await client.post(
+        "/auth/login",
+        json={"email": "refresh@test.com", "senha": "senha123"},
+    )
+    assert res_login.status_code == 200
+    body = res_login.json()
+    assert "access_token" in body
+    assert "refresh_token" in body
+
+    refresh_token = body["refresh_token"]
+
+    res_refresh = await client.post(
+        "/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert res_refresh.status_code == 200
+    body_refreshed = res_refresh.json()
+    assert "access_token" in body_refreshed
+    assert "refresh_token" in body_refreshed
+
+    # Verifica se o novo access token funciona em rota protegida
+    headers = {"Authorization": f"Bearer {body_refreshed['access_token']}"}
+    res_me = await client.get("/auth/me", headers=headers)
+    assert res_me.status_code == 200
+    assert res_me.json()["email"] == "refresh@test.com"
+
+
+@pytest.mark.anyio
 async def test_consulta_placa_invalida_retorna_422_e_preserva_token(client):
     headers = await _criar_usuario_logado(client)
 

@@ -8,7 +8,12 @@ class LoginEntrada(BaseModel):
 
 class TokenResposta(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+
+
+class RefreshEntrada(BaseModel):
+    refresh_token: str
 
 
 class UsuarioLogadoResposta(BaseModel):

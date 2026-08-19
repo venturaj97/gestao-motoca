@@ -1,6 +1,7 @@
 from decimal import Decimal
 from datetime import date
 
+# pyrefly: ignore [missing-import]
 import pytest
 
 from app.core.security import gerar_token_acesso, validar_token_acesso

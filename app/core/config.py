@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     )
     auth_algorithm: str = Field(default="HS256", validation_alias="AUTH_ALGORITHM")
     auth_token_exp_minutos: int = Field(default=1440, validation_alias="AUTH_TOKEN_EXP_MINUTOS")
+    auth_refresh_token_exp_dias: int = Field(default=30, validation_alias="AUTH_REFRESH_TOKEN_EXP_DIAS")
     cors_origins: list[str] = Field(
         default=[
             "http://localhost:5173",
