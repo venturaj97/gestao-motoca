@@ -95,7 +95,7 @@ async function handleCadastro() {
         </div>
 
         <!-- Formulário -->
-        <form v-else class="space-y-6" @submit.prevent="handleCadastro">
+        <form v-else novalidate class="space-y-6" @submit.prevent="handleCadastro">
 
           <!-- Nome -->
           <div class="space-y-2">

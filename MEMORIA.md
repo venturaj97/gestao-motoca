@@ -1,8 +1,8 @@
 # 🧠 Memória do Projeto — Gestão Motoca
 
-> **Data do registro:** 16 de Agosto de 2026  
-> **Status:** Sistema Funcional / Refatorações recentes de UI, Datas, Modo Claro e Validações concluídas com sucesso.  
-> **Ramo Git Atual:** `inicio-front` (sincronizado com `main`)
+> **Data do registro:** 18 de Agosto de 2026  
+> **Status:** Sistema Funcional / Implementações recentes de Recuperação de Senha por PIN E-mail, Alteração de Senha e Refresh Token Automático (30 dias).  
+> **Ramo Git Atual:** `melhoras-back`
 
 ---
 
@@ -14,7 +14,8 @@ O **Gestão Motoca** é um sistema web de controle financeiro projetado especifi
 - **Backend:** Python 3.13 / FastAPI 0.129, SQLAlchemy 2.0, Alembic, Pydantic v2, Pytest 8.4
 - **Frontend:** Vue 3.5, TypeScript 5.9, Pinia 3.0, Vue Router 4.6, Tailwind CSS 3.4, Vite 8.0
 - **Banco de Dados:** PostgreSQL 16
-- **Autenticação:** JWT Bearer (passlib + bcrypt + python-jose)
+- **Autenticação:** JWT Bearer (passlib + bcrypt + python-jose) com Par de Tokens (`access_token` 24h + `refresh_token` 30d)
+- **Serviço de E-mail:** SMTP (Gmail SMTP com Senha de App)
 - **Integrações Externas:** API WDAPI (consulta de placa de veículos com cache local no banco)
 
 ---
@@ -22,150 +23,72 @@ O **Gestão Motoca** é um sistema web de controle financeiro projetado especifi
 ## 🔍 Onde Paramos & Estado Atual (Memory Snapshot)
 
 ### 1. Estado da Suíte de Testes e Build
-- **Backend (Pytest):** 100% passando (9 testes executados sem erros via `.venv/bin/pytest`).
-- **Frontend (TypeScript & Vue):** 100% passando (`vue-tsc -b && vite build` compila limpo sem erros de tipagem ou bundle).
+- **Backend (Pytest):** 100% passando (11/11 testes executados sem erros via `.venv/bin/pytest`).
+- **Frontend (TypeScript & Vue):** 100% passando (`vue-tsc -b && vite build` compila limpo sem erros).
 
-### 2. Análise dos Commits e Modificações Recentes
-Analisando o histórico recente de commits na branch `inicio-front` / `main`:
+### 2. Últimas Alterações Implementadas (Branch `melhoras-back`)
 
-1. **Refatoração do Modo Claro (`refatorando modo claro` - `6059423`, `843ed05`)**
-   - Ajustados componentes visuais e variáveis CSS globais ([style.css](file:///home/jv/gm/gestao-motoca/frontend/src/style.css)) para suporte nativo e elegante ao modo claro.
-   - Refatorados estilos nas views: [DashboardView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/DashboardView.vue), [HistoricoView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/HistoricoView.vue), [LancarView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/LancarView.vue), [AbastecerView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/AbastecerView.vue), [ManutencaoView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/ManutencaoView.vue) e [ConfiguracoesView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/ConfiguracoesView.vue).
+1. **🔑 Recuperação de Senha por E-mail (PIN de 6 Dígitos)**
+   - Modal responsiva de 2 etapas no [LoginView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/LoginView.vue).
+   - Disparo de e-mail HTML estilizado com código PIN de 6 dígitos (validade 15 min) via Gmail SMTP ([email_service.py](file:///home/jv/gm/gestao-motoca/app/core/email_service.py)).
+   - Endpoints: `POST /auth/solicitar-recuperacao` e `POST /auth/redefinir-senha`.
+   - Migration Alembic: `0007_recuperacao_senha.py`.
 
-2. **Resolução de Bug de Datas (`bug da datas no sistema resolvido` - `24eec18`)**
-   - Corrigidos problemas de deslocamento de fusos horários e datas nos formulários de abastecimento, manutenção e lançamentos ([AppDateInput.vue](file:///home/jv/gm/gestao-motoca/frontend/src/components/AppDateInput.vue), [AbastecerView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/AbastecerView.vue), [ManutencaoView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/ManutencaoView.vue)).
+2. **🛡️ Alteração de Senha no Perfil**
+   - Nova aba **"SENHA"** no painel de [ConfiguracoesView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/ConfiguracoesView.vue).
+   - Endpoint protegido: `PUT /auth/alterar-senha` (exige validação da senha atual).
 
-3. **Regras de Negócio de Despesas & Categorias (`regras nas despesas, categoria obrigatorio` - `5f81e8a`, `ab85537`, `d85ca9e`)**
-   - Implementada a obrigatoriedade da escolha de Categoria no cadastro de Despesas tanto no Backend ([categoria_service.py](file:///home/jv/gm/gestao-motoca/app/services/categoria_service.py)) quanto no Frontend ([LancarView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/LancarView.vue)).
-   - Reformulada a lógica de lançamento em lote/individual e persistência da categoria selecionada pelo usuário.
+3. **🔄 Renovação Automática de Token (Refresh Token 30 dias)**
+   - Login `POST /auth/login` retorna `access_token` e `refresh_token`.
+   - Endpoint `POST /auth/refresh` valida o `refresh_token` e emite novo par.
+   - Interceptor Axios em [client.ts](file:///home/jv/gm/gestao-motoca/frontend/src/api/client.ts) captura erro `401 Unauthorized` silenciosamente, renova os tokens e re-executa a chamada original sem deslogar o motoboy no celular.
 
-4. **Limpeza de Código Morto & Documentação (`785ec1e`, `c3607ed`)**
-   - Remoção de assets do Vite/Vue e componentes não utilizados ([HelloWorld.vue](file:///home/jv/gm/gestao-motoca/frontend/src/components/HelloWorld.vue), `hero.png`).
-   - Criação da Documentação Técnica ([DOCUMENTACAO.md](file:///home/jv/gm/gestao-motoca/DOCUMENTACAO.md)) e Mapeamento de Arquitetura ([MAPEAMENTO.md](file:///home/jv/gm/gestao-motoca/MAPEAMENTO.md)).
+4. **✉️ Validação Estrita & Normalização de E-mail (Unificação Visual)**
+   - Backend: Validação Pydantic (`EmailStr`) e normalização automática para minúsculas com remoção de espaços em branco (`strip/lowercase`) em todos os schemas ([usuario.py](file:///home/jv/gm/gestao-motoca/app/schemas/usuario.py), [auth.py](file:///home/jv/gm/gestao-motoca/app/schemas/auth.py), [recuperacao_senha.py](file:///home/jv/gm/gestao-motoca/app/schemas/recuperacao_senha.py)).
+   - Frontend: Adicionado `novalidate` nos formulários ([CadastroView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/CadastroView.vue), [LoginView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/LoginView.vue)) para eliminar balões cinzas nativos do navegador e exibir 100% dos erros na tarja tática vermelha do app.
 
----
-
-## 🗺️ Mapeamento de Módulos e Componentes
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                       FRONTEND (Vue 3 + TS)                     │
-├─────────────────┬─────────────────────────────┬─────────────────┤
-│ Views Publicas  │ Views Autenticadas          │ Gerenciamento   │
-│ - InicioView    │ - DashboardView             │ - Pinia Stores  │
-│ - LoginView     │ - HistoricoView             │   (auth, moto,  │
-│ - CadastroView  │ - LancarView                │    theme)       │
-│                 │ - AbastecerView             │ - Axios Client  │
-│                 │ - ManutencaoView            │   (Bearer JWT)  │
-│                 │ - VincularMotoView          │                 │
-│                 │ - ConfiguracoesView         │                 │
-│                 │ - CadastrarMotoView         │                 │
-└─────────────────┴─────────────────────────────┴─────────────────┘
-                                │ HTTP / REST API (JWT)
-┌───────────────────────────────▼─────────────────────────────────┐
-│                       BACKEND (FastAPI + SQLAlchemy)            │
-├─────────────────┬─────────────────────────────┬─────────────────┤
-│ Routers (API)   │ Services (Regras)           │ Models (ORM)    │
-│ - auth          │ - usuario_service           │ - Usuario       │
-│ - usuarios      │ - moto_service              │ - MotoUsuario   │
-│ - motos         │ - categoria_service         │ - Categoria     │
-│ - categorias    │ - lancamento_service        │ - Lancamento    │
-│ - lancamentos   │ - abastecimento_service     │ - Abastecimento │
-│ - abastecimentos│ - manutencao_service        │ - Manutencao    │
-│ - manutencoes   │ - indicador_service         │ - Meta          │
-│ - indicadores   │ - meta_service              │ - Catalogos     │
-│ - visao_mes     │ - visao_mes_service         │   (WDAPI/Modelo)│
-└─────────────────┴─────────────────────────────┴─────────────────┘
-                                │ PostgreSQL 16
-```
-
-### Detalhes das Telas e Funcionalidades Principais:
-1. **Landing Page & Autenticação:**
-   - `/inicio` - Apresentação pública da aplicação.
-   - `/login` & `/cadastro` - Autenticação JWT e criação de contas com categorias padrão automáticas.
-   - `/vincular-moto` - Fluxo obrigatório onboarding de vínculo de moto.
-2. **Dashboard & Visão Geral (`/`):**
-   - Resumo financeiro do mês (receita bruta, total despesas, lucro líquido, ticket médio por dia/corrida).
-   - Calendário visual de dias trabalhados e gráfico mensal.
-3. **Lançamentos (`/lancar`):**
-   - Entradas de Ganhos (`DIARIO` ou por `CORRIDA` com minutos e km).
-   - Entradas de Despesas (obrigatório escolher categoria).
-4. **Módulos Especiais (`/abastecer` & `/manutencao`):**
-   - Formulários rápidos que salvam o registro específico e automaticamente geram a despesa financeira correspondente.
-5. **Histórico & Configurações (`/historico` & `/configuracoes`):**
-   - Histórico completo com ordenação, paginação e filtros (período, tipo, categoria, valor).
-   - Gerenciamento de motos (adicionar, editar, trocar moto ativa) e categorias personalizadas.
+5. **Refatoração Visual e Correções Anteriores**
+   - Refatoração do Modo Claro e resolução de bugs de fusos horários em formulários de datas.
+   - Obrigatoriedade de seleção de Categoria no cadastro de despesas.
 
 ---
 
-## 📋 Lista de Tarefas / Próximos Passos (Backlog)
+## 🗺️ Mapeamento de Módulos
 
-- [ ] **Módulo de Metas no Frontend (Pendente Alto Priority):**
-  - O Backend possui o model `Meta`, service `meta_service.py` e endpoints `/metas` prontos.
-  - Criar `frontend/src/api/metas.ts`, store/integração no frontend e tela/componente de metas e progresso no Dashboard.
-- [ ] **Migração de Warnings Pydantic v2:**
-  - Atualizar os schemas em `app/schemas/` trocando a classe interna `Config` por `model_config = ConfigDict(...)` para remover os warnings do Pytest.
-- [ ] **Testes no Frontend:**
-  - Adicionar testes unitários/componentes no frontend utilizando Vitest.
+*Para ver a explicação detalhada de cada módulo, consulte o documento **[MODULOS_SISTEMA.md](file:///home/jv/gm/gestao-motoca/MODULOS_SISTEMA.md)**.*
+
+- **Módulo 1: Autenticação & Usuários** (`/auth`, `/usuarios`) — Login, cadastro, refresh token, recuperação por e-mail e alteração de senha.
+- **Módulo 2: Gestão de Motos** (`/motos`) — Placa (WDAPI), catálogo, manual e troca de moto ativa.
+- **Módulo 3: Categorias** (`/categorias`) — Ganhos/Despesas por grupos com exclusão lógica.
+- **Módulo 4: Lançamentos** (`/lancamentos`) — Ganho diário/corrida, despesa obrigatória e lote.
+- **Módulo 5: Abastecimentos** (`/abastecimentos`) — Combustível, média de consumo e despesa automática.
+- **Módulo 6: Manutenções** (`/manutencoes`) — Oficina, peças e despesa automática.
+- **Módulo 7: Dashboard / Visão do Mês** (`/visao-mes`, `/indicadores`) — Lucro Real, ticket médio e gráficos.
+- **Módulo 8: Metas** (`/metas`) — Metas de faturamento e limite de gastos (Backend OK, Frontend pendente).
 
 ---
 
 ## 🚀 Como Executar e Verificar o Projeto
 
-### Backend (Python/FastAPI)
-### 1. Opção Recomendada: Usando Docker (Mais Fácil)
-Você não precisa se preocupar com Python local nem instalar banco de dados, o Docker sobe o banco PostgreSQL e o Backend juntos:
-
+### 1. Com Docker (Recomendado)
 ```bash
-# Subir o banco de dados e o backend FastAPI juntos
 docker compose up --build
-
-# Para rodar em segundo plano (detached):
-docker compose up -d
 ```
-> O backend estará acessível automaticamente em `http://localhost:8000`.
 
----
-
-### 2. Opção Alternativa: Usando Python / Virtualenv Local (`.venv`)
-
-Se preferir rodar sem Docker diretamente na sua máquina:
-
-1. **Ativar o ambiente virtual (virtualenv):**  
-   No terminal Linux/macOS, use o comando `source` (não execute o arquivo `.activate` diretamente):
-   ```bash
-   source .venv/bin/activate
-   ```
-
-2. **Subir o servidor de desenvolvimento (Uvicorn):**  
-   Use a sintaxe de módulo `app.main:app` (que aponta para a variável `app` dentro de `app/main.py`):
-   ```bash
-   # Com a venv ativada:
-   uvicorn app.main:app --reload --port 8000
-
-   # Ou chamando a venv diretamente em um único comando:
-   .venv/bin/uvicorn app.main:app --reload --port 8000
-   ```
-
-3. **Executar a suíte de testes unitários:**
-   ```bash
-   .venv/bin/pytest
-   ```
-
----
+### 2. Com Python Local (`.venv`)
+```bash
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+.venv/bin/pytest
+```
 
 ### 3. Frontend (Vue 3 / Vite)
 ```bash
-# Entrar na pasta do frontend
 cd frontend
-
-# Iniciar servidor de desenvolvimento (http://localhost:5173)
 npm run dev
-
-# Executar checagem de tipos (TypeScript) e build de produção
 npm run build
 ```
 
 ---
 
-*Documento gerado automaticamente para preservação do estado do projeto.*
+*Documento mantido atualizado no método KISS para preservação da memória do projeto.*
