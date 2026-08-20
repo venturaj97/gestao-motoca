@@ -1,7 +1,17 @@
 import axios from 'axios'
 
+function obterBaseUrlApi(): string {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `http://${window.location.hostname}:8000`
+  }
+  return 'http://localhost:8000'
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000',
+  baseURL: obterBaseUrlApi(),
   headers: {
     'Content-Type': 'application/json',
     // Evita que o navegador sirva 304 em requisições POST

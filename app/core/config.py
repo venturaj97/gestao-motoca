@@ -35,6 +35,7 @@ class Settings(BaseSettings):
             "http://127.0.0.1:5174",
             "http://127.0.0.1:5175",
             "http://localhost:4173",
+            "http://192.168.1.69:5173",
         ],
         validation_alias="CORS_ORIGINS",
     )
