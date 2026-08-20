@@ -11,6 +11,7 @@ const authStore = useAuthStore()
 const email = ref('')
 const senha = ref('')
 const erro = ref('')
+const sucesso = ref('')
 const carregando = ref(false)
 const mostrarSenha = ref(false)
 
@@ -69,10 +70,11 @@ async function executarRedefinicao() {
       codigo_pin: pinRecuperacao.value,
       nova_senha: novaSenhaRecuperacao.value,
     })
-    alert(res.mensagem || 'Senha redefinida com sucesso!')
     mostrarModalRecuperacao.value = false
     email.value = emailRecuperacao.value
     senha.value = novaSenhaRecuperacao.value
+    sucesso.value = res.mensagem || 'Senha redefinida e e-mail confirmado com sucesso! Clique em CONECTAR AGORA.'
+    erro.value = ''
   } catch (e: any) {
     erroRecuperacao.value = e?.response?.data?.detail || 'Código inválido ou expirado. Tente novamente.'
   } finally {
@@ -81,12 +83,12 @@ async function executarRedefinicao() {
 }
 
 async function handleLogin() {
-  // Só limpa o erro após validação — mantém a mensagem visível
   if (!email.value || !senha.value) {
     erro.value = 'Preencha e-mail e senha.'
     return
   }
   erro.value = ''
+  sucesso.value = ''
   carregando.value = true
   try {
     const resposta = await login({ email: email.value, senha: senha.value })
@@ -110,33 +112,33 @@ async function handleLogin() {
   <div class="bg-background text-on-background font-body min-h-screen flex flex-col tactical-grid">
 
     <!-- Brand Header -->
-    <header class="w-full flex justify-center pt-12 pb-8">
+    <header class="w-full flex justify-center pt-8 sm:pt-12 pb-4 sm:pb-8">
       <div class="flex flex-col items-center">
-        <div class="w-16 h-16 bg-primary-container flex items-center justify-center mb-4">
-          <span class="material-symbols-outlined text-on-primary-fixed text-4xl">two_wheeler</span>
+        <div class="w-14 h-14 sm:w-16 sm:h-16 bg-primary-container flex items-center justify-center mb-3 sm:mb-4">
+          <span class="material-symbols-outlined text-on-primary-fixed text-3xl sm:text-4xl">two_wheeler</span>
         </div>
-        <h1 class="font-headline font-bold text-primary-fixed tracking-widest text-sm uppercase">
+        <h1 class="font-headline font-bold text-primary-fixed tracking-widest text-xs sm:text-sm uppercase">
           GESTÃO MOTOCA
         </h1>
       </div>
     </header>
 
     <!-- Form Card -->
-    <main class="flex-grow flex items-center justify-center px-6">
-      <div class="w-full max-w-md bg-surface-container-low p-8 relative">
+    <main class="flex-grow flex items-center justify-center px-4 sm:px-6 py-4 sm:py-8">
+      <div class="w-full max-w-md bg-surface-container-low p-6 sm:p-8 relative">
 
         <!-- Tactical corner accent -->
         <div class="absolute top-0 left-0 w-8 h-[2px] bg-primary-container"></div>
         <div class="absolute top-0 left-0 w-[2px] h-8 bg-primary-container"></div>
 
-        <div class="mb-12">
-          <h2 class="font-headline text-5xl font-bold tracking-tighter text-on-background mb-2">
+        <div class="mb-8 sm:mb-10">
+          <h2 class="font-headline text-4xl sm:text-5xl font-bold tracking-tighter text-on-background mb-2">
             ENTRAR
           </h2>
           <div class="h-1 w-12 bg-primary-container"></div>
         </div>
 
-        <form novalidate class="space-y-8" @submit.prevent="handleLogin">
+        <form novalidate class="space-y-6 sm:space-y-8" @submit.prevent="handleLogin">
 
           <!-- Email -->
           <div class="group">
@@ -149,10 +151,10 @@ async function handleLogin() {
                 type="email"
                 placeholder="operador@gestaomotoca.com"
                 autocomplete="email"
-                class="tactical-input py-4 px-4 pr-10"
+                class="tactical-input py-3.5 sm:py-4 px-4 pr-12 text-sm sm:text-base"
               />
-              <div class="absolute right-0 top-4 text-outline group-focus-within:text-primary-fixed transition-colors pointer-events-none">
-                <span class="material-symbols-outlined">alternate_email</span>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary-fixed transition-colors pointer-events-none flex items-center justify-center">
+                <span class="material-symbols-outlined text-xl">alternate_email</span>
               </div>
             </div>
           </div>
@@ -168,19 +170,29 @@ async function handleLogin() {
                 :type="mostrarSenha ? 'text' : 'password'"
                 placeholder="••••••••"
                 autocomplete="current-password"
-                class="tactical-input py-4 px-4 pr-10"
+                class="tactical-input py-3.5 sm:py-4 px-4 pr-12 text-sm sm:text-base"
               />
               <button
                 type="button"
                 tabindex="-1"
-                class="absolute right-0 top-4 text-outline hover:text-primary-fixed transition-colors"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary-fixed transition-colors flex items-center justify-center p-1"
                 @click="mostrarSenha = !mostrarSenha"
               >
-                <span class="material-symbols-outlined">
+                <span class="material-symbols-outlined text-xl">
                   {{ mostrarSenha ? 'visibility_off' : 'visibility' }}
                 </span>
               </button>
             </div>
+          </div>
+
+          <!-- Sucesso -->
+          <div
+            v-if="sucesso"
+            class="flex items-start gap-3 bg-primary-container/20 text-primary-fixed
+                   text-xs font-label px-4 py-3 border-l-4 border-primary-fixed"
+          >
+            <span class="material-symbols-outlined text-base mt-0.5 flex-shrink-0">check_circle</span>
+            {{ sucesso }}
           </div>
 
           <!-- Erro -->
@@ -194,11 +206,11 @@ async function handleLogin() {
           </div>
 
           <!-- Submit -->
-          <div class="pt-4">
+          <div class="pt-2 sm:pt-4">
             <button
               type="submit"
               :disabled="carregando"
-              class="btn-primary h-16 text-lg tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn-primary h-14 sm:h-16 text-base sm:text-lg tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span v-if="carregando" class="material-symbols-outlined animate-spin">refresh</span>
               <span v-else>CONECTAR AGORA</span>
@@ -208,11 +220,11 @@ async function handleLogin() {
         </form>
 
         <!-- Links secundários -->
-        <div class="mt-8 flex flex-col gap-4">
+        <div class="mt-6 sm:mt-8 flex flex-col gap-4">
           <div class="h-[1px] w-full bg-surface-container"></div>
           <div class="flex flex-col sm:flex-row justify-between gap-3">
             <button
-              class="text-left font-label text-[11px] tracking-wider text-on-surface-variant hover:text-primary-fixed transition-colors uppercase flex items-center gap-2"
+              class="text-left font-label text-[11px] tracking-wider text-on-surface-variant hover:text-primary-fixed transition-colors uppercase flex items-center gap-2 cursor-pointer"
               @click="$router.push({ name: 'cadastro' })"
             >
               <span class="material-symbols-outlined text-sm">person_add</span>
@@ -220,7 +232,7 @@ async function handleLogin() {
             </button>
             <button
               type="button"
-              class="text-left font-label text-[11px] tracking-wider text-primary-fixed hover:underline transition-colors uppercase flex items-center gap-2"
+              class="text-left font-label text-[11px] tracking-wider text-primary-fixed hover:underline transition-colors uppercase flex items-center gap-2 cursor-pointer"
               @click="abrirModalRecuperacao"
             >
               <span class="material-symbols-outlined text-sm">lock_reset</span>
@@ -242,7 +254,7 @@ async function handleLogin() {
         <div class="absolute top-0 left-0 w-[2px] h-8 bg-primary-container"></div>
 
         <div class="flex justify-between items-center mb-6">
-          <h3 class="font-headline text-2xl font-bold tracking-tight text-on-background">
+          <h3 class="font-headline text-xl sm:text-2xl font-bold tracking-tight text-on-background">
             {{ etapaRecuperacao === 1 ? 'RECUPERAR SENHA' : 'DIGITAR CÓDIGO PIN' }}
           </h3>
           <button
@@ -269,7 +281,7 @@ async function handleLogin() {
               type="email"
               required
               placeholder="seu-email@exemplo.com"
-              class="tactical-input py-3 px-4"
+              class="tactical-input py-3 px-4 text-sm"
             />
           </div>
 
@@ -280,7 +292,7 @@ async function handleLogin() {
           <div class="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              class="px-4 py-3 text-xs font-label uppercase text-on-surface-variant hover:bg-surface-container"
+              class="px-4 py-3 text-xs font-label uppercase text-on-surface-variant hover:bg-surface-container cursor-pointer"
               @click="mostrarModalRecuperacao = false"
             >
               Cancelar
@@ -288,7 +300,7 @@ async function handleLogin() {
             <button
               type="submit"
               :disabled="carregandoRecuperacao"
-              class="btn-primary py-3 px-6 text-xs tracking-wider disabled:opacity-50"
+              class="btn-primary py-3 px-6 text-xs tracking-wider disabled:opacity-50 cursor-pointer"
             >
               <span v-if="carregandoRecuperacao" class="material-symbols-outlined animate-spin text-sm mr-1">refresh</span>
               ENVIAR CÓDIGO
@@ -313,10 +325,12 @@ async function handleLogin() {
             <input
               v-model="pinRecuperacao"
               type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
               maxlength="6"
               required
               placeholder="123456"
-              class="tactical-input py-3 px-4 font-mono text-lg tracking-widest text-center"
+              class="tactical-input py-3 px-4 font-mono text-xl tracking-[0.3em] text-center"
             />
           </div>
 
@@ -330,7 +344,7 @@ async function handleLogin() {
               required
               minlength="6"
               placeholder="••••••••"
-              class="tactical-input py-3 px-4"
+              class="tactical-input py-3 px-4 text-sm"
             />
           </div>
 
@@ -341,7 +355,7 @@ async function handleLogin() {
           <div class="flex justify-between items-center pt-2">
             <button
               type="button"
-              class="text-xs font-label uppercase text-on-surface-variant hover:text-primary-fixed"
+              class="text-xs font-label uppercase text-on-surface-variant hover:text-primary-fixed cursor-pointer"
               @click="etapaRecuperacao = 1"
             >
               ← Voltar / Reenviar
@@ -349,7 +363,7 @@ async function handleLogin() {
             <button
               type="submit"
               :disabled="carregandoRecuperacao"
-              class="btn-primary py-3 px-6 text-xs tracking-wider disabled:opacity-50"
+              class="btn-primary py-3 px-6 text-xs tracking-wider disabled:opacity-50 cursor-pointer"
             >
               <span v-if="carregandoRecuperacao" class="material-symbols-outlined animate-spin text-sm mr-1">refresh</span>
               REDEFINIR SENHA
@@ -360,13 +374,13 @@ async function handleLogin() {
     </div>
 
     <!-- Footer tactical -->
-    <footer class="p-6 flex justify-between items-end">
-      <div class="text-[10px] font-label text-outline uppercase tracking-[0.3em]">
+    <footer class="p-4 sm:p-6 flex justify-between items-end">
+      <div class="text-[9px] sm:text-[10px] font-label text-outline uppercase tracking-[0.2em] sm:tracking-[0.3em]">
         SISTEMA OPERACIONAL V1.0
       </div>
       <div class="flex flex-col items-end">
-        <span class="text-[9px] font-label text-outline uppercase tracking-widest">STATUS REDE</span>
-        <span class="text-[10px] font-headline text-primary-fixed flex items-center gap-1">
+        <span class="text-[8px] sm:text-[9px] font-label text-outline uppercase tracking-widest">STATUS REDE</span>
+        <span class="text-[9px] sm:text-[10px] font-headline text-primary-fixed flex items-center gap-1">
           ONLINE <span class="w-1.5 h-1.5 bg-primary-fixed rounded-full"></span>
         </span>
       </div>

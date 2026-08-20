@@ -66,8 +66,9 @@ def redefinir_senha_com_codigo(db: Session, email: str, codigo_pin: str, nova_se
     if not recuperacao:
         raise ValueError("codigo_invalido_ou_expirado")
 
-    # Atualiza a senha do usuário
+    # Atualiza a senha do usuário e confirma o e-mail automaticamente
     usuario.senha = gerar_hash_senha(nova_senha)
+    usuario.email_confirmado = True
     recuperacao.usado = True
     db.commit()
 

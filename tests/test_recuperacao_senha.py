@@ -52,6 +52,11 @@ async def test_fluxo_recuperacao_e_alteracao_de_senha(client, db_session):
     token = resp_login_novo.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
+    # 5.1 Confirma se o e-mail foi marcado como confirmado automaticamente
+    resp_me = await client.get("/auth/me", headers=headers)
+    assert resp_me.status_code == 200
+    assert resp_me.json()["email_confirmado"] is True
+
     # 6. Altera a senha estando logado
     resp_alterar = await client.put(
         "/auth/alterar-senha",

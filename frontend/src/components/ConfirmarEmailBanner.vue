@@ -152,6 +152,8 @@ function fecharModal() {
           <input
             v-model="pin"
             type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
             maxlength="6"
             placeholder="000000"
             class="w-full h-14 bg-surface-container-lowest border-0 border-b-2 border-primary-container
