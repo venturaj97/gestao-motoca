@@ -122,3 +122,53 @@ async def test_fluxo_http_moto_categoria_lancamento(client):
     resposta_lista = await client.get("/lancamentos", headers=headers)
     assert resposta_lista.status_code == 200
     assert resposta_lista.json()["total"] == 1
+
+
+@pytest.mark.anyio
+async def test_atualizar_km_rapido_moto_com_e_sem_troca_oleo(client):
+    auth_headers = await _criar_usuario_logado(client)
+
+    # 1. Cadastra uma moto
+    resp_moto = await client.post(
+        "/motos/minha",
+        headers=auth_headers,
+        json={
+            "marca_manual": "Honda",
+            "modelo_manual": "CG 160 Fan",
+            "ano_manual": 2022,
+            "km_atual": 10000,
+            "cor": "Preta",
+        },
+    )
+    assert resp_moto.status_code == 201
+    assert resp_moto.json()["km_atual"] == 10000
+
+    # 2. Atualiza apenas o KM (sem troca de oleo)
+    resp_km1 = await client.patch(
+        "/motos/minha/km",
+        headers=auth_headers,
+        json={"km_atual": 10500, "trocou_oleo": False},
+    )
+    assert resp_km1.status_code == 200
+    assert resp_km1.json()["km_atual"] == 10500
+
+    # 3. Atualiza o KM com Troca de Oleo (cria despesa de manutencao)
+    resp_km2 = await client.patch(
+        "/motos/minha/km",
+        headers=auth_headers,
+        json={
+            "km_atual": 11000,
+            "trocou_oleo": True,
+            "valor_oleo": "45.00",
+            "oficina": "Oficina Central",
+        },
+    )
+    assert resp_km2.status_code == 200
+    assert resp_km2.json()["km_atual"] == 11000
+
+    # 4. Verifica se a manutencao foi registrada
+    resp_manu = await client.get("/manutencoes", headers=auth_headers)
+    assert resp_manu.status_code == 200
+    assert len(resp_manu.json()) == 1
+    assert resp_manu.json()[0]["valor_total"] == "45.00"
+    assert resp_manu.json()[0]["tipo_servico"] == "TROCA_OLEO"

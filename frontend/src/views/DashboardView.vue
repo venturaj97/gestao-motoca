@@ -7,6 +7,7 @@ import { obterVisaoMes } from '@/api/visaoMes'
 import type { VisaoMesResposta } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 import ConfirmarEmailBanner from '@/components/ConfirmarEmailBanner.vue'
+import AtualizarKmModal from '@/components/AtualizarKmModal.vue'
 
 const router  = useRouter()
 const route   = useRoute()
@@ -17,6 +18,7 @@ const motoStore = useMotoStore()
 const visao        = ref<VisaoMesResposta | null>(null)
 const carregando   = ref(true)
 const erroCarregar = ref('')
+const modalKmVisivel = ref(false)
 
 type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
 
@@ -267,7 +269,37 @@ onMounted(() => {
           <span class="material-symbols-outlined text-xs align-middle">two_wheeler</span>
           {{ nomeMoto }}
         </p>
+
+        <!-- Card de Odômetro (KM) com Botão Rápido -->
+        <div v-if="motoAtiva" class="mt-3 flex items-center justify-between bg-surface-container p-3 border-l-4 border-primary-container">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-none bg-primary-container/10 flex items-center justify-center text-primary-container">
+              <span class="material-symbols-outlined text-lg">speed</span>
+            </div>
+            <div>
+              <p class="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">ODÔMETRO ATUAL</p>
+              <p class="font-headline font-black text-sm text-on-surface tracking-wide">
+                {{ motoAtiva.km_atual.toLocaleString('pt-BR') }} KM
+              </p>
+            </div>
+          </div>
+          <button
+            class="px-3 py-1.5 bg-primary-container/10 dark:bg-primary-container/20 text-primary-container font-label text-[10px] font-black uppercase tracking-wider hover:bg-primary-container hover:text-on-primary-fixed transition-all flex items-center gap-1 cursor-pointer border border-primary-container/30 active:scale-[0.97]"
+            @click="modalKmVisivel = true"
+          >
+            <span class="material-symbols-outlined text-xs">edit</span>
+            ATUALIZAR KM
+          </button>
+        </div>
       </section>
+
+      <!-- Modal de Atualização Rápida de KM -->
+      <AtualizarKmModal
+        :show="modalKmVisivel"
+        :km-atual="motoAtiva?.km_atual ?? 0"
+        @close="modalKmVisivel = false"
+        @salvo="carregar"
+      />
 
       <!-- Filtro de período -->
       <section class="space-y-3 bg-surface-container p-4">

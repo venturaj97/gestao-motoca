@@ -7,6 +7,7 @@ from app.models.usuario import Usuario
 from app.routers._errors import raise_mapped_error
 from app.schemas.moto import (
     ConsultaPlacaResposta,
+    MotoAtualizarKmEntrada,
     MotoUsuarioAtivaAlterar,
     MotoUsuarioAtualizar,
     MotoUsuarioCriar,
@@ -20,6 +21,7 @@ from app.services.moto_service import (
     listar_modelos_por_marca,
     listar_anos_por_modelo,
     alterar_ativa_moto_usuario,
+    atualizar_km_rapido,
     atualizar_moto_usuario,
     criar_moto_usuario,
     criar_moto_usuario_por_placa,
@@ -34,6 +36,7 @@ ERROS_MOTO = {
     "placa_ja_cadastrada_usuario": (409, "Placa ja cadastrada para este usuario"),
     "dados_placa_incompletos": (422, "Dados insuficientes retornados para cadastrar a moto"),
     "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
+    "km_menor_que_atual": (400, "O novo KM deve ser maior ou igual ao KM atual da moto"),
     "moto_possui_registros": (
         409,
         "Nao e possivel excluir: existem lancamentos, abastecimentos ou manutencoes nesta moto",
@@ -145,3 +148,15 @@ def rota_listar_minhas_motos(
     usuario: Usuario = Depends(get_usuario_logado),
 ):
     return {"usuario_id": usuario.id, "motos": listar_motos_do_usuario(db, usuario.id)}
+
+
+@router.patch("/minha/km", response_model=MotoUsuarioResposta)
+def rota_atualizar_km_minha_moto(
+    dados: MotoAtualizarKmEntrada,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    try:
+        return atualizar_km_rapido(db, usuario.id, dados)
+    except ValueError as e:
+        raise_mapped_error(e, ERROS_MOTO)

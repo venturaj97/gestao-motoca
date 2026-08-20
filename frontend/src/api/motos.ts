@@ -4,6 +4,7 @@ import type {
   MotoUsuarioCriar,
   MotoUsuarioCriarPorPlaca,
   MotoUsuarioAtualizar,
+  MotoAtualizarKmEntrada,
   ConsultaPlacaResposta,
 } from '@/types'
 
@@ -34,6 +35,11 @@ export async function cadastrarMotoManual(dados: MotoUsuarioCriar): Promise<Moto
 
 export async function atualizarMoto(id: number, dados: MotoUsuarioAtualizar): Promise<MotoUsuarioResposta> {
   const res = await api.put<MotoUsuarioResposta>(`/motos/minha/${id}`, dados)
+  return res.data
+}
+
+export async function atualizarKmMinhaMoto(dados: MotoAtualizarKmEntrada): Promise<MotoUsuarioResposta> {
+  const res = await api.patch<MotoUsuarioResposta>('/motos/minha/km', dados)
   return res.data
 }
 

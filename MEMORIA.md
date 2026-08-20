@@ -58,7 +58,11 @@ O **Gestão Motoca** é um sistema web de controle financeiro projetado especifi
    - Declaradas diretamente em todos os modelos SQLAlchemy ([usuario.py](file:///home/jv/gm/gestao-motoca/app/models/usuario.py), [moto_usuario.py](file:///home/jv/gm/gestao-motoca/app/models/moto_usuario.py), [categoria.py](file:///home/jv/gm/gestao-motoca/app/models/categoria.py), [lancamento.py](file:///home/jv/gm/gestao-motoca/app/models/lancamento.py), [abastecimento.py](file:///home/jv/gm/gestao-motoca/app/models/abastecimento.py), [manutencao.py](file:///home/jv/gm/gestao-motoca/app/models/manutencao.py), [meta.py](file:///home/jv/gm/gestao-motoca/app/models/meta.py), [recuperacao_senha.py](file:///home/jv/gm/gestao-motoca/app/models/recuperacao_senha.py)) as 4 colunas padrão: `id`, `situacao` ('ATIVO'/'INATIVO'), `data` (atualização) e `data_criacao`.
    - Migration Alembic: `0009_padronizacao_audit_mixin.py`.
 
-8. **Refatoração Visual e Correções Anteriores**
+8. **⏱️ Atualização Rápida de Odômetro (KM) & Troca de Óleo**
+   - Backend: Endpoint `PATCH /motos/minha/km` ([motos.py](file:///home/jv/gm/gestao-motoca/app/routers/motos.py)). Atualiza a quilometragem da moto ativa e, se `trocou_oleo = true`, gera automaticamente o registro em `lancamentos` e `manutencoes` (`TROCA_OLEO`).
+   - Frontend: Card tático de **Odômetro Atual** no topo do [DashboardView.vue](file:///home/jv/gm/gestao-motoca/frontend/src/views/DashboardView.vue) com o botão `[ ✏️ ATUALIZAR KM ]` e o modal interativo [AtualizarKmModal.vue](file:///home/jv/gm/gestao-motoca/frontend/src/components/AtualizarKmModal.vue).
+
+9. **Refatoração Visual e Correções Anteriores**
    - Refatoração do Modo Claro e resolução de bugs de fusos horários em formulários de datas.
    - Obrigatoriedade de seleção de Categoria no cadastro de despesas.
 

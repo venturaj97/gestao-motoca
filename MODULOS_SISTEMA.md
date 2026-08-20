@@ -27,11 +27,15 @@
 ## 2. 🏍️ Módulo de Gestão de Motos
 
 * **Objetivo:** Cadastrar e gerenciar as motos do usuário. É o módulo central, pois todas as movimentações financeiras exigem uma moto associada.
-* **Endpoints principais:** `/motos/marcas`, `/motos/modelos`, `/motos/anos`, `/motos/consulta-placa/{placa}`, `/motos/minha`
+* **Endpoints principais:** `/motos/marcas`, `/motos/modelos`, `/motos/anos`, `/motos/consulta-placa/{placa}`, `/motos/minha`, `PATCH /motos/minha/km`
 * **Formas de Cadastro:**
   1. **Por Placa (API WDAPI):** Consulta externa com cache local (`motos_consultas_wdapi`) para economizar chamadas de API.
   2. **Catálogo de Modelos:** Escolha por Marca $\rightarrow$ Modelo $\rightarrow$ Ano/Versão.
   3. **Manual:** Digitação livre de marca, modelo e ano.
+* **Atualização Rápida de Odômetro (KM) & Troca de Óleo:**
+  - Card fixo no Dashboard exibindo o KM Atual da moto ativa com o botão `[ ✏️ ATUALIZAR KM ]`.
+  - Modal interativo (`AtualizarKmModal.vue`) com a pergunta: *"Aproveitou e trocou o óleo da moto nesta rodagem?"*.
+  - Se confirmado o óleo, o sistema registra automaticamente o lançamento financeiro de despesa e a manutenção preventiva de óleo (`TROCA_OLEO`).
 * **Regra de Moto Ativa:**
   - O usuário precisa ter **pelo menos 1 moto cadastrada**.
   - Com 2+ motos, uma fica definida como **ativa (`ativa = true`)** e recebe os novos lançamentos.

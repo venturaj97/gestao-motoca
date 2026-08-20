@@ -65,6 +65,14 @@ export interface MotoUsuarioAtivaAlterar {
   ativa: boolean
 }
 
+export interface MotoAtualizarKmEntrada {
+  km_atual: number
+  trocou_oleo?: boolean
+  valor_oleo?: number | string
+  oficina?: string
+  data_lancamento?: string
+}
+
 export interface MotoUsuarioAtualizar {
   km_atual?: number
   cor?: string

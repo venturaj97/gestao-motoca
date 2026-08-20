@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pydantic import BaseModel, Field
 from typing import Any, Optional
 
@@ -60,3 +61,14 @@ class MotoUsuarioCriarPorPlaca(BaseModel):
     placa: str = Field(min_length=7, max_length=8)
     km_atual: int = Field(default=0, ge=0)
     cor: Optional[str] = Field(default=None, max_length=40)
+
+
+from datetime import date
+
+
+class MotoAtualizarKmEntrada(BaseModel):
+    km_atual: int = Field(..., gt=0, description="Nova quilometragem atual da moto")
+    trocou_oleo: bool = Field(default=False)
+    valor_oleo: Optional[Decimal] = Field(default=None, ge=0)
+    oficina: Optional[str] = Field(default=None, max_length=120)
+    data_lancamento: Optional[date] = Field(default=None, description="Data do lançamento de manutenção de óleo")

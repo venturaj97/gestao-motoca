@@ -1,8 +1,16 @@
+from datetime import date, datetime
 import json
 import re
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
+
+def obter_data_hoje_local() -> date:
+    try:
+        return datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+    except Exception:
+        return date.today()
 
 from sqlalchemy import func, select, distinct
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.abastecimento import Abastecimento
+from app.models.categoria import Categoria
 from app.models.lancamento import Lancamento
 from app.models.manutencao import Manutencao
 from app.models.moto_consulta_wdapi import MotoConsultaWDAPI
@@ -17,6 +26,7 @@ from app.models.moto_modelo import MotoModelo
 from app.models.moto_usuario import MotoUsuario
 from app.models.moto_versao import MotoVersao
 from app.schemas.moto import (
+    MotoAtualizarKmEntrada,
     MotoUsuarioAtualizar,
     MotoUsuarioCriar,
     MotoUsuarioCriarPorPlaca,
@@ -199,6 +209,103 @@ def atualizar_moto_usuario(
             moto.modelo_manual = dados.modelo_manual
         if dados.ano_manual is not None:
             moto.ano_manual = dados.ano_manual
+
+    db.commit()
+    db.refresh(moto)
+    return moto
+
+
+def atualizar_km_rapido(
+    db: Session,
+    usuario_id: int,
+    dados: MotoAtualizarKmEntrada,
+) -> MotoUsuario:
+    moto = db.execute(
+        select(MotoUsuario)
+        .where(MotoUsuario.usuario_id == usuario_id, MotoUsuario.ativa == True)  # noqa: E712
+        .order_by(MotoUsuario.id.desc())
+    ).scalars().first()
+
+    if not moto:
+        moto = db.execute(
+            select(MotoUsuario)
+            .where(MotoUsuario.usuario_id == usuario_id)
+            .order_by(MotoUsuario.id.desc())
+        ).scalars().first()
+
+    if not moto:
+        raise ValueError("moto_nao_encontrada_ou_nao_sua")
+
+    if dados.km_atual < moto.km_atual:
+        raise ValueError("km_menor_que_atual")
+
+    moto.km_atual = dados.km_atual
+
+    if dados.trocou_oleo and dados.valor_oleo and dados.valor_oleo > 0:
+        categoria_manu = db.execute(
+            select(Categoria).where(
+                Categoria.usuario_id == usuario_id,
+                Categoria.grupo_despesa == "MANUTENCAO",
+                Categoria.tipo == "DESPESA",
+                Categoria.ativo == True,  # noqa: E712
+            )
+        ).scalars().first()
+
+        if not categoria_manu:
+            categoria_manu = db.execute(
+                select(Categoria).where(
+                    Categoria.usuario_id.is_(None),
+                    Categoria.grupo_despesa == "MANUTENCAO",
+                    Categoria.tipo == "DESPESA",
+                )
+            ).scalars().first()
+
+        if not categoria_manu:
+            categoria_manu = db.execute(
+                select(Categoria).where(
+                    Categoria.usuario_id == usuario_id,
+                    Categoria.tipo == "DESPESA",
+                )
+            ).scalars().first()
+
+        if not categoria_manu:
+            categoria_manu = Categoria(
+                usuario_id=usuario_id,
+                nome="Manutenção",
+                tipo="DESPESA",
+                grupo_despesa="MANUTENCAO",
+                ativo=True,
+            )
+            db.add(categoria_manu)
+            db.flush()
+
+        data_ref = dados.data_lancamento or obter_data_hoje_local()
+
+        lancamento = Lancamento(
+            usuario_id=usuario_id,
+            moto_usuario_id=moto.id,
+            categoria_id=categoria_manu.id,
+            tipo="DESPESA",
+            valor=dados.valor_oleo,
+            descricao="Troca de Óleo",
+            periodo="CORRIDA",
+            data_lancamento=data_ref,
+        )
+        db.add(lancamento)
+        db.flush()
+
+        manutencao = Manutencao(
+            usuario_id=usuario_id,
+            moto_usuario_id=moto.id,
+            lancamento_id=lancamento.id,
+            valor_total=dados.valor_oleo,
+            km_atual=dados.km_atual,
+            descricao_servico="Troca de Óleo",
+            oficina=dados.oficina,
+            tipo_servico="TROCA_OLEO",
+            data_manutencao=data_ref,
+        )
+        db.add(manutencao)
 
     db.commit()
     db.refresh(moto)

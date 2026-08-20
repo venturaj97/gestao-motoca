@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { MotoUsuarioResposta } from '@/types'
-import { listarMinhasMotos } from '@/api/motos'
+import type { MotoUsuarioResposta, MotoAtualizarKmEntrada } from '@/types'
+import { listarMinhasMotos, atualizarKmMinhaMoto } from '@/api/motos'
 
 export const useMotoStore = defineStore('moto', () => {
   const motos = ref<MotoUsuarioResposta[]>([])
@@ -32,6 +32,17 @@ export const useMotoStore = defineStore('moto', () => {
     motos.value.push(moto)
   }
 
+  async function atualizarKm(dados: MotoAtualizarKmEntrada) {
+    const res = await atualizarKmMinhaMoto(dados)
+    const idx = motos.value.findIndex((m) => m.id === res.id)
+    if (idx !== -1) {
+      motos.value[idx] = res
+    } else {
+      motos.value.push(res)
+    }
+    return res
+  }
+
   function limpar() {
     motos.value = []
     carregado.value = false
@@ -45,6 +56,7 @@ export const useMotoStore = defineStore('moto', () => {
     temMoto,
     carregarMotos,
     adicionarMoto,
+    atualizarKm,
     limpar,
   }
 })

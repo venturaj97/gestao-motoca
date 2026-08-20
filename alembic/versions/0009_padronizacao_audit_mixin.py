@@ -30,15 +30,28 @@ tabelas = [
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
     for tabela in tabelas:
-        op.add_column(
-            tabela,
-            sa.Column("situacao", sa.String(length=20), server_default="ATIVO", nullable=False),
-        )
-        op.add_column(
-            tabela,
-            sa.Column("data", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        )
+        columns = [col["name"] for col in inspector.get_columns(tabela)]
+        if "situacao" not in columns:
+            op.add_column(
+                tabela,
+                sa.Column("situacao", sa.String(length=20), server_default="ATIVO", nullable=False),
+            )
+        if "data" not in columns:
+            op.add_column(
+                tabela,
+                sa.Column("data", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+            )
+        if "data_criacao" not in columns:
+            if "data_cadastro" in columns:
+                op.alter_column(tabela, "data_cadastro", new_column_name="data_criacao")
+            else:
+                op.add_column(
+                    tabela,
+                    sa.Column("data_criacao", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+                )
 
 
 def downgrade() -> None:
