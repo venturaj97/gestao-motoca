@@ -5,6 +5,7 @@ import type {
   MotoUsuarioCriarPorPlaca,
   MotoUsuarioAtualizar,
   MotoAtualizarKmEntrada,
+  MotoHistoricoKmResumo,
   ConsultaPlacaResposta,
 } from '@/types'
 
@@ -57,3 +58,24 @@ export async function listarAnos(modeloId: number): Promise<{ anos: { id: number
   const res = await api.get('/motos/anos', { params: { modelo_id: modeloId } })
   return res.data
 }
+
+// === Histórico de KM ===
+
+export async function obterHistoricoKm(motoUsuarioId: number): Promise<MotoHistoricoKmResumo> {
+  const res = await api.get<MotoHistoricoKmResumo>('/motos/minha/historico-km', {
+    params: { moto_usuario_id: motoUsuarioId },
+  })
+  return res.data
+}
+
+export async function registrarHistoricoKm(motoUsuarioId: number, km: number): Promise<{ id: number }> {
+  const res = await api.post('/motos/minha/historico-km', { km, origem: 'MANUAL' }, {
+    params: { moto_usuario_id: motoUsuarioId },
+  })
+  return res.data
+}
+
+export async function excluirHistoricoKm(registroId: number): Promise<void> {
+  await api.delete(`/motos/minha/historico-km/${registroId}`)
+}
+

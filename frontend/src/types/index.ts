@@ -310,3 +310,74 @@ export interface VisaoMesResposta {
   metas_ativas: MetaResposta[]
   alertas_mensais: MetaAlertaResposta[]
 }
+
+// === HISTÓRICO DE KM ===
+export interface MotoHistoricoKmResposta {
+  id: number
+  moto_usuario_id: number
+  km: number
+  origem: string
+  data_criacao: string
+  variacao: number | null
+}
+
+export interface MotoHistoricoKmResumo {
+  km_atual: number
+  km_mes: number
+  media_dia: number
+  previsao_troca_oleo_km: number | null
+  previsao_troca_oleo_dias: number | null
+  registros: MotoHistoricoKmResposta[]
+}
+
+// === INTELIGÊNCIA ===
+export interface ComparativoItem {
+  label: string
+  valor_atual: string
+  valor_anterior: string
+  variacao_percentual: number | null
+  positivo: boolean
+}
+
+export interface ComparativoMensal {
+  faturamento: ComparativoItem
+  despesas: ComparativoItem
+  lucro: ComparativoItem
+}
+
+export interface RankingDiaSemana {
+  dia_semana: string
+  total: string
+  quantidade: number
+  percentual: number
+}
+
+export interface DespesaCategoria {
+  categoria_nome: string
+  total: string
+  quantidade: number
+  percentual: number
+}
+
+export interface EficienciaCombustivel {
+  km_por_litro: number | null
+  custo_por_km: number | null
+  total_litros: number
+  total_gasto_combustivel: string
+  km_rodados_combustivel: number
+  dados_suficientes: boolean
+}
+
+export interface InteligenciaResumo {
+  ano: number
+  mes: number
+  comparativo: ComparativoMensal
+  ranking_dias_ganho: RankingDiaSemana[]
+  ranking_dias_despesa: RankingDiaSemana[]
+  despesas_por_categoria: DespesaCategoria[]
+  maior_vilao: DespesaCategoria | null
+  ticket_medio_despesa: string
+  eficiencia_combustivel: EficienciaCombustivel
+  insights: string[]
+}
+

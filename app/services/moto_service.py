@@ -22,11 +22,13 @@ from app.models.categoria import Categoria
 from app.models.lancamento import Lancamento
 from app.models.manutencao import Manutencao
 from app.models.moto_consulta_wdapi import MotoConsultaWDAPI
+from app.models.moto_historico_km import MotoHistoricoKm
 from app.models.moto_modelo import MotoModelo
 from app.models.moto_usuario import MotoUsuario
 from app.models.moto_versao import MotoVersao
 from app.schemas.moto import (
     MotoAtualizarKmEntrada,
+    MotoHistoricoKmCriar,
     MotoUsuarioAtualizar,
     MotoUsuarioCriar,
     MotoUsuarioCriarPorPlaca,
@@ -307,6 +309,15 @@ def atualizar_km_rapido(
         )
         db.add(manutencao)
 
+    # Auto-registrar leitura de KM no histórico
+    historico = MotoHistoricoKm(
+        usuario_id=usuario_id,
+        moto_usuario_id=moto.id,
+        km=dados.km_atual,
+        origem="ATUALIZACAO_RAPIDA",
+    )
+    db.add(historico)
+
     db.commit()
     db.refresh(moto)
     return moto
@@ -537,3 +548,148 @@ def criar_moto_usuario_por_placa(
 
     db.refresh(moto)
     return moto
+
+
+# ── Histórico de KM ──────────────────────────────────────────────
+
+def registrar_historico_km(
+    db: Session,
+    usuario_id: int,
+    moto_usuario_id: int,
+    km: int,
+    origem: str = "MANUAL",
+) -> MotoHistoricoKm:
+    moto = db.execute(
+        select(MotoUsuario).where(
+            MotoUsuario.id == moto_usuario_id,
+            MotoUsuario.usuario_id == usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not moto:
+        raise ValueError("moto_nao_encontrada_ou_nao_sua")
+
+    registro = MotoHistoricoKm(
+        usuario_id=usuario_id,
+        moto_usuario_id=moto_usuario_id,
+        km=km,
+        origem=origem,
+    )
+    db.add(registro)
+
+    if km > moto.km_atual:
+        moto.km_atual = km
+
+    db.commit()
+    db.refresh(registro)
+    return registro
+
+
+def obter_historico_km(
+    db: Session,
+    usuario_id: int,
+    moto_usuario_id: int,
+) -> dict:
+    import calendar
+    from datetime import date as date_type
+
+    moto = db.execute(
+        select(MotoUsuario).where(
+            MotoUsuario.id == moto_usuario_id,
+            MotoUsuario.usuario_id == usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not moto:
+        raise ValueError("moto_nao_encontrada_ou_nao_sua")
+
+    registros = db.execute(
+        select(MotoHistoricoKm)
+        .where(
+            MotoHistoricoKm.usuario_id == usuario_id,
+            MotoHistoricoKm.moto_usuario_id == moto_usuario_id,
+            MotoHistoricoKm.situacao == "ATIVO",
+        )
+        .order_by(MotoHistoricoKm.data_criacao.desc())
+    ).scalars().all()
+
+    # Calcular variação entre registros
+    lista = []
+    registros_asc = list(reversed(registros))
+    for i, reg in enumerate(registros_asc):
+        variacao = None
+        if i > 0:
+            variacao = reg.km - registros_asc[i - 1].km
+        lista.append({
+            "id": reg.id,
+            "moto_usuario_id": reg.moto_usuario_id,
+            "km": reg.km,
+            "origem": reg.origem,
+            "data_criacao": reg.data_criacao.isoformat() if reg.data_criacao else "",
+            "variacao": variacao,
+        })
+    lista.reverse()
+
+    # Métricas do mês atual
+    hoje = obter_data_hoje_local()
+    inicio_mes = date_type(hoje.year, hoje.month, 1)
+    ultimo_dia = calendar.monthrange(hoje.year, hoje.month)[1]
+    fim_mes = date_type(hoje.year, hoje.month, ultimo_dia)
+
+    registros_mes = [
+        r for r in registros_asc
+        if r.data_criacao and r.data_criacao.date() >= inicio_mes and r.data_criacao.date() <= fim_mes
+    ]
+
+    km_mes = 0
+    media_dia = 0.0
+    if len(registros_mes) >= 2:
+        km_mes = registros_mes[-1].km - registros_mes[0].km
+        dias_entre = (registros_mes[-1].data_criacao.date() - registros_mes[0].data_criacao.date()).days
+        if dias_entre > 0:
+            media_dia = round(km_mes / dias_entre, 1)
+
+    # Previsão de troca de óleo
+    ultima_troca = db.execute(
+        select(Manutencao)
+        .where(
+            Manutencao.usuario_id == usuario_id,
+            Manutencao.moto_usuario_id == moto_usuario_id,
+            Manutencao.tipo_servico == "TROCA_OLEO",
+        )
+        .order_by(Manutencao.data_manutencao.desc())
+    ).scalars().first()
+
+    previsao_km = None
+    previsao_dias = None
+    if ultima_troca and ultima_troca.km_atual:
+        proximo_km = ultima_troca.km_atual + 3000
+        faltam_km = proximo_km - moto.km_atual
+        previsao_km = max(faltam_km, 0)
+        if media_dia > 0:
+            previsao_dias = max(round(faltam_km / media_dia), 0)
+
+    return {
+        "km_atual": moto.km_atual,
+        "km_mes": km_mes,
+        "media_dia": media_dia,
+        "previsao_troca_oleo_km": previsao_km,
+        "previsao_troca_oleo_dias": previsao_dias,
+        "registros": lista,
+    }
+
+
+def excluir_historico_km(
+    db: Session,
+    usuario_id: int,
+    registro_id: int,
+) -> None:
+    registro = db.execute(
+        select(MotoHistoricoKm).where(
+            MotoHistoricoKm.id == registro_id,
+            MotoHistoricoKm.usuario_id == usuario_id,
+        )
+    ).scalar_one_or_none()
+    if not registro:
+        raise ValueError("registro_nao_encontrado")
+
+    db.delete(registro)
+    db.commit()

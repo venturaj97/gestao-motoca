@@ -72,3 +72,31 @@ class MotoAtualizarKmEntrada(BaseModel):
     valor_oleo: Optional[Decimal] = Field(default=None, ge=0)
     oficina: Optional[str] = Field(default=None, max_length=120)
     data_lancamento: Optional[date] = Field(default=None, description="Data do lançamento de manutenção de óleo")
+
+
+# === HISTÓRICO DE KM ===
+
+class MotoHistoricoKmCriar(BaseModel):
+    km: int = Field(..., gt=0, description="Quilometragem registrada")
+    origem: str = Field(default="MANUAL", max_length=30)
+
+
+class MotoHistoricoKmResposta(BaseModel):
+    id: int
+    moto_usuario_id: int
+    km: int
+    origem: str
+    data_criacao: str
+    variacao: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MotoHistoricoKmResumo(BaseModel):
+    km_atual: int
+    km_mes: int
+    media_dia: float
+    previsao_troca_oleo_km: Optional[int] = None
+    previsao_troca_oleo_dias: Optional[int] = None
+    registros: list[MotoHistoricoKmResposta]

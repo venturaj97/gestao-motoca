@@ -11,8 +11,12 @@ logger = logging.getLogger("uvicorn.error")
 def enviar_email_codigo_recuperacao(email_destino: str, codigo_pin: str) -> bool:
     """
     Envia um e-mail HTML contendo o código PIN de 6 dígitos para recuperação de senha.
-    Se o SMTP não estiver configurado ou ocorrer falha, faz fallback exibindo o código nos logs.
+    MODO DEV ATIVO: Apenas exibe o código no log do console sem realizar envio SMTP real.
     """
+    # DESABILITADO TEMPORARIAMENTE PARA DESENVOLVIMENTO
+    logger.info(f"[EMAIL DEV MOCK] Código PIN para '{email_destino}': {codigo_pin}")
+    return True
+
     if not settings.smtp_user or not settings.smtp_password:
         logger.warning(
             f"[SMTP DEV] Configuração SMTP não preenchida. Código PIN para '{email_destino}': {codigo_pin}"

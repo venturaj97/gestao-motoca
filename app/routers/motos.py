@@ -8,6 +8,8 @@ from app.routers._errors import raise_mapped_error
 from app.schemas.moto import (
     ConsultaPlacaResposta,
     MotoAtualizarKmEntrada,
+    MotoHistoricoKmCriar,
+    MotoHistoricoKmResumo,
     MotoUsuarioAtivaAlterar,
     MotoUsuarioAtualizar,
     MotoUsuarioCriar,
@@ -17,6 +19,7 @@ from app.schemas.moto import (
 from app.services.moto_service import (
     ConsultaPlacaErro,
     consultar_dados_veiculo_por_placa_com_cache,
+    excluir_historico_km,
     listar_marcas,
     listar_modelos_por_marca,
     listar_anos_por_modelo,
@@ -27,6 +30,8 @@ from app.services.moto_service import (
     criar_moto_usuario_por_placa,
     excluir_moto_usuario,
     listar_motos_do_usuario,
+    obter_historico_km,
+    registrar_historico_km,
 )
 
 router = APIRouter(prefix="/motos", tags=["motos"])
@@ -37,6 +42,7 @@ ERROS_MOTO = {
     "dados_placa_incompletos": (422, "Dados insuficientes retornados para cadastrar a moto"),
     "moto_nao_encontrada_ou_nao_sua": (404, "Moto nao encontrada ou nao pertence ao usuario"),
     "km_menor_que_atual": (400, "O novo KM deve ser maior ou igual ao KM atual da moto"),
+    "registro_nao_encontrado": (404, "Registro de KM nao encontrado"),
     "moto_possui_registros": (
         409,
         "Nao e possivel excluir: existem lancamentos, abastecimentos ou manutencoes nesta moto",
@@ -158,5 +164,45 @@ def rota_atualizar_km_minha_moto(
 ):
     try:
         return atualizar_km_rapido(db, usuario.id, dados)
+    except ValueError as e:
+        raise_mapped_error(e, ERROS_MOTO)
+
+
+# ── Histórico de KM ──────────────────────────────────────────────
+
+@router.get("/minha/historico-km", response_model=MotoHistoricoKmResumo)
+def rota_obter_historico_km(
+    moto_usuario_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    try:
+        return obter_historico_km(db, usuario.id, moto_usuario_id)
+    except ValueError as e:
+        raise_mapped_error(e, ERROS_MOTO)
+
+
+@router.post("/minha/historico-km", status_code=status.HTTP_201_CREATED)
+def rota_registrar_historico_km(
+    dados: MotoHistoricoKmCriar,
+    moto_usuario_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    try:
+        reg = registrar_historico_km(db, usuario.id, moto_usuario_id, dados.km, dados.origem)
+        return {"id": reg.id, "km": reg.km, "origem": reg.origem}
+    except ValueError as e:
+        raise_mapped_error(e, ERROS_MOTO)
+
+
+@router.delete("/minha/historico-km/{registro_id}", status_code=status.HTTP_204_NO_CONTENT)
+def rota_excluir_historico_km(
+    registro_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    try:
+        excluir_historico_km(db, usuario.id, registro_id)
     except ValueError as e:
         raise_mapped_error(e, ERROS_MOTO)
