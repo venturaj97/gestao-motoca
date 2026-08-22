@@ -172,3 +172,65 @@ async def test_atualizar_km_rapido_moto_com_e_sem_troca_oleo(client):
     assert len(resp_manu.json()) == 1
     assert resp_manu.json()[0]["valor_total"] == "45.00"
     assert resp_manu.json()[0]["tipo_servico"] == "TROCA_OLEO"
+
+
+@pytest.mark.anyio
+async def test_busca_e_exclusao_em_lote_lancamentos(client):
+    headers = await _criar_usuario_logado(client, "busca_lote@test.com")
+
+    # Cadastra moto obrigatoria
+    await client.post(
+        "/motos/minha",
+        headers=headers,
+        json={"marca_manual": "Honda", "modelo_manual": "CG 160", "ano_manual": 2022, "km_atual": 5000},
+    )
+
+    # Cadastra categoria de despesa
+    res_cat = await client.post(
+        "/categorias",
+        headers=headers,
+        json={"nome": "Manutenção Geral", "tipo": "DESPESA", "grupo_despesa": "GERAL"},
+    )
+    assert res_cat.status_code == 201
+    cat_id = res_cat.json()["id"]
+
+    # Cria 3 lançamentos
+    res1 = await client.post(
+        "/lancamentos",
+        headers=headers,
+        json={"categoria_id": cat_id, "tipo": "DESPESA", "valor": "50.00", "descricao": "Troca de pneu traseiro", "data_lancamento": "2026-08-20"},
+    )
+    res2 = await client.post(
+        "/lancamentos",
+        headers=headers,
+        json={"categoria_id": cat_id, "tipo": "DESPESA", "valor": "30.00", "descricao": "Lâmpada do farol", "data_lancamento": "2026-08-21"},
+    )
+    res3 = await client.post(
+        "/lancamentos",
+        headers=headers,
+        json={"categoria_id": cat_id, "tipo": "DESPESA", "valor": "20.00", "descricao": "Troca de pneu dianteiro", "data_lancamento": "2026-08-22"},
+    )
+
+    id1 = res1.json()["id"]
+    id2 = res2.json()["id"]
+    id3 = res3.json()["id"]
+
+    # Teste de busca por texto livre na descricao: "pneu"
+    res_busca = await client.get("/lancamentos", headers=headers, params={"busca": "pneu"})
+    assert res_busca.status_code == 200
+    itens_busca = res_busca.json()["itens"]
+    assert len(itens_busca) == 2
+    assert {i["id"] for i in itens_busca} == {id1, id3}
+
+    # Teste de exclusão em lote (deleta id1 e id2)
+    res_lote = await client.request("DELETE", "/lancamentos/lote", headers=headers, json={"ids": [id1, id2]})
+    assert res_lote.status_code == 200
+    assert res_lote.json()["quantidade"] == 2
+
+    # Verifica se restar apenas id3
+    res_final = await client.get("/lancamentos", headers=headers)
+    assert res_final.status_code == 200
+    itens_finais = res_final.json()["itens"]
+    assert len(itens_finais) == 1
+    assert itens_finais[0]["id"] == id3
+

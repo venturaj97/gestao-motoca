@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 from sqlalchemy.orm import Session
 
 from app.models.abastecimento import Abastecimento
@@ -166,6 +166,7 @@ def listar_lancamentos(
     data_inicio: Optional[date] = None,
     data_fim: Optional[date] = None,
     categoria_nome: Optional[str] = None,
+    busca: Optional[str] = None,
     valor_min: Optional[Decimal] = None,
     valor_max: Optional[Decimal] = None,
     pagina: int = 1,
@@ -187,6 +188,10 @@ def listar_lancamentos(
 
     if categoria_nome:
         filtros.append(Categoria.nome.ilike(f"%{categoria_nome.strip()}%"))
+
+    if busca and busca.strip():
+        termo = f"%{busca.strip()}%"
+        filtros.append(or_(Categoria.nome.ilike(termo), Lancamento.descricao.ilike(termo)))
 
     if valor_min is not None:
         filtros.append(Lancamento.valor >= valor_min)
@@ -337,3 +342,32 @@ def excluir_lancamento(db: Session, lancamento_id: int, usuario_id: int, auto_co
         db.commit()
     else:
         db.flush()
+
+
+def excluir_lancamentos_em_lote(
+    db: Session,
+    usuario_id: int,
+    ids: list[int],
+) -> int:
+    if not ids:
+        return 0
+
+    stmt = (
+        select(Lancamento)
+        .where(
+            Lancamento.usuario_id == usuario_id,
+            Lancamento.id.in_(ids),
+        )
+    )
+    itens = db.execute(stmt).scalars().all()
+
+    if not itens:
+        raise ValueError("lancamento_nao_encontrado")
+
+    qtd = len(itens)
+    for item in itens:
+        db.delete(item)
+
+    db.commit()
+    return qtd
+

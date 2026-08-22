@@ -10,6 +10,7 @@ export interface FiltrosLancamento {
   data_inicio?: string   // formato: YYYY-MM-DD
   data_fim?: string
   categoria_nome?: string
+  busca?: string
   valor_min?: number
   valor_max?: number
   pagina?: number
@@ -57,3 +58,10 @@ export async function atualizarLancamento(id: number, dados: LancamentoCriar): P
 export async function excluirLancamento(id: number): Promise<void> {
   await api.delete(`/lancamentos/${id}`)
 }
+
+// DELETE /lancamentos/lote
+export async function excluirLancamentosLote(ids: number[]): Promise<{ quantidade: number; mensagem: string }> {
+  const res = await api.delete<{ quantidade: number; mensagem: string }>('/lancamentos/lote', { data: { ids } })
+  return res.data
+}
+

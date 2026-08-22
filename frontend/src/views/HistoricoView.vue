@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { listarLancamentos } from '@/api/lancamentos'
+import { listarLancamentos, excluirLancamentosLote } from '@/api/lancamentos'
 import { obterHistoricoKm, excluirHistoricoKm } from '@/api/motos'
 import { obterInteligenciaResumo } from '@/api/inteligencia'
 import { useMotoStore } from '@/stores/moto'
@@ -11,6 +11,7 @@ import type {
   InteligenciaResumo,
 } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
+import EditarLancamentoModal from '@/components/EditarLancamentoModal.vue'
 
 const router   = useRouter()
 const route    = useRoute()
@@ -36,10 +37,19 @@ const totalRegistros = ref(0)
 const totalPaginas = ref(1)
 const mostrarFiltros = ref(false)
 const filtroCategoriaNome = ref('')
+const filtroBusca = ref('')
 const filtroValorMin = ref('')
 const filtroValorMax = ref('')
 type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
 const modoPeriodo = ref<ModoPeriodo>('HOJE')
+
+// ── Estado Seleção & Edição ─────────────────────────────────────
+const modoSelecao = ref(false)
+const idsSelecionados = ref<number[]>([])
+const executandoExclusaoLote = ref(false)
+
+const modalEdicaoVisivel = ref(false)
+const lancamentoParaEditar = ref<LancamentoResposta | null>(null)
 
 // ── Estado Relatórios (KM + Inteligência) ───────────────────────
 const historicoKm = ref<MotoHistoricoKmResumo | null>(null)
@@ -73,9 +83,12 @@ const faixaPeriodo = computed(() => {
 })
 
 const filtrosAtivos = computed(() => {
-  const chips: Array<{ chave: 'categoria' | 'min' | 'max'; texto: string }> = []
+  const chips: Array<{ chave: 'categoria' | 'busca' | 'min' | 'max'; texto: string }> = []
   if (filtroCategoriaNome.value.trim()) {
     chips.push({ chave: 'categoria', texto: `Categoria: ${filtroCategoriaNome.value.trim()}` })
+  }
+  if (filtroBusca.value.trim()) {
+    chips.push({ chave: 'busca', texto: `Busca: "${filtroBusca.value.trim()}"` })
   }
   if (filtroValorMin.value.trim()) {
     chips.push({ chave: 'min', texto: `Min: R$ ${filtroValorMin.value.trim()}` })
@@ -106,6 +119,7 @@ async function carregarTransacoes(pagina = paginaAtual.value) {
       data_inicio: dataInicio.value || undefined,
       data_fim: dataFim.value || undefined,
       categoria_nome: filtroCategoriaNome.value.trim() || undefined,
+      busca: filtroBusca.value.trim() || undefined,
       valor_min: paraNumeroFiltro(filtroValorMin.value),
       valor_max: paraNumeroFiltro(filtroValorMax.value),
       pagina,
@@ -264,16 +278,73 @@ function aplicarFiltrosAvancados() {
 
 function limparFiltrosAvancados() {
   filtroCategoriaNome.value = ''
+  filtroBusca.value = ''
   filtroValorMin.value = ''
   filtroValorMax.value = ''
   carregarTransacoes(1)
 }
 
-function removerFiltro(chave: 'categoria' | 'min' | 'max') {
+function removerFiltro(chave: 'categoria' | 'busca' | 'min' | 'max') {
   if (chave === 'categoria') filtroCategoriaNome.value = ''
+  if (chave === 'busca') filtroBusca.value = ''
   if (chave === 'min') filtroValorMin.value = ''
   if (chave === 'max') filtroValorMax.value = ''
   carregarTransacoes(1)
+}
+
+// ── Ações de Seleção e Edição ────────────────────────────────────
+function abrirEdicao(lanc: LancamentoResposta) {
+  lancamentoParaEditar.value = lanc
+  modalEdicaoVisivel.value = true
+}
+
+function clicarNaLinha(lanc: LancamentoResposta) {
+  if (modoSelecao.value) {
+    toggleItemSelecao(lanc.id)
+  } else {
+    abrirEdicao(lanc)
+  }
+}
+
+function toggleModoSelecao() {
+  modoSelecao.value = !modoSelecao.value
+  idsSelecionados.value = []
+}
+
+function cancelarSelecao() {
+  modoSelecao.value = false
+  idsSelecionados.value = []
+}
+
+function toggleItemSelecao(id: number) {
+  const idx = idsSelecionados.value.indexOf(id)
+  if (idx > -1) {
+    idsSelecionados.value.splice(idx, 1)
+  } else {
+    idsSelecionados.value.push(id)
+  }
+}
+
+function ehSelecionado(id: number): boolean {
+  return idsSelecionados.value.includes(id)
+}
+
+async function executarExclusaoLote() {
+  if (!idsSelecionados.value.length) return
+  const qtd = idsSelecionados.value.length
+  if (!confirm(`Tem certeza que deseja excluir ${qtd} lançamento(s)?`)) return
+
+  executandoExclusaoLote.value = true
+  try {
+    await excluirLancamentosLote(idsSelecionados.value)
+    idsSelecionados.value = []
+    modoSelecao.value = false
+    await carregarTransacoes()
+  } catch {
+    erro.value = 'Erro ao excluir lançamentos.'
+  } finally {
+    executandoExclusaoLote.value = false
+  }
 }
 
 function paginaAnterior() {
@@ -416,7 +487,7 @@ onMounted(async () => {
             <button
               class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
               :class="modoPeriodo === 'HOJE'
-                ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+                ? 'bg-slate-200 text-slate-900 dark:bg-slate-100 dark:text-slate-900 border-slate-300 shadow-sm font-black'
                 : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
               @click="aplicarPeriodoRapido('HOJE')"
             >
@@ -425,7 +496,7 @@ onMounted(async () => {
             <button
               class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
               :class="modoPeriodo === 'SEMANA'
-                ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+                ? 'bg-slate-200 text-slate-900 dark:bg-slate-100 dark:text-slate-900 border-slate-300 shadow-sm font-black'
                 : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
               @click="aplicarPeriodoRapido('SEMANA')"
             >
@@ -434,7 +505,7 @@ onMounted(async () => {
             <button
               class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
               :class="modoPeriodo === 'MES'
-                ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
+                ? 'bg-slate-200 text-slate-900 dark:bg-slate-100 dark:text-slate-900 border-slate-300 shadow-sm font-black'
                 : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
               @click="aplicarPeriodoRapido('MES')"
             >
@@ -492,6 +563,12 @@ onMounted(async () => {
           v-if="mostrarFiltros"
           class="space-y-2 bg-surface-container p-3 border border-outline-variant"
         >
+          <input
+            v-model="filtroBusca"
+            type="text"
+            placeholder="Buscar por descrição (ex: pneu, lâmpada)"
+            class="tactical-input py-2.5 px-2 text-sm"
+          />
           <input
             v-model="filtroCategoriaNome"
             type="text"
@@ -567,11 +644,69 @@ onMounted(async () => {
           </button>
         </div>
 
+        <!-- Cabeçalho da Lista -->
+        <div class="flex justify-between items-center py-1">
+          <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+            {{ totalRegistros }} REGISTRO{{ totalRegistros !== 1 ? 'S' : '' }}
+          </p>
+          <button
+            v-if="lancamentosFiltrados.length > 1 || modoSelecao"
+            class="h-7 px-2.5 flex items-center gap-1 font-label text-[9px] font-bold tracking-widest uppercase border transition-colors"
+            :class="modoSelecao
+              ? 'bg-red-600 text-white border-red-600'
+              : 'bg-surface-container border-outline-variant text-on-surface-variant hover:bg-surface-bright'"
+            @click="toggleModoSelecao"
+          >
+            <span class="material-symbols-outlined text-xs">{{ modoSelecao ? 'close' : 'delete_sweep' }}</span>
+            {{ modoSelecao ? 'CANCELAR' : 'APAGAR VÁRIOS' }}
+          </button>
+        </div>
+
+        <!-- Barra Flutuante de Ações Dinâmica (quando modoSelecao ativo) -->
+        <div
+          v-if="modoSelecao"
+          class="bg-surface-container-high p-3 border border-outline-variant flex justify-between items-center gap-2 animate-in fade-in duration-150"
+        >
+          <div class="flex items-center gap-2">
+            <button
+              class="font-label text-[9px] font-bold tracking-widest uppercase text-on-surface-variant hover:text-on-surface"
+              @click="cancelarSelecao"
+            >
+              CANCELAR
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Botão Excluir em Lote -->
+            <button
+              class="h-8 px-3 bg-red-600 text-white font-label text-[9px] font-extrabold tracking-widest uppercase flex items-center gap-1 disabled:opacity-40 hover:bg-red-500 transition-all"
+              :disabled="!idsSelecionados.length || executandoExclusaoLote"
+              @click="executarExclusaoLote"
+            >
+              <span class="material-symbols-outlined text-xs">delete</span>
+              EXCLUIR SELECIONADOS ({{ idsSelecionados.length }})
+            </button>
+          </div>
+        </div>
+
         <!-- Lista de lançamentos -->
-        <ul v-else class="space-y-1">
+        <ul v-if="lancamentosFiltrados.length" class="space-y-1">
           <li v-for="l in lancamentosFiltrados" :key="l.id"
-            class="scannable-row flex items-center justify-between py-3 px-1">
+            class="scannable-row flex items-center justify-between py-3 px-1 cursor-pointer transition-colors hover:bg-surface-container-high/50"
+            :class="{ 'bg-surface-container-highest/60 border-l-2 border-outline-variant': modoSelecao && ehSelecionado(l.id) }"
+            @click="clicarNaLinha(l)">
             <div class="flex items-center gap-3">
+
+              <!-- Checkbox de seleção (EXIBIDO APENAS NO MODO SELEÇÃO) -->
+              <div v-if="modoSelecao" class="flex items-center justify-center pr-1" @click.stop="toggleItemSelecao(l.id)">
+                <input
+                  type="checkbox"
+                  :checked="ehSelecionado(l.id)"
+                  class="w-4 h-4 accent-slate-400 dark:accent-slate-200 cursor-pointer"
+                />
+              </div>
+
+              <!-- Ícone indicador -->
               <div class="w-8 h-8 flex items-center justify-center flex-shrink-0"
                 :class="l.tipo === 'GANHO' ? 'bg-primary-container/10' : 'bg-secondary/10'">
                 <span class="material-symbols-outlined text-base"
@@ -588,6 +723,9 @@ onMounted(async () => {
                 <p v-if="l.categoria_nome" class="font-label text-[9px] text-on-surface-variant uppercase opacity-80">
                   {{ l.categoria_nome }}
                 </p>
+                <p v-if="l.descricao" class="font-label text-[10px] text-on-surface">
+                  {{ l.descricao }}
+                </p>
                 <p v-if="l.km_corrida" class="font-label text-[9px] text-on-surface-variant">
                   {{ parseFloat(l.km_corrida).toFixed(1) }} km
                   <span v-if="l.minutos_corrida">· {{ l.minutos_corrida }}min</span>
@@ -595,10 +733,13 @@ onMounted(async () => {
               </div>
             </div>
 
-            <p class="font-headline font-bold text-sm"
-              :class="l.tipo === 'GANHO' ? 'text-primary-container' : 'text-secondary'">
-              {{ l.tipo === 'GANHO' ? '+' : '-' }}{{ formatarReais(l.valor) }}
-            </p>
+            <div class="flex items-center gap-2">
+              <p class="font-headline font-bold text-sm"
+                :class="l.tipo === 'GANHO' ? 'text-primary-container' : 'text-secondary'">
+                {{ l.tipo === 'GANHO' ? '+' : '-' }}{{ formatarReais(l.valor) }}
+              </p>
+              <span v-if="!modoSelecao" class="material-symbols-outlined text-xs text-on-surface-variant opacity-40">chevron_right</span>
+            </div>
           </li>
         </ul>
 
@@ -969,6 +1110,14 @@ onMounted(async () => {
       </template>
 
     </main>
+
+    <!-- Modal de Edição de Lançamento -->
+    <EditarLancamentoModal
+      :visivel="modalEdicaoVisivel"
+      :lancamento="lancamentoParaEditar"
+      @fechar="modalEdicaoVisivel = false"
+      @salvo="carregarTransacoes"
+    />
 
     <!-- Bottom Nav -->
     <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">

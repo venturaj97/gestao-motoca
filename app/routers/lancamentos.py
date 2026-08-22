@@ -12,6 +12,7 @@ from app.models.categoria import Categoria
 from app.routers._errors import raise_mapped_error
 from app.schemas.lancamento import (
     LancamentoCriar,
+    LancamentoExcluirLoteEntrada,
     LancamentoListaPaginadaResposta,
     LancamentoLoteCriar,
     LancamentoLoteItemResumo,
@@ -22,6 +23,7 @@ from app.services.lancamento_service import (
     atualizar_lancamento,
     criar_lancamento,
     excluir_lancamento,
+    excluir_lancamentos_em_lote,
     listar_lancamentos,
 )
 
@@ -152,6 +154,19 @@ def rota_atualizar_lancamento(
         _erros_lancamento_valor(e)
 
 
+@router.delete("/lote", status_code=status.HTTP_200_OK)
+def rota_excluir_lancamentos_em_lote(
+    dados: LancamentoExcluirLoteEntrada,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    try:
+        qtd = excluir_lancamentos_em_lote(db, usuario.id, dados.ids)
+        return {"quantidade": qtd, "mensagem": f"{qtd} lancamento(s) excluido(s) com sucesso."}
+    except ValueError as e:
+        _erros_lancamento_valor(e)
+
+
 @router.delete("/{lancamento_id}", status_code=status.HTTP_204_NO_CONTENT)
 def rota_excluir_lancamento(
     lancamento_id: int,
@@ -164,12 +179,14 @@ def rota_excluir_lancamento(
         _erros_lancamento_valor(e)
 
 
+
 @router.get("", response_model=LancamentoListaPaginadaResposta)
 def rota_listar_lancamentos(
     tipo: Optional[str] = Query(default=None),
     data_inicio: Optional[date] = Query(default=None),
     data_fim: Optional[date] = Query(default=None),
     categoria_nome: Optional[str] = Query(default=None, min_length=1, max_length=60),
+    busca: Optional[str] = Query(default=None, min_length=1, max_length=100),
     valor_min: Optional[Decimal] = Query(default=None, ge=0),
     valor_max: Optional[Decimal] = Query(default=None, ge=0),
     pagina: int = Query(default=1, ge=1),
@@ -185,6 +202,7 @@ def rota_listar_lancamentos(
             data_inicio=data_inicio,
             data_fim=data_fim,
             categoria_nome=categoria_nome,
+            busca=busca,
             valor_min=valor_min,
             valor_max=valor_max,
             pagina=pagina,

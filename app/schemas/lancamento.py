@@ -64,3 +64,8 @@ class LancamentoListaPaginadaResposta(BaseModel):
     pagina: int
     limite: int
     total_paginas: int
+
+
+class LancamentoExcluirLoteEntrada(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=100, description="Lista de IDs dos lançamentos a excluir")
+
