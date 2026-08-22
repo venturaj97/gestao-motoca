@@ -101,6 +101,20 @@ const filtrosAtivos = computed(() => {
 
 const motoAtiva = computed(() => motoStore.motoAtiva)
 
+const registrosParaGrafico = computed(() => {
+  if (!historicoKm.value || !historicoKm.value.registros.length) return []
+  const ordenados = historicoKm.value.registros.slice().reverse()
+  if (ordenados.length <= 15) return ordenados
+
+  const passo = (ordenados.length - 1) / 14
+  const pontos = []
+  for (let i = 0; i < 15; i++) {
+    const idx = Math.round(i * passo)
+    if (ordenados[idx]) pontos.push(ordenados[idx])
+  }
+  return pontos
+})
+
 function paraNumeroFiltro(valor: string): number | undefined {
   const txt = valor.trim()
   if (!txt) return undefined
@@ -829,7 +843,7 @@ onMounted(async () => {
                 <line v-for="i in 5" :key="'g'+i" :x1="30" :y1="10 + (i-1)*30" :x2="310" :y2="10 + (i-1)*30"
                   stroke="currentColor" class="text-outline-variant" stroke-width="0.5" opacity="0.3" />
                 <polyline
-                  :points="historicoKm.registros.slice().reverse().map((r, idx, arr) => {
+                  :points="registrosParaGrafico.map((r, idx, arr) => {
                     const minKm = Math.min(...arr.map(a => a.km))
                     const maxKm = Math.max(...arr.map(a => a.km))
                     const range = maxKm - minKm || 1
@@ -843,25 +857,24 @@ onMounted(async () => {
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
-                <circle v-for="(r, idx) in historicoKm.registros.slice().reverse()" :key="'d'+r.id"
-                  :cx="35 + (idx / Math.max(historicoKm.registros.length - 1, 1)) * 270"
+                <circle v-for="(r, idx) in registrosParaGrafico" :key="'d'+r.id"
+                  :cx="35 + (idx / Math.max(registrosParaGrafico.length - 1, 1)) * 270"
                   :cy="(() => {
-                    const arr = historicoKm!.registros.slice().reverse()
-                    const minKm = Math.min(...arr.map(a => a.km))
-                    const maxKm = Math.max(...arr.map(a => a.km))
+                    const minKm = Math.min(...registrosParaGrafico.map(a => a.km))
+                    const maxKm = Math.max(...registrosParaGrafico.map(a => a.km))
                     const range = maxKm - minKm || 1
                     return 120 - ((r.km - minKm) / range) * 100
                   })()"
-                  r="4"
+                  r="3.5"
                   fill="var(--md-sys-color-primary-container, #4fc3f7)"
                 />
               </svg>
               <div class="flex justify-between mt-1">
                 <span class="font-label text-[8px] text-on-surface-variant">
-                  {{ formatarDataCriacao(historicoKm.registros[historicoKm.registros.length - 1]?.data_criacao || '') }}
+                  {{ formatarDataCriacao(registrosParaGrafico[0]?.data_criacao || '') }}
                 </span>
                 <span class="font-label text-[8px] text-on-surface-variant">
-                  {{ formatarDataCriacao(historicoKm.registros[0]?.data_criacao || '') }}
+                  {{ formatarDataCriacao(registrosParaGrafico[registrosParaGrafico.length - 1]?.data_criacao || '') }}
                 </span>
               </div>
             </div>
@@ -1073,36 +1086,38 @@ onMounted(async () => {
               <span class="material-symbols-outlined text-3xl opacity-30">speed</span>
               <p class="font-label text-xs tracking-widest uppercase mt-2">Nenhum registro de KM</p>
             </div>
-            <ul v-else class="space-y-1">
-              <li v-for="r in historicoKm.registros" :key="r.id"
-                class="flex items-center justify-between py-2 px-1 scannable-row">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 bg-primary-container/10">
-                    <span class="material-symbols-outlined text-base text-primary-container">speed</span>
+            <div v-else class="max-h-80 overflow-y-auto pr-1 space-y-1">
+              <ul class="space-y-1">
+                <li v-for="r in historicoKm.registros" :key="r.id"
+                  class="flex items-center justify-between py-2 px-1 scannable-row">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 bg-primary-container/10">
+                      <span class="material-symbols-outlined text-base text-primary-container">speed</span>
+                    </div>
+                    <div>
+                      <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+                        {{ formatarDataCriacao(r.data_criacao) }}
+                        <span class="opacity-60">· {{ origemLabel(r.origem) }}</span>
+                      </p>
+                      <p class="font-headline font-bold text-sm text-on-surface">
+                        {{ r.km.toLocaleString('pt-BR') }} km
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-                      {{ formatarDataCriacao(r.data_criacao) }}
-                      <span class="opacity-60">· {{ origemLabel(r.origem) }}</span>
-                    </p>
-                    <p class="font-headline font-bold text-sm text-on-surface">
-                      {{ r.km.toLocaleString('pt-BR') }} km
-                    </p>
+                  <div class="flex items-center gap-2">
+                    <span v-if="r.variacao !== null"
+                      class="font-label text-[9px] font-bold"
+                      :class="r.variacao >= 0 ? 'text-primary-container' : 'text-secondary'">
+                      {{ r.variacao >= 0 ? '+' : '' }}{{ r.variacao.toLocaleString('pt-BR') }}
+                    </span>
+                    <button @click="removerRegistroKm(r.id)"
+                      class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-secondary transition-colors">
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
                   </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span v-if="r.variacao !== null"
-                    class="font-label text-[9px] font-bold"
-                    :class="r.variacao >= 0 ? 'text-primary-container' : 'text-secondary'">
-                    {{ r.variacao >= 0 ? '+' : '' }}{{ r.variacao.toLocaleString('pt-BR') }}
-                  </span>
-                  <button @click="removerRegistroKm(r.id)"
-                    class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-secondary transition-colors">
-                    <span class="material-symbols-outlined text-sm">delete</span>
-                  </button>
-                </div>
-              </li>
-            </ul>
+                </li>
+              </ul>
+            </div>
           </div>
 
         </template>
