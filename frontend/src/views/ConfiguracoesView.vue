@@ -772,6 +772,29 @@ onMounted(async () => {
             </button>
           </form>
         </div>
+
+        <!-- Card de Status do PWA / Aplicativo Mobile -->
+        <div class="bg-surface-container-low p-5 border-l-4 border-cyan-500 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-0.5">DISPOSITIVO E APLICATIVO</p>
+              <h3 class="font-headline font-black text-lg text-on-surface uppercase">STATUS DO APP (PWA)</h3>
+            </div>
+            <span class="material-symbols-outlined text-cyan-400 text-2xl">install_mobile</span>
+          </div>
+
+          <p class="text-xs text-on-surface-variant leading-relaxed">
+            O <strong>Gestão Motoca</strong> pode ser instalado diretamente na tela inicial do seu celular, funcionando como um aplicativo nativo com abertura rápida e baixo consumo de dados na rua.
+          </p>
+
+          <div class="rounded bg-surface-container p-3 border border-outline-variant flex items-center justify-between text-xs">
+            <span class="font-bold text-on-surface flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Modo PWA Habilitado
+            </span>
+            <span class="font-label text-[10px] text-on-surface-variant uppercase tracking-wider">v1.0.0</span>
+          </div>
+        </div>
       </section>
     </main>
 
