@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
 import { criarAbastecimento } from '@/api/abastecimentos'
 import { listarCategorias } from '@/api/categorias'
@@ -9,7 +9,6 @@ import AppDateInput from '@/components/AppDateInput.vue'
 import AppLayout from '@/components/AppLayout.vue'
 
 const router    = useRouter()
-const route     = useRoute()
 const motoStore = useMotoStore()
 
 // ── Estado ─────────────────────────────────────────────────────

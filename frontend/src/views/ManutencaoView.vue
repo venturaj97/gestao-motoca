@@ -9,7 +9,6 @@ import type { CategoriaResposta } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 
 const router    = useRouter()
-const route     = useRoute()
 const motoStore = useMotoStore()
 
 // ── Estado ─────────────────────────────────────────────────────

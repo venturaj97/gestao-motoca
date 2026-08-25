@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { listarLancamentos, excluirLancamentosLote } from '@/api/lancamentos'
 import { obterHistoricoKm, excluirHistoricoKm } from '@/api/motos'
 import { obterInteligenciaResumo } from '@/api/inteligencia'
@@ -15,7 +15,6 @@ import EditarLancamentoModal from '@/components/EditarLancamentoModal.vue'
 import AppLayout from '@/components/AppLayout.vue'
 
 const router   = useRouter()
-const route    = useRoute()
 const motoStore = useMotoStore()
 
 // ── 2 Abas Táticas: Transações vs Relatórios ─────────────────────

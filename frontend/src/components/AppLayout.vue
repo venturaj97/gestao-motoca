@@ -124,7 +124,15 @@ function logout() {
     <div class="main-area">
       <!-- Topbar mobile -->
       <header class="topbar-mobile">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <button
+            v-if="route.name !== 'dashboard'"
+            class="topbar-icon-btn text-on-surface-variant hover:text-primary-container p-1"
+            title="Voltar"
+            @click="router.back()"
+          >
+            <span class="material-symbols-outlined text-2xl">arrow_back</span>
+          </button>
           <div class="w-8 h-8 bg-surface-container-highest flex items-center justify-center">
             <span class="font-headline font-black text-primary-container text-sm">
               {{ primeiroNome.charAt(0) }}

@@ -369,29 +369,7 @@ onMounted(() => {
                 </div>
                 <div class="action-card__text">
                   <span class="action-card__title">LANÇAR DESPESA</span>
-                  <span class="action-card__sub">Gasolina, peça...</span>
-                </div>
-              </button>
-
-              <!-- Abastecer -->
-              <button class="action-card action-card--ganho" @click="router.push({ name: 'abastecer' })">
-                <div class="action-card__icon action-card__icon--ganho">
-                  <span class="material-symbols-outlined text-2xl">local_gas_station</span>
-                </div>
-                <div class="action-card__text">
-                  <span class="action-card__title">ABASTECER</span>
-                  <span class="action-card__sub">Registrar abastecimento</span>
-                </div>
-              </button>
-
-              <!-- Manutenção -->
-              <button class="action-card action-card--manutencao" @click="router.push({ name: 'manutencao' })">
-                <div class="action-card__icon action-card__icon--manutencao">
-                  <span class="material-symbols-outlined text-2xl">build</span>
-                </div>
-                <div class="action-card__text">
-                  <span class="action-card__title">MANUTENÇÃO</span>
-                  <span class="action-card__sub">Revisão, troca de óleo...</span>
+                  <span class="action-card__sub">Gasolina, manutenção...</span>
                 </div>
               </button>
             </div>
@@ -670,7 +648,7 @@ onMounted(() => {
 /* ─── Ações rápidas ──────────────────────────────────────── */
 .actions-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 0.75rem;
 }
 
@@ -680,10 +658,12 @@ onMounted(() => {
   gap: 0.75rem;
   background: rgb(var(--color-surface));
   border: 2px solid rgb(var(--color-outline-variant));
-  padding: 1rem;
+  padding: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
+  min-width: 0;
+  width: 100%;
 }
 
 .action-card--ganho:hover {
@@ -703,8 +683,8 @@ onMounted(() => {
 }
 
 .action-card__icon {
-  width: 3rem;
-  height: 3rem;
+  width: 2.75rem;
+  height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -735,12 +715,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
+  flex: 1;
 }
 
 .action-card__title {
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: rgb(var(--color-on-surface));
   white-space: nowrap;

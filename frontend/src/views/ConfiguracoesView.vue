@@ -20,7 +20,6 @@ import AppLayout from '@/components/AppLayout.vue'
 import { alterarSenhaLogado } from '@/api/recuperacao'
 
 const router = useRouter()
-const route = useRoute()
 const motoStore = useMotoStore()
 
 type AbaConfig = 'MOTO' | 'CATEGORIAS' | 'LANCAMENTOS' | 'SEGURANCA'
