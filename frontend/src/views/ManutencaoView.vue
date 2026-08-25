@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
 import { criarManutencao } from '@/api/manutencoes'
 import { listarCategorias } from '@/api/categorias'
+import AppLayout from '@/components/AppLayout.vue'
 import type { CategoriaResposta } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 
@@ -109,41 +110,24 @@ function irParaInicio() {
   router.push({ name: 'dashboard' })
 }
 
-const navItems = [
-  { name: 'dashboard',  label: 'Início',    icon: 'dashboard'  },
-  { name: 'historico',  label: 'Histórico', icon: 'history'    },
-  { name: 'lancar',     label: 'Lançar',    icon: 'add_box'    },
-  { name: 'manutencao', label: 'Manutenção',icon: 'build'      },
-  { name: 'configuracoes', label: 'Config', icon: 'settings' },
-]
-function isActive(name: string) { return route.name === name }
-function navIconStyle(name: string) {
-  return isActive(name) ? { fontVariationSettings: '"FILL" 1' } : {}
-}
 
 onMounted(carregar)
 </script>
 
 <template>
-  <div class="bg-background text-on-surface font-body min-h-screen pb-24">
+  <AppLayout>
+  <div class="bg-background text-on-surface font-body min-h-screen">
+    <div class="px-5 py-4 lg:hidden">
+      <button
+        class="flex items-center gap-1 text-on-surface-variant hover:text-on-surface transition-colors text-sm font-bold"
+        @click="router.push({ name: 'dashboard' })"
+      >
+        <span class="material-symbols-outlined text-base">arrow_back</span>
+        VOLTAR
+      </button>
+    </div>
 
-    <!-- TopBar -->
-    <header class="bg-background flex justify-between items-center w-full px-5 h-16 sticky top-0 z-50 border-l-4 border-primary-container">
-      <div class="flex items-center gap-3">
-        <button class="text-on-surface-variant hover:text-on-surface transition-colors p-1"
-          @click="router.push({ name: 'dashboard' })">
-          <span class="material-symbols-outlined">arrow_back</span>
-        </button>
-        <h1 class="text-primary-container font-headline font-black text-lg tracking-tight uppercase">
-          GESTÃO MOTOCA
-        </h1>
-      </div>
-      <span class="font-label text-[10px] tracking-widest text-on-surface-variant uppercase">
-        MANUTENÇÃO
-      </span>
-    </header>
-
-    <main class="px-5 py-6 space-y-6 max-w-md mx-auto">
+    <main class="px-5 py-2 lg:py-6 space-y-6 max-w-2xl mx-auto pb-28 lg:pb-8">
 
       <!-- Título -->
       <div>
@@ -305,17 +289,6 @@ onMounted(carregar)
       </div>
     </div>
 
-    <!-- Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">
-      <button v-for="item in navItems" :key="item.name"
-        class="flex flex-col items-center justify-center h-full w-full transition-colors duration-100"
-        :class="isActive(item.name)
-          ? 'bg-primary-container text-on-primary-fixed'
-          : 'text-on-surface-variant hover:bg-surface-container'"
-        @click="router.push({ name: item.name })">
-        <span class="material-symbols-outlined" :style="navIconStyle(item.name)">{{ item.icon }}</span>
-        <span class="font-label text-[9px] font-bold uppercase tracking-[0.08em] mt-0.5">{{ item.label }}</span>
-      </button>
-    </nav>
   </div>
+  </AppLayout>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMotoStore } from '@/stores/moto'
 import { obterVisaoMes } from '@/api/visaoMes'
@@ -8,25 +8,25 @@ import type { VisaoMesResposta } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 import ConfirmarEmailBanner from '@/components/ConfirmarEmailBanner.vue'
 import AtualizarKmModal from '@/components/AtualizarKmModal.vue'
+import AppLayout from '@/components/AppLayout.vue'
 
-const router  = useRouter()
-const route   = useRoute()
-const auth    = useAuthStore()
+const router    = useRouter()
+const auth      = useAuthStore()
 const motoStore = useMotoStore()
 
 // ── Estado ───────────────────────────────────────────────────
-const visao        = ref<VisaoMesResposta | null>(null)
-const carregando   = ref(true)
-const erroCarregar = ref('')
+const visao          = ref<VisaoMesResposta | null>(null)
+const carregando     = ref(true)
+const erroCarregar   = ref('')
 const modalKmVisivel = ref(false)
 
 type ModoPeriodo = 'HOJE' | 'SEMANA' | 'MES' | 'PERSONALIZADO'
 
 const modoPeriodo = ref<ModoPeriodo>('HOJE')
-const dataInicio = ref('')
-const dataFim = ref('')
+const dataInicio  = ref('')
+const dataFim     = ref('')
 
-// ── Dados derivados do usuário e da moto ─────────────────────
+// ── Dados derivados ───────────────────────────────────────────
 const primeiroNome = computed(() => {
   const nome = auth.usuario?.nome ?? ''
   return nome.split(' ')[0].toUpperCase()
@@ -42,10 +42,10 @@ const nomeMoto = computed(() => {
   return [marca, modelo].filter(Boolean).join(' ') || '—'
 })
 
-// ── Dados financeiros do mês ──────────────────────────────────
-const ganho    = computed(() => visao.value?.ganho?.total_periodo    ?? '0.00')
-const despesa  = computed(() => visao.value?.despesa?.total_periodo  ?? '0.00')
-const saldo    = computed(() => visao.value?.saldo_mes               ?? '0.00')
+// ── Dados financeiros ────────────────────────────────────────
+const ganho   = computed(() => visao.value?.ganho?.total_periodo   ?? '0.00')
+const despesa = computed(() => visao.value?.despesa?.total_periodo ?? '0.00')
+const saldo   = computed(() => visao.value?.saldo_mes              ?? '0.00')
 
 // ── Formatações ───────────────────────────────────────────────
 function formatarReais(valor: string | number): string {
@@ -54,18 +54,17 @@ function formatarReais(valor: string | number): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-const hojeFormatado = computed(() => {
-  return new Date().toLocaleDateString('pt-BR', {
+const hojeFormatado = computed(() =>
+  new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long',
   }).toUpperCase()
-})
+)
 
 const saldoPositivo = computed(() => {
   const n = parseFloat(saldo.value)
   return isNaN(n) || n >= 0
 })
 
-// ── Alertas de manutenção (usa resumo_executivo do backend) ───
 const alertas = computed(() => visao.value?.resumo_executivo ?? [])
 
 const tituloSaldo = computed(() => {
@@ -78,7 +77,7 @@ const tituloSaldo = computed(() => {
 const faixaPeriodo = computed(() => {
   if (!dataInicio.value || !dataFim.value) return ''
   const inicio = formatarIsoParaBr(dataInicio.value)
-  const fim = formatarIsoParaBr(dataFim.value)
+  const fim    = formatarIsoParaBr(dataFim.value)
   return inicio === fim ? inicio : `${inicio} até ${fim}`
 })
 
@@ -96,17 +95,17 @@ function formatarIsoParaBr(iso: string): string {
 }
 
 function obterInicioSemanaAtual(): Date {
-  const hoje = new Date()
-  const inicio = new Date(hoje)
-  const diaSemana = inicio.getDay() // domingo=0
-  const deslocamento = diaSemana === 0 ? 6 : diaSemana - 1 // segunda=0
+  const hoje    = new Date()
+  const inicio  = new Date(hoje)
+  const diaSemana   = inicio.getDay()
+  const deslocamento = diaSemana === 0 ? 6 : diaSemana - 1
   inicio.setDate(inicio.getDate() - deslocamento)
   return inicio
 }
 
 function obterFimSemanaAtual(): Date {
   const inicio = obterInicioSemanaAtual()
-  const fim = new Date(inicio)
+  const fim    = new Date(inicio)
   fim.setDate(inicio.getDate() + 6)
   return fim
 }
@@ -128,20 +127,20 @@ function aplicarPeriodoRapido(modo: Exclude<ModoPeriodo, 'PERSONALIZADO'>): void
   if (modo === 'HOJE') {
     const isoHoje = formatarDataIso(hoje)
     dataInicio.value = isoHoje
-    dataFim.value = isoHoje
+    dataFim.value    = isoHoje
     carregar()
     return
   }
 
   if (modo === 'SEMANA') {
     dataInicio.value = formatarDataIso(obterInicioSemanaAtual())
-    dataFim.value = formatarDataIso(obterFimSemanaAtual())
+    dataFim.value    = formatarDataIso(obterFimSemanaAtual())
     carregar()
     return
   }
 
   dataInicio.value = formatarDataIso(obterInicioMesAtual())
-  dataFim.value = formatarDataIso(obterFimMesAtual())
+  dataFim.value    = formatarDataIso(obterFimMesAtual())
   carregar()
 }
 
@@ -174,7 +173,7 @@ async function carregar() {
     } else {
       visao.value = await obterVisaoMes({
         dataInicio: dataInicio.value,
-        dataFim: dataFim.value,
+        dataFim:    dataFim.value,
         motoUsuarioId: motoId,
       })
     }
@@ -185,115 +184,50 @@ async function carregar() {
   }
 }
 
-// ── Logout ────────────────────────────────────────────────────
-function logout() {
-  auth.logout()
-  motoStore.limpar()
-  router.push({ name: 'login' })
-}
-
-// ── Nav ───────────────────────────────────────────────────────
-const navItems = [
-  { name: 'dashboard',  label: 'Início',    icon: 'dashboard'       },
-  { name: 'historico',  label: 'Histórico', icon: 'history'         },
-  { name: 'lancar',     label: 'Lançar',    icon: 'add_box'         },
-  { name: 'manutencao', label: 'Manutenção',icon: 'build'           },
-  { name: 'configuracoes', label: 'Config', icon: 'settings' },
-]
-
-function isActive(name: string) {
-  return route.name === name
-}
-
-function navIconStyle(name: string): Record<string, string> {
-  return isActive(name) ? { fontVariationSettings: '"FILL" 1' } : {}
-}
-
 onMounted(() => {
   aplicarPeriodoRapido('HOJE')
 })
 </script>
 
 <template>
-  <div class="bg-background text-on-surface font-body min-h-screen pb-24">
+  <AppLayout>
+    <div class="dashboard-page">
 
-    <!-- ══ TopBar ══════════════════════════════════════════════ -->
-    <header class="bg-background flex justify-between items-center w-full px-5 h-16 sticky top-0 z-50 border-l-4 border-primary-container">
-      <div class="flex items-center gap-3">
-        <!-- Avatar inicial do usuário -->
-        <div class="w-9 h-9 bg-surface-container-highest flex items-center justify-center">
-          <span class="font-headline font-black text-primary-container text-sm">
-            {{ primeiroNome.charAt(0) }}
-          </span>
-        </div>
-        <h1 class="text-primary-container font-headline font-black text-lg tracking-tight uppercase">
-          GESTÃO MOTOCA
-        </h1>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <!-- Recarregar -->
-        <button
-          class="text-on-surface-variant hover:text-primary-container transition-colors"
-          :class="{ 'animate-spin': carregando }"
-          @click="carregar"
-        >
-          <span class="material-symbols-outlined text-xl">refresh</span>
-        </button>
-        <!-- Logout -->
-        <button
-          class="text-on-surface-variant hover:text-secondary transition-colors"
-          title="Sair"
-          @click="logout"
-        >
-          <span class="material-symbols-outlined text-xl">logout</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- ══ Conteúdo principal ══════════════════════════════════ -->
-    <main class="px-5 py-5 space-y-6 max-w-md mx-auto">
-
-      <!-- Banner de Confirmação de E-mail (se pendente) -->
+      <!-- Banner de Confirmação de E-mail -->
       <ConfirmarEmailBanner />
 
-      <!-- Boas-vindas -->
-      <section class="space-y-0.5">
-        <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase">
-          {{ hojeFormatado }}
-        </p>
-        <h2 class="font-headline font-extrabold text-3xl uppercase tracking-tight">
-          OLÁ, {{ primeiroNome }}
-        </h2>
-        <p v-if="nomeMoto !== '—'" class="font-label text-[10px] text-primary-container tracking-widest uppercase">
-          <span class="material-symbols-outlined text-xs align-middle">two_wheeler</span>
-          {{ nomeMoto }}
-        </p>
+      <!-- ══ Cabeçalho da página ═════════════════════════════ -->
+      <section class="page-header">
+        <div>
+          <p class="label-overline">{{ hojeFormatado }}</p>
+          <h2 class="page-title">OLÁ, {{ primeiroNome }}</h2>
+          <p v-if="nomeMoto !== '—'" class="moto-label">
+            <span class="material-symbols-outlined text-xs align-middle">two_wheeler</span>
+            {{ nomeMoto }}
+          </p>
+        </div>
 
-        <!-- Card de Odômetro (KM) com Botão Rápido -->
-        <div v-if="motoAtiva" class="mt-3 flex items-center justify-between bg-surface-container p-3 border-l-4 border-primary-container">
+        <!-- Card Odômetro (apenas se tiver moto) -->
+        <div v-if="motoAtiva" class="odometer-card">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-none bg-primary-container/10 flex items-center justify-center text-primary-container">
+            <div class="w-9 h-9 bg-primary-container/10 flex items-center justify-center text-primary-container">
               <span class="material-symbols-outlined text-lg">speed</span>
             </div>
             <div>
-              <p class="font-label text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">ODÔMETRO ATUAL</p>
+              <p class="label-overline">ODÔMETRO ATUAL</p>
               <p class="font-headline font-black text-sm text-on-surface tracking-wide">
                 {{ motoAtiva.km_atual.toLocaleString('pt-BR') }} KM
               </p>
             </div>
           </div>
-          <button
-            class="px-3 py-1.5 bg-primary-container/10 dark:bg-primary-container/20 text-primary-container font-label text-[10px] font-black uppercase tracking-wider hover:bg-primary-container hover:text-on-primary-fixed transition-all flex items-center gap-1 cursor-pointer border border-primary-container/30 active:scale-[0.97]"
-            @click="modalKmVisivel = true"
-          >
+          <button class="btn-km" @click="modalKmVisivel = true">
             <span class="material-symbols-outlined text-xs">edit</span>
             ATUALIZAR KM
           </button>
         </div>
       </section>
 
-      <!-- Modal de Atualização Rápida de KM -->
+      <!-- Modal atualizar KM -->
       <AtualizarKmModal
         :show="modalKmVisivel"
         :km-atual="motoAtiva?.km_atual ?? 0"
@@ -301,228 +235,532 @@ onMounted(() => {
         @salvo="carregar"
       />
 
-      <!-- Filtro de período -->
-      <section class="space-y-3 bg-surface-container p-4">
-        <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-          PERÍODO DA VISÃO
-        </p>
+      <!-- ══ Grid Principal Desktop ══════════════════════════ -->
+      <div class="dashboard-grid">
 
-        <div class="grid grid-cols-3 gap-2">
-          <button
-            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
-            :class="modoPeriodo === 'HOJE'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
-              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
-            @click="aplicarPeriodoRapido('HOJE')"
-          >
-            HOJE
-          </button>
-          <button
-            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
-            :class="modoPeriodo === 'SEMANA'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
-              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
-            @click="aplicarPeriodoRapido('SEMANA')"
-          >
-            SEMANA
-          </button>
-          <button
-            class="py-2.5 font-label text-[10px] tracking-widest uppercase border transition-all duration-150 cursor-pointer"
-            :class="modoPeriodo === 'MES'
-              ? 'bg-primary-container text-on-primary-fixed border-primary-container shadow-sm font-black'
-              : 'bg-white dark:bg-surface-container-high text-on-surface-variant border-outline-variant hover:bg-surface-variant dark:hover:bg-surface-bright shadow-2xs font-bold'"
-            @click="aplicarPeriodoRapido('MES')"
-          >
-            MÊS
-          </button>
-        </div>
+        <!-- ── Coluna Esquerda / Coluna única em mobile ─────── -->
+        <div class="dashboard-col-main">
 
-        <div class="space-y-2">
-          <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-            PERSONALIZADO
-          </p>
-          <div class="grid grid-cols-2 gap-2">
-            <AppDateInput v-model="dataInicio" tone="system" :max="dataFim || undefined" />
-            <AppDateInput v-model="dataFim" tone="system" :min="dataInicio || undefined" />
+          <!-- Filtro de período -->
+          <section class="card-section">
+            <p class="label-overline">PERÍODO DA VISÃO</p>
+
+            <div class="period-tabs">
+              <button
+                class="period-tab"
+                :class="{ 'period-tab--active': modoPeriodo === 'HOJE' }"
+                @click="aplicarPeriodoRapido('HOJE')"
+              >HOJE</button>
+              <button
+                class="period-tab"
+                :class="{ 'period-tab--active': modoPeriodo === 'SEMANA' }"
+                @click="aplicarPeriodoRapido('SEMANA')"
+              >SEMANA</button>
+              <button
+                class="period-tab"
+                :class="{ 'period-tab--active': modoPeriodo === 'MES' }"
+                @click="aplicarPeriodoRapido('MES')"
+              >MÊS</button>
+            </div>
+
+            <div class="custom-period">
+              <p class="label-overline">PERSONALIZADO</p>
+              <div class="grid grid-cols-2 gap-2">
+                <AppDateInput v-model="dataInicio" tone="system" :max="dataFim || undefined" />
+                <AppDateInput v-model="dataFim" tone="system" :min="dataInicio || undefined" />
+              </div>
+              <button class="btn-apply" @click="aplicarPeriodoPersonalizado">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                APLICAR PERÍODO
+              </button>
+            </div>
+          </section>
+
+          <!-- Erro de carregamento -->
+          <div v-if="erroCarregar" class="error-banner">
+            <span class="material-symbols-outlined text-sm">warning</span>
+            {{ erroCarregar }}
           </div>
-          <button
-            class="w-full py-2.5 bg-white dark:bg-surface-container-high border border-outline dark:border-outline-variant text-on-surface font-label text-[10px] font-bold tracking-widest uppercase hover:bg-surface-variant dark:hover:bg-surface-bright transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
-            @click="aplicarPeriodoPersonalizado"
-          >
-            <span class="material-symbols-outlined text-sm">check_circle</span>
-            APLICAR PERÍODO
-          </button>
-        </div>
-      </section>
 
-      <!-- Erro de carregamento -->
-      <div v-if="erroCarregar" class="bg-error-container text-on-error-container font-label text-xs px-4 py-3 flex items-center gap-2">
-        <span class="material-symbols-outlined text-sm">warning</span>
-        {{ erroCarregar }}
+          <!-- Skeleton -->
+          <template v-if="carregando && !visao">
+            <div class="space-y-4 animate-pulse">
+              <div class="h-32 bg-surface-container-low" />
+              <div class="grid grid-cols-2 gap-3">
+                <div class="h-20 bg-surface-container-low" />
+                <div class="h-20 bg-surface-container-low" />
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <!-- ── Card principal: Saldo ──────────────────── -->
+            <div class="saldo-card">
+              <div class="saldo-card__glow" />
+              <p class="label-overline">{{ tituloSaldo }}</p>
+              <p v-if="faixaPeriodo" class="label-overline">{{ faixaPeriodo }}</p>
+              <div class="flex items-baseline gap-2 mt-1">
+                <span
+                  class="font-headline font-black text-5xl leading-none"
+                  :class="saldoPositivo ? 'text-primary-container' : 'text-secondary'"
+                >
+                  {{ formatarReais(saldo) }}
+                </span>
+              </div>
+              <div
+                class="mt-3 flex items-center gap-1.5 text-[9px] font-label font-bold"
+                :class="saldoPositivo ? 'text-primary-container' : 'text-secondary'"
+              >
+                <span class="material-symbols-outlined text-sm">
+                  {{ saldoPositivo ? 'trending_up' : 'trending_down' }}
+                </span>
+                <span>{{ saldoPositivo ? 'SALDO POSITIVO' : 'SALDO NEGATIVO' }}</span>
+              </div>
+            </div>
+
+            <!-- ── Link histórico ────────────────────────── -->
+            <button class="historico-link" @click="router.push({ name: 'historico' })">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary-container">analytics</span>
+                <span class="font-label text-xs font-bold tracking-[0.2em] uppercase">HISTÓRICO DETALHADO</span>
+              </div>
+              <span class="material-symbols-outlined text-on-surface-variant text-sm">chevron_right</span>
+            </button>
+
+            <!-- ── Métricas: Ganhos / Despesas ───────────── -->
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <p class="label-overline">GANHOS</p>
+                <p class="font-headline font-bold text-lg text-on-surface">{{ formatarReais(ganho) }}</p>
+              </div>
+              <div class="metric-card">
+                <p class="label-overline">DESPESAS</p>
+                <p class="font-headline font-bold text-lg text-secondary">{{ formatarReais(despesa) }}</p>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- ── Coluna Direita: Ações + Alertas (desktop) ─── -->
+        <div class="dashboard-col-side">
+
+          <!-- Ações rápidas -->
+          <section class="card-section">
+            <p class="label-overline">AÇÕES RÁPIDAS</p>
+            <div class="actions-grid">
+              <!-- Lançar Ganho -->
+              <button class="action-card action-card--ganho" @click="router.push({ name: 'lancar' })">
+                <div class="action-card__icon action-card__icon--ganho">
+                  <span class="material-symbols-outlined text-2xl">add_circle</span>
+                </div>
+                <div class="action-card__text">
+                  <span class="action-card__title">LANÇAR GANHO</span>
+                  <span class="action-card__sub">Corrida, entrega...</span>
+                </div>
+              </button>
+
+              <!-- Lançar Despesa -->
+              <button
+                class="action-card action-card--despesa"
+                @click="router.push({ name: 'lancar', query: { tipo: 'DESPESA' } })"
+              >
+                <div class="action-card__icon action-card__icon--despesa">
+                  <span class="material-symbols-outlined text-2xl">remove_circle</span>
+                </div>
+                <div class="action-card__text">
+                  <span class="action-card__title">LANÇAR DESPESA</span>
+                  <span class="action-card__sub">Gasolina, peça...</span>
+                </div>
+              </button>
+
+              <!-- Abastecer -->
+              <button class="action-card action-card--ganho" @click="router.push({ name: 'abastecer' })">
+                <div class="action-card__icon action-card__icon--ganho">
+                  <span class="material-symbols-outlined text-2xl">local_gas_station</span>
+                </div>
+                <div class="action-card__text">
+                  <span class="action-card__title">ABASTECER</span>
+                  <span class="action-card__sub">Registrar abastecimento</span>
+                </div>
+              </button>
+
+              <!-- Manutenção -->
+              <button class="action-card action-card--manutencao" @click="router.push({ name: 'manutencao' })">
+                <div class="action-card__icon action-card__icon--manutencao">
+                  <span class="material-symbols-outlined text-2xl">build</span>
+                </div>
+                <div class="action-card__text">
+                  <span class="action-card__title">MANUTENÇÃO</span>
+                  <span class="action-card__sub">Revisão, troca de óleo...</span>
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <!-- Alertas -->
+          <div v-if="alertas.length" class="alerts-card">
+            <p class="label-overline text-secondary">ALERTAS DO PERÍODO</p>
+            <ul class="space-y-1.5 mt-2">
+              <li
+                v-for="(alerta, i) in alertas"
+                :key="i"
+                class="flex items-start gap-2 text-xs text-on-surface-variant font-body"
+              >
+                <span class="material-symbols-outlined text-secondary text-sm mt-0.5 flex-shrink-0">warning</span>
+                {{ alerta }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
       </div>
-
-      <!-- Skeleton enquanto carrega -->
-      <template v-if="carregando && !visao">
-        <div class="space-y-4 animate-pulse">
-          <div class="h-32 bg-surface-container-low"></div>
-          <div class="grid grid-cols-2 gap-3">
-            <div class="h-20 bg-surface-container-low"></div>
-            <div class="h-20 bg-surface-container-low"></div>
-          </div>
-        </div>
-      </template>
-
-      <!-- Dados reais -->
-      <template v-else>
-
-        <!-- ── Card principal: Saldo do mês ─────────────────── -->
-        <div class="bg-surface-container-low p-5 relative overflow-hidden">
-          <!-- Glow decorativo -->
-          <div class="absolute top-0 right-0 w-40 h-40 bg-primary-container/10 blur-3xl rounded-full -mr-20 -mt-20 pointer-events-none"></div>
-
-          <p class="font-label text-[9px] font-bold tracking-[0.3em] text-on-surface-variant uppercase mb-2">
-            {{ tituloSaldo }}
-          </p>
-          <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-2">
-            {{ faixaPeriodo }}
-          </p>
-          <div class="flex items-baseline gap-2">
-            <span
-              class="font-headline font-black text-5xl leading-none"
-              :class="saldoPositivo ? 'text-primary-container' : 'text-secondary'"
-            >
-              {{ formatarReais(saldo) }}
-            </span>
-          </div>
-
-          <!-- Indicador tendência fictício de exemplo -->
-          <div class="mt-3 flex items-center gap-1.5 text-[9px] font-label font-bold"
-               :class="saldoPositivo ? 'text-primary-container' : 'text-secondary'">
-            <span class="material-symbols-outlined text-sm">
-              {{ saldoPositivo ? 'trending_up' : 'trending_down' }}
-            </span>
-            <span>{{ saldoPositivo ? 'SALDO POSITIVO' : 'SALDO NEGATIVO' }}</span>
-          </div>
-        </div>
-
-        <!-- ── Histórico detalhado (link) ────────────────────── -->
-        <button
-          class="w-full flex items-center justify-between p-4 bg-surface-container border border-outline-variant
-                 hover:bg-surface-container-high transition-all active:scale-[0.98] group"
-          @click="router.push({ name: 'historico' })"
-        >
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-primary-container">analytics</span>
-            <span class="font-label text-xs font-bold tracking-[0.2em] uppercase">HISTÓRICO DETALHADO</span>
-          </div>
-          <span class="material-symbols-outlined text-on-surface-variant text-sm">chevron_right</span>
-        </button>
-
-        <!-- ── Grid de métricas secundárias ──────────────────── -->
-        <div class="grid grid-cols-2 gap-3">
-          <!-- Ganhos -->
-          <div class="bg-surface-container p-4">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant mb-1 uppercase">GANHOS</p>
-            <p class="font-headline font-bold text-lg text-on-surface">{{ formatarReais(ganho) }}</p>
-          </div>
-
-          <!-- Despesas -->
-          <div class="bg-surface-container p-4">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant mb-1 uppercase">DESPESAS</p>
-            <p class="font-headline font-bold text-lg text-secondary">{{ formatarReais(despesa) }}</p>
-          </div>
-
-        </div>
-
-        <!-- ── Ações rápidas ──────────────────────────────────── -->
-        <section class="space-y-3">
-          <h3 class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-            AÇÕES RÁPIDAS
-          </h3>
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Lançar Ganho -->
-            <button
-              class="flex items-center gap-3 bg-white dark:bg-surface-container border-2 border-outline-variant hover:border-primary-container dark:hover:border-primary-container p-4 shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.96] group relative cursor-pointer text-left"
-              @click="router.push({ name: 'lancar' })"
-            >
-              <div class="w-12 h-12 bg-primary-container text-on-primary-fixed flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 shrink-0">
-                <span class="material-symbols-outlined text-2xl">add_circle</span>
-              </div>
-              <div class="flex flex-col overflow-hidden">
-                <span class="font-headline font-black text-xs tracking-wider text-on-surface group-hover:text-primary-container transition-colors uppercase truncate">
-                  LANÇAR GANHO
-                </span>
-                <span class="font-label text-[9px] text-on-surface-variant uppercase truncate">
-                  Corrida, entrega...
-                </span>
-              </div>
-            </button>
-
-            <!-- Lançar Despesa -->
-            <button
-              class="flex items-center gap-3 bg-white dark:bg-surface-container border-2 border-outline-variant hover:border-secondary p-4 shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.96] group relative cursor-pointer text-left"
-              @click="router.push({ name: 'lancar', query: { tipo: 'DESPESA' } })"
-            >
-              <div class="w-12 h-12 bg-secondary text-on-secondary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 shrink-0">
-                <span class="material-symbols-outlined text-2xl">remove_circle</span>
-              </div>
-              <div class="flex flex-col overflow-hidden">
-                <span class="font-headline font-black text-xs tracking-wider text-on-surface group-hover:text-secondary transition-colors uppercase truncate">
-                  LANÇAR DESPESA
-                </span>
-                <span class="font-label text-[9px] text-on-surface-variant uppercase truncate">
-                  Gasolina, peça...
-                </span>
-              </div>
-            </button>
-          </div>
-        </section>
-
-        <!-- ── Alertas / Resumo executivo ─────────────────────── -->
-        <div
-          v-if="alertas.length"
-          class="bg-surface-container-lowest p-5 border-l-4 border-secondary"
-        >
-          <p class="font-label text-[9px] font-bold tracking-widest text-secondary uppercase mb-2">
-            ALERTAS DO PERÍODO
-          </p>
-          <ul class="space-y-1.5">
-            <li
-              v-for="(alerta, i) in alertas"
-              :key="i"
-              class="flex items-start gap-2 text-xs text-on-surface-variant font-body"
-            >
-              <span class="material-symbols-outlined text-secondary text-sm mt-0.5 flex-shrink-0">warning</span>
-              {{ alerta }}
-            </li>
-          </ul>
-        </div>
-
-      </template>
-    </main>
-
-    <!-- ══ Bottom Navigation Bar ═══════════════════════════════ -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">
-      <button
-        v-for="item in navItems"
-        :key="item.name"
-        class="flex flex-col items-center justify-center h-full w-full transition-colors duration-100"
-        :class="isActive(item.name)
-          ? 'bg-primary-container text-on-primary-fixed'
-          : 'text-on-surface-variant hover:bg-surface-container'"
-        @click="router.push({ name: item.name })"
-      >
-        <span
-          class="material-symbols-outlined"
-          :style="navIconStyle(item.name)"
-        >
-          {{ item.icon }}
-        </span>
-        <span class="font-label text-[9px] font-bold uppercase tracking-[0.08em] mt-0.5">
-          {{ item.label }}
-        </span>
-      </button>
-    </nav>
-
-  </div>
+    </div>
+  </AppLayout>
 </template>
+
+<style scoped>
+/* ─── Page wrapper ───────────────────────────────────────── */
+.dashboard-page {
+  padding: 1.5rem 1.25rem;
+  padding-bottom: 7rem; /* espaço para bottom nav mobile */
+  max-width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-page {
+    padding: 2rem 2.5rem;
+    padding-bottom: 2rem; /* sem bottom nav */
+  }
+}
+
+/* ─── Cabeçalho da página ────────────────────────────────── */
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+}
+
+.page-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 900;
+  font-size: 1.875rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: rgb(var(--color-on-surface));
+}
+
+.moto-label {
+  font-size: 10px;
+  color: rgb(var(--color-primary-container));
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+.label-overline {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface-variant));
+  margin-bottom: 0.25rem;
+}
+
+/* ─── Odômetro card ──────────────────────────────────────── */
+.odometer-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgb(var(--color-surface-container));
+  padding: 0.75rem 1rem;
+  border-left: 4px solid rgb(var(--color-primary-container));
+  margin-top: 0.75rem;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .odometer-card {
+    margin-top: 0;
+    min-width: 280px;
+  }
+}
+
+.btn-km {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background: rgb(var(--color-primary-container) / 0.1);
+  border: 1px solid rgb(var(--color-primary-container) / 0.3);
+  color: rgb(var(--color-primary-container));
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-km:hover {
+  background: rgb(var(--color-primary-container));
+  color: rgb(var(--color-on-primary-fixed));
+}
+
+/* ─── Dashboard grid (2 colunas em desktop) ──────────────── */
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2rem;
+    align-items: start;
+  }
+}
+
+.dashboard-col-main,
+.dashboard-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ─── Card section genérico ──────────────────────────────── */
+.card-section {
+  background: rgb(var(--color-surface-container));
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ─── Period tabs ────────────────────────────────────────── */
+.period-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.period-tab {
+  padding: 0.625rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border: 1px solid rgb(var(--color-outline-variant));
+  cursor: pointer;
+  transition: all 0.15s;
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.period-tab:hover {
+  background: rgb(var(--color-surface-variant));
+  color: rgb(var(--color-on-surface));
+}
+
+.period-tab--active {
+  background: rgb(var(--color-primary-container));
+  color: rgb(var(--color-on-primary-fixed));
+  border-color: rgb(var(--color-primary-container));
+  font-weight: 900;
+}
+
+.custom-period {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.btn-apply {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.625rem;
+  background: rgb(var(--color-surface));
+  border: 1px solid rgb(var(--color-outline));
+  color: rgb(var(--color-on-surface));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-apply:hover {
+  background: rgb(var(--color-surface-variant));
+}
+
+/* ─── Erro ───────────────────────────────────────────────── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgb(var(--color-error-container));
+  color: rgb(var(--color-on-error-container));
+  padding: 0.75rem 1rem;
+  font-size: 12px;
+}
+
+/* ─── Card de Saldo ──────────────────────────────────────── */
+.saldo-card {
+  background: rgb(var(--color-surface-container-low));
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.saldo-card__glow {
+  position: absolute;
+  top: -5rem;
+  right: -5rem;
+  width: 10rem;
+  height: 10rem;
+  background: rgb(var(--color-primary-container) / 0.1);
+  border-radius: 50%;
+  filter: blur(2rem);
+  pointer-events: none;
+}
+
+/* ─── Link histórico ─────────────────────────────────────── */
+.historico-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1rem;
+  background: rgb(var(--color-surface-container));
+  border: 1px solid rgb(var(--color-outline-variant));
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.historico-link:hover {
+  background: rgb(var(--color-surface-container-high));
+}
+
+/* ─── Métricas ───────────────────────────────────────────── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.metric-card {
+  background: rgb(var(--color-surface-container));
+  padding: 1rem;
+}
+
+/* ─── Ações rápidas ──────────────────────────────────────── */
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgb(var(--color-surface));
+  border: 2px solid rgb(var(--color-outline-variant));
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.action-card--ganho:hover {
+  border-color: rgb(var(--color-primary-container));
+}
+
+.action-card--despesa:hover {
+  border-color: rgb(var(--color-secondary));
+}
+
+.action-card--manutencao:hover {
+  border-color: rgb(var(--color-tertiary));
+}
+
+.action-card:active {
+  transform: scale(0.97);
+}
+
+.action-card__icon {
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.action-card:hover .action-card__icon {
+  transform: scale(1.05);
+}
+
+.action-card__icon--ganho {
+  background: rgb(var(--color-primary-container));
+  color: rgb(var(--color-on-primary-fixed));
+}
+
+.action-card__icon--despesa {
+  background: rgb(var(--color-secondary));
+  color: rgb(var(--color-on-secondary));
+}
+
+.action-card__icon--manutencao {
+  background: rgb(var(--color-tertiary));
+  color: rgb(var(--color-on-tertiary));
+}
+
+.action-card__text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.action-card__title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-card__sub {
+  font-size: 9px;
+  color: rgb(var(--color-on-surface-variant));
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Alertas ────────────────────────────────────────────── */
+.alerts-card {
+  background: rgb(var(--color-surface-container-lowest));
+  padding: 1.25rem;
+  border-left: 4px solid rgb(var(--color-secondary));
+}
+</style>

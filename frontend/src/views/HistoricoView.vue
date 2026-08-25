@@ -12,6 +12,7 @@ import type {
 } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 import EditarLancamentoModal from '@/components/EditarLancamentoModal.vue'
+import AppLayout from '@/components/AppLayout.vue'
 
 const router   = useRouter()
 const route    = useRoute()
@@ -416,18 +417,7 @@ function ehNegativo(valorStr: string): boolean {
   return parseFloat(valorStr) < 0
 }
 
-// ── Navegação ───────────────────────────────────────────────────
-const navItems = [
-  { name: 'dashboard',  label: 'Início',    icon: 'dashboard'  },
-  { name: 'historico',  label: 'Histórico', icon: 'history'    },
-  { name: 'lancar',     label: 'Lançar',    icon: 'add_box'    },
-  { name: 'manutencao', label: 'Manutenção',icon: 'build'      },
-  { name: 'configuracoes', label: 'Config', icon: 'settings' },
-]
-function isActive(name: string) { return route.name === name }
-function navIconStyle(name: string) {
-  return isActive(name) ? { fontVariationSettings: '"FILL" 1' } : {}
-}
+
 
 onMounted(async () => {
   if (!motoStore.carregado) await motoStore.carregarMotos()
@@ -436,21 +426,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-background text-on-surface font-body min-h-screen pb-24">
-
-    <!-- TopBar -->
-    <header class="bg-background flex justify-between items-center w-full px-5 h-16 sticky top-0 z-50 border-l-4 border-primary-container">
-      <div class="flex items-center gap-3">
-        <h1 class="text-primary-container font-headline font-black text-lg tracking-tight uppercase">GESTÃO MOTOCA</h1>
-      </div>
-      <button class="text-on-surface-variant hover:text-primary-container transition-colors"
-        :class="{ 'animate-spin': carregando || carregandoRelatorios }"
-        @click="abaAtiva === 'transacoes' ? carregarTransacoes() : carregarRelatorios()">
-        <span class="material-symbols-outlined text-xl">refresh</span>
-      </button>
-    </header>
-
-    <main class="px-5 py-5 space-y-5 max-w-md mx-auto">
+  <AppLayout>
+  <div class="historico-page">
+    <main class="px-5 py-5 lg:px-8 lg:py-6 space-y-5 max-w-4xl mx-auto pb-28 lg:pb-8">
 
       <!-- Título -->
       <div>
@@ -1133,18 +1111,6 @@ onMounted(async () => {
       @fechar="modalEdicaoVisivel = false"
       @salvo="carregarTransacoes"
     />
-
-    <!-- Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">
-      <button v-for="item in navItems" :key="item.name"
-        class="flex flex-col items-center justify-center h-full w-full transition-colors duration-100"
-        :class="isActive(item.name)
-          ? 'bg-primary-container text-on-primary-fixed'
-          : 'text-on-surface-variant hover:bg-surface-container'"
-        @click="router.push({ name: item.name })">
-        <span class="material-symbols-outlined" :style="navIconStyle(item.name)">{{ item.icon }}</span>
-        <span class="font-label text-[9px] font-bold uppercase tracking-[0.08em] mt-0.5">{{ item.label }}</span>
-      </button>
-    </nav>
   </div>
+  </AppLayout>
 </template>

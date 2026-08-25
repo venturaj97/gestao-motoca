@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
 import { atualizarMoto } from '@/api/motos'
 import { listarCategorias, criarCategoria, atualizarCategoria, excluirCategoria } from '@/api/categorias'
@@ -15,6 +15,7 @@ import type {
   TipoLancamento,
 } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
+import AppLayout from '@/components/AppLayout.vue'
 
 import { alterarSenhaLogado } from '@/api/recuperacao'
 
@@ -67,18 +68,6 @@ async function handleAlterarSenha() {
   }
 }
 
-const navItems = [
-  { name: 'dashboard', label: 'Início', icon: 'dashboard' },
-  { name: 'historico', label: 'Histórico', icon: 'history' },
-  { name: 'lancar', label: 'Lançar', icon: 'add_box' },
-  { name: 'manutencao', label: 'Manutenção', icon: 'build' },
-  { name: 'configuracoes', label: 'Config', icon: 'settings' },
-]
-
-function isActive(name: string) { return route.name === name }
-function navIconStyle(name: string) {
-  return isActive(name) ? { fontVariationSettings: '"FILL" 1' } : {}
-}
 
 const moto = computed(() => motoStore.motoAtiva)
 
@@ -397,13 +386,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-background text-on-surface font-body min-h-screen pb-24">
-    <header class="bg-background flex justify-between items-center w-full px-5 h-16 sticky top-0 z-50 border-l-4 border-primary-container">
-      <h1 class="text-primary-container font-headline font-black text-lg tracking-tight uppercase">GESTÃO MOTOCA</h1>
-      <span class="font-label text-[10px] tracking-widest text-on-surface-variant uppercase">CONFIGURAÇÕES</span>
-    </header>
-
-    <main class="px-5 py-5 space-y-4 max-w-md mx-auto">
+  <AppLayout>
+  <div class="bg-background text-on-surface font-body min-h-screen">
+    <main class="px-5 py-5 lg:px-8 lg:py-6 space-y-4 max-w-4xl mx-auto pb-28 lg:pb-8">
       <div>
         <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">CENTRO DE CONTROLE</p>
         <h2 class="font-headline font-extrabold text-3xl uppercase tracking-tight">CONFIGURAÇÕES</h2>
@@ -775,17 +760,6 @@ onMounted(async () => {
       </section>
     </main>
 
-    <nav class="fixed bottom-0 left-0 w-full z-50 h-20 bg-white dark:bg-background border-t border-outline-variant dark:border-t-4 dark:border-surface-container shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none grid grid-cols-5">
-      <button
-        v-for="item in navItems"
-        :key="item.name"
-        class="flex flex-col items-center justify-center h-full w-full transition-colors duration-100"
-        :class="isActive(item.name) ? 'bg-primary-container text-on-primary-fixed' : 'text-on-surface-variant hover:bg-surface-container'"
-        @click="router.push({ name: item.name })"
-      >
-        <span class="material-symbols-outlined" :style="navIconStyle(item.name)">{{ item.icon }}</span>
-        <span class="font-label text-[9px] font-bold uppercase tracking-[0.08em] mt-0.5">{{ item.label }}</span>
-      </button>
-    </nav>
   </div>
+  </AppLayout>
 </template>
