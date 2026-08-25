@@ -24,4 +24,4 @@ INSERT INTO categorias (nome, tipo, ativo, data_criacao) VALUES
 ('Acessórios', 'DESPESA', true, NOW()),
 ('Estacionamento', 'DESPESA', true, NOW()),
 ('Outras Despesas', 'DESPESA', true, NOW())
-ON CONFLICT (nome, tipo) DO NOTHING;
+ON CONFLICT (usuario_id, nome, tipo) DO NOTHING;
