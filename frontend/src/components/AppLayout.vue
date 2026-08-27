@@ -15,7 +15,7 @@ const navItems = [
   { name: 'dashboard',     label: 'Início',     icon: 'dashboard'   },
   { name: 'historico',     label: 'Histórico',  icon: 'history'     },
   { name: 'lancar',        label: 'Lançar',     icon: 'add_box'     },
-  { name: 'manutencao',    label: 'Manutenção', icon: 'build'       },
+  { name: 'metas',         label: 'Metas',      icon: 'flag'        },
   { name: 'configuracoes', label: 'Config',     icon: 'settings'    },
 ]
 

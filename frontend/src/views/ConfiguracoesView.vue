@@ -29,6 +29,9 @@ const abaAtiva = ref<AbaConfig>('MOTO')
 const senhaAtual = ref('')
 const novaSenha = ref('')
 const confirmaNovaSenha = ref('')
+const mostrarSenhaAtual = ref(false)
+const mostrarNovaSenha = ref(false)
+const mostrarConfirmaNovaSenha = ref(false)
 const enviandoSenha = ref(false)
 const erroSenha = ref('')
 const sucessoSenha = ref('')
@@ -706,37 +709,76 @@ onMounted(async () => {
           <form class="space-y-4" @submit.prevent="handleAlterarSenha">
             <div>
               <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">SENHA ATUAL</label>
-              <input
-                v-model="senhaAtual"
-                type="password"
-                required
-                placeholder="••••••••"
-                class="tactical-input h-11 px-3"
-              />
+              <div class="relative">
+                <input
+                  v-model="senhaAtual"
+                  :type="mostrarSenhaAtual ? 'text' : 'password'"
+                  required
+                  placeholder="••••••••"
+                  class="tactical-input h-11 px-3 pr-10"
+                />
+                <button
+                  type="button"
+                  tabindex="-1"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface focus:outline-none flex items-center justify-center"
+                  @click="mostrarSenhaAtual = !mostrarSenhaAtual"
+                  :title="mostrarSenhaAtual ? 'Ocultar senha' : 'Exibir senha'"
+                >
+                  <span class="material-symbols-outlined text-lg">
+                    {{ mostrarSenhaAtual ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div>
               <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">NOVA SENHA</label>
-              <input
-                v-model="novaSenha"
-                type="password"
-                required
-                minlength="6"
-                placeholder="••••••••"
-                class="tactical-input h-11 px-3"
-              />
+              <div class="relative">
+                <input
+                  v-model="novaSenha"
+                  :type="mostrarNovaSenha ? 'text' : 'password'"
+                  required
+                  minlength="6"
+                  placeholder="••••••••"
+                  class="tactical-input h-11 px-3 pr-10"
+                />
+                <button
+                  type="button"
+                  tabindex="-1"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface focus:outline-none flex items-center justify-center"
+                  @click="mostrarNovaSenha = !mostrarNovaSenha"
+                  :title="mostrarNovaSenha ? 'Ocultar senha' : 'Exibir senha'"
+                >
+                  <span class="material-symbols-outlined text-lg">
+                    {{ mostrarNovaSenha ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div>
               <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-1 uppercase">CONFIRMAR NOVA SENHA</label>
-              <input
-                v-model="confirmaNovaSenha"
-                type="password"
-                required
-                minlength="6"
-                placeholder="••••••••"
-                class="tactical-input h-11 px-3"
-              />
+              <div class="relative">
+                <input
+                  v-model="confirmaNovaSenha"
+                  :type="mostrarConfirmaNovaSenha ? 'text' : 'password'"
+                  required
+                  minlength="6"
+                  placeholder="••••••••"
+                  class="tactical-input h-11 px-3 pr-10"
+                />
+                <button
+                  type="button"
+                  tabindex="-1"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface focus:outline-none flex items-center justify-center"
+                  @click="mostrarConfirmaNovaSenha = !mostrarConfirmaNovaSenha"
+                  :title="mostrarConfirmaNovaSenha ? 'Ocultar senha' : 'Exibir senha'"
+                >
+                  <span class="material-symbols-outlined text-lg">
+                    {{ mostrarConfirmaNovaSenha ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div v-if="erroSenha" class="bg-error-container text-on-error-container text-xs p-3 font-label">

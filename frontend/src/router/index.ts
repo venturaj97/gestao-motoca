@@ -55,6 +55,11 @@ const router = createRouter({
       component: () => import('@/views/AbastecerView.vue'),
     },
     {
+      path: '/metas',
+      name: 'metas',
+      component: () => import('@/views/MetasView.vue'),
+    },
+    {
       path: '/manutencao',
       name: 'manutencao',
       component: () => import('@/views/ManutencaoView.vue'),

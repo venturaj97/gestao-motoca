@@ -93,8 +93,9 @@ export interface ConsultaPlacaResposta {
 // === CATEGORIA ===
 export type TipoLancamento = 'GANHO' | 'DESPESA'
 export type PeriodoLancamento = 'DIARIO' | 'SEMANAL' | 'CORRIDA'
-export type PeriodoMeta = 'SEMANAL' | 'MENSAL'
-export type StatusMeta = 'EM_DIA' | 'ATENCAO' | 'CRITICO'
+export type PeriodoMeta = 'DIARIO' | 'SEMANAL' | 'MENSAL' | 'OBJETIVO'
+export type StatusMeta = 'atingida' | 'em_andamento' | 'estourada' | 'atencao' | 'dentro_meta'
+export type CategoriaCofre = 'PNEU' | 'SEGURO' | 'IPVA' | 'REVISAO' | 'RESERVA' | 'OUTROS' | null
 export type GrupoDespesa = 'GERAL' | 'MANUTENCAO' | 'ABASTECIMENTO' | 'IMPOSTO'
 
 export interface CategoriaResposta {
@@ -259,6 +260,8 @@ export interface MetaCriar {
   tipo: TipoLancamento
   periodo: PeriodoMeta
   valor_meta: number
+  dias_trabalho_semana?: number
+  categoria_cofre?: CategoriaCofre
   ativa: boolean
 }
 
@@ -267,6 +270,8 @@ export interface MetaAtualizar {
   tipo?: TipoLancamento
   periodo?: PeriodoMeta
   valor_meta?: number
+  dias_trabalho_semana?: number
+  categoria_cofre?: CategoriaCofre
   ativa?: boolean
 }
 
@@ -277,6 +282,8 @@ export interface MetaResposta {
   tipo: TipoLancamento
   periodo: PeriodoMeta
   valor_meta: string
+  dias_trabalho_semana: number | null
+  categoria_cofre: CategoriaCofre
   ativa: boolean
   data_criacao: string
 }
@@ -287,9 +294,14 @@ export interface MetaAlertaResposta {
   tipo: TipoLancamento
   periodo: PeriodoMeta
   valor_meta: string
+  dias_trabalho_semana: number | null
+  categoria_cofre: CategoriaCofre
   periodo_inicio: string
   periodo_fim: string
   realizado: string
+  valor_restante: string
+  meta_diaria_necessaria: string
+  dias_trabalho_restantes: number
   progresso_periodo_percentual: string
   percentual_meta: string
   status: StatusMeta
@@ -380,4 +392,43 @@ export interface InteligenciaResumo {
   eficiencia_combustivel: EficienciaCombustivel
   insights: string[]
 }
+
+// === COFRE ===
+export interface CofreCriar {
+  nome: string
+  categoria: string
+  valor_meta: number
+  saldo_atual?: number
+  porcentagem_autoguarda?: number
+  ativa?: boolean
+}
+
+export interface CofreAtualizar {
+  nome?: string
+  categoria?: string
+  valor_meta?: number
+  saldo_atual?: number
+  porcentagem_autoguarda?: number
+  ativa?: boolean
+}
+
+export interface CofreAporte {
+  valor: number
+  tipo_operacao: 'DEPOSITO' | 'SAQUE'
+}
+
+export interface CofreResposta {
+  id: number
+  usuario_id: number
+  nome: string
+  categoria: string
+  valor_meta: string
+  saldo_atual: string
+  porcentagem_autoguarda: string
+  ativa: boolean
+  valor_restante: string
+  percentual_meta: number
+  data_criacao: string
+}
+
 

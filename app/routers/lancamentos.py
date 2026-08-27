@@ -94,9 +94,13 @@ def rota_criar_lancamentos_em_lote(
     primeiro_tipo: str | None = None
     primeira_data: date | None = None
     try:
+        km_atualizado = False
         for item in dados.itens:
             item_usuario = item.model_copy(update={"usuario_id": usuario.id})
-            lanc = criar_lancamento(db, item_usuario, auto_commit=False)
+            deve_atualizar_km = not km_atualizado
+            lanc = criar_lancamento(db, item_usuario, auto_commit=False, atualizar_km_moto=deve_atualizar_km)
+            if deve_atualizar_km and lanc.km_corrida and lanc.km_corrida > 0:
+                km_atualizado = True
             criados.append(lanc)
             if primeiro_tipo is None:
                 primeiro_tipo = lanc.tipo

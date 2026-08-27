@@ -63,17 +63,6 @@ const tipoFiltroApi = computed(() =>
   filtroTipo.value === 'TODOS' ? undefined : filtroTipo.value
 )
 
-const totalGanhos = computed(() =>
-  lancamentos.value
-    .filter(l => l.tipo === 'GANHO')
-    .reduce((acc, l) => acc + parseFloat(l.valor), 0)
-)
-
-const totalDespesas = computed(() =>
-  lancamentos.value
-    .filter(l => l.tipo === 'DESPESA')
-    .reduce((acc, l) => acc + parseFloat(l.valor), 0)
-)
 
 const faixaPeriodo = computed(() => {
   if (!dataInicio.value || !dataFim.value) return ''
@@ -351,6 +340,7 @@ async function executarExclusaoLote() {
   executandoExclusaoLote.value = true
   try {
     await excluirLancamentosLote(idsSelecionados.value)
+    await motoStore.carregarMotos()
     idsSelecionados.value = []
     modoSelecao.value = false
     await carregarTransacoes()
@@ -457,17 +447,6 @@ onMounted(async () => {
           {{ faixaPeriodo }}
         </p>
 
-        <!-- Resumo rápido -->
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-surface-container p-3 border-l-2 border-primary-container">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">GANHOS</p>
-            <p class="font-headline font-bold text-base text-primary-container">{{ formatarReais(totalGanhos) }}</p>
-          </div>
-          <div class="bg-surface-container p-3 border-l-2 border-secondary">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">DESPESAS</p>
-            <p class="font-headline font-bold text-base text-secondary">{{ formatarReais(totalDespesas) }}</p>
-          </div>
-        </div>
 
         <!-- Filtro de período -->
         <div class="space-y-3 bg-surface-container p-3">
@@ -778,33 +757,36 @@ onMounted(async () => {
 
         <template v-else>
 
-          <!-- Banner Premium -->
-          <div class="flex items-center justify-between bg-gradient-to-r from-amber-500/10 to-amber-600/5 border border-amber-500/20 px-3 py-2">
+          <!-- Banner Premium (Roxo/Violeta Inteligência) -->
+          <div class="flex items-center justify-between bg-gradient-to-r from-purple-500/15 via-indigo-500/10 to-purple-600/5 border border-purple-500/30 px-3 py-2">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-amber-500 text-base">workspace_premium</span>
-              <span class="font-label text-[9px] font-bold tracking-widest text-amber-600 dark:text-amber-400 uppercase">PAINEL DE INTELIGÊNCIA PREMIUM</span>
+              <span class="material-symbols-outlined text-purple-400 text-base">workspace_premium</span>
+              <span class="font-label text-[9px] font-bold tracking-widest text-purple-600 dark:text-purple-300 uppercase">PAINEL DE INTELIGÊNCIA PREMIUM</span>
             </div>
           </div>
 
-          <!-- ── 1. METRICAS E EVOLUÇÃO DE QUILOMETRAGEM (KM) ────────── -->
+          <!-- ── 1. METRICAS E EVOLUÇÃO DE QUILOMETRAGEM (KM - CIANO / ÂMBAR) ────────── -->
           <div v-if="historicoKm" class="space-y-3">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
               🏍️ EVOLUÇÃO E ODÔMETRO DA MOTO
             </p>
             <div class="grid grid-cols-3 gap-2">
-              <div class="bg-surface-container p-3 border-l-2 border-primary-container">
+              <!-- KM NO MÊS (Ciano Telemetria) -->
+              <div class="bg-surface-container p-3 border-l-2 border-cyan-500">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">KM NO MÊS</p>
-                <p class="font-headline font-bold text-lg text-primary-container">{{ historicoKm.km_mes.toLocaleString('pt-BR') }}</p>
+                <p class="font-headline font-bold text-lg text-cyan-600 dark:text-cyan-400">{{ historicoKm.km_mes.toLocaleString('pt-BR') }}</p>
                 <p class="font-label text-[9px] text-on-surface-variant">km</p>
               </div>
-              <div class="bg-surface-container p-3 border-l-2 border-tertiary">
+              <!-- MÉDIA/DIA (Sky Blue) -->
+              <div class="bg-surface-container p-3 border-l-2 border-sky-400">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">MÉDIA/DIA</p>
-                <p class="font-headline font-bold text-lg text-tertiary">{{ historicoKm.media_dia }}</p>
+                <p class="font-headline font-bold text-lg text-sky-600 dark:text-sky-400">{{ historicoKm.media_dia }}</p>
                 <p class="font-label text-[9px] text-on-surface-variant">km/dia</p>
               </div>
-              <div class="bg-surface-container p-3 border-l-2 border-secondary">
+              <!-- TROCA ÓLEO (Âmbar Alerta Manutenção) -->
+              <div class="bg-surface-container p-3 border-l-2 border-amber-500">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">TROCA ÓLEO</p>
-                <p class="font-headline font-bold text-lg text-secondary">
+                <p class="font-headline font-bold text-lg text-amber-600 dark:text-amber-400">
                   {{ historicoKm.previsao_troca_oleo_km !== null ? `${historicoKm.previsao_troca_oleo_km.toLocaleString('pt-BR')}` : '—' }}
                 </p>
                 <p class="font-label text-[9px] text-on-surface-variant">
@@ -813,7 +795,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Gráfico SVG do Odômetro -->
+            <!-- Gráfico SVG do Odômetro (Linha e Pontos em Ciano) -->
             <div v-if="historicoKm.registros.length >= 2" class="bg-surface-container p-4">
               <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">EVOLUÇÃO ACUMULADA DO ODÔMETRO</p>
               <svg viewBox="0 0 320 140" class="w-full h-auto">
@@ -829,7 +811,7 @@ onMounted(async () => {
                     return `${x},${y}`
                   }).join(' ')"
                   fill="none"
-                  stroke="var(--md-sys-color-primary-container, #4fc3f7)"
+                  stroke="#22d3ee"
                   stroke-width="2.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -843,7 +825,7 @@ onMounted(async () => {
                     return 120 - ((r.km - minKm) / range) * 100
                   })()"
                   r="3.5"
-                  fill="var(--md-sys-color-primary-container, #4fc3f7)"
+                  fill="#22d3ee"
                 />
               </svg>
               <div class="flex justify-between mt-1">
@@ -857,7 +839,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- ── 2. COMPARATIVO VS MÊS ANTERIOR (COM REGRA RÍGIDA DE CORES) ── -->
+          <!-- ── 2. COMPARATIVO VS MÊS ANTERIOR (VERDE & ROSA FINANCEIRO) ── -->
           <div v-if="inteligencia" class="space-y-2">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
               📊 COMPARATIVO VS MÊS ANTERIOR
@@ -883,7 +865,7 @@ onMounted(async () => {
                 <p v-else class="font-label text-[8px] text-on-surface-variant mt-1 opacity-60">sem dados</p>
               </div>
 
-              <!-- CARD DESPESAS (VERMELHO OBRIGATÓRIO) -->
+              <!-- CARD DESPESAS (ROSA/VERMELHO) -->
               <div class="bg-surface-container p-3 border-l-2 border-secondary">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-1">
                   DESPESAS
@@ -902,7 +884,7 @@ onMounted(async () => {
                 <p v-else class="font-label text-[8px] text-on-surface-variant mt-1 opacity-60">sem dados</p>
               </div>
 
-              <!-- CARD LUCRO REAL (VERDE SE >= 0, VERMELHO SE < 0) -->
+              <!-- CARD LUCRO REAL (VERDE SE >= 0, ROSA SE < 0) -->
               <div class="bg-surface-container p-3 border-l-2"
                 :class="ehNegativo(inteligencia.comparativo.lucro.valor_atual) ? 'border-secondary' : 'border-primary-container'">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-1">
@@ -934,7 +916,7 @@ onMounted(async () => {
               💸 RAIO-X DAS DESPESAS
             </p>
 
-            <!-- Maior Vilão destacado em VERMELHO -->
+            <!-- Maior Vilão destacado em ROSA/VERMELHO -->
             <div v-if="inteligencia.maior_vilao" class="bg-secondary/10 border border-secondary/30 p-3 flex items-center gap-3">
               <span class="material-symbols-outlined text-secondary text-xl">warning</span>
               <div>
@@ -973,7 +955,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- ── 4. RANKING DE MELHORES DIAS DE GANHO ────────────────── -->
+          <!-- ── 4. RANKING DE MELHORES DIAS DE GANHO (VERDE) ────────────────── -->
           <div v-if="inteligencia && inteligencia.ranking_dias_ganho.length" class="space-y-2">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
               🏆 RANKING — MELHORES DIAS DE GANHO
@@ -999,15 +981,16 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- ── 5. EFICIÊNCIA DO COMBUSTÍVEL ────────────────────────── -->
+          <!-- ── 5. EFICIÊNCIA DO COMBUSTÍVEL (CIANO PARA TELEMETRIA + ROSA FINANCEIRO) ── -->
           <div v-if="inteligencia" class="space-y-2">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
               ⛽ EFICIÊNCIA DO COMBUSTÍVEL
             </p>
             <div class="grid grid-cols-2 gap-2">
-              <div class="bg-surface-container p-3 border-l-2 border-primary-container">
+              <!-- KM/L (Ciano Telemetria) -->
+              <div class="bg-surface-container p-3 border-l-2 border-cyan-500">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">KM/LITRO</p>
-                <p class="font-headline font-bold text-lg text-primary-container">
+                <p class="font-headline font-bold text-lg text-cyan-600 dark:text-cyan-400">
                   {{ inteligencia.eficiencia_combustivel.dados_suficientes && inteligencia.eficiencia_combustivel.km_por_litro
                     ? inteligencia.eficiencia_combustivel.km_por_litro
                     : '—' }}
@@ -1016,6 +999,7 @@ onMounted(async () => {
                   {{ inteligencia.eficiencia_combustivel.dados_suficientes ? 'km por litro' : 'dados insuficientes' }}
                 </p>
               </div>
+              <!-- CUSTO/KM (Rosa/Vermelho Financeiro) -->
               <div class="bg-surface-container p-3 border-l-2 border-secondary">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">CUSTO/KM</p>
                 <p class="font-headline font-bold text-lg text-secondary">
@@ -1029,10 +1013,12 @@ onMounted(async () => {
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
+              <!-- LITROS NO MÊS (Ciano Telemetria) -->
               <div class="bg-surface-container p-3">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">LITROS NO MÊS</p>
-                <p class="font-headline font-bold text-sm text-on-surface">{{ inteligencia.eficiencia_combustivel.total_litros.toFixed(1) }} L</p>
+                <p class="font-headline font-bold text-sm text-cyan-600 dark:text-cyan-400">{{ inteligencia.eficiencia_combustivel.total_litros.toFixed(1) }} L</p>
               </div>
+              <!-- GASTO TOTAL (Rosa Financeiro) -->
               <div class="bg-surface-container p-3">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">GASTO TOTAL</p>
                 <p class="font-headline font-bold text-sm text-secondary">{{ formatarReais(inteligencia.eficiencia_combustivel.total_gasto_combustivel) }}</p>
@@ -1040,21 +1026,21 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- ── 6. RESUMO EXECUTIVO (INSIGHTS AUTOMÁTICOS) ─────────── -->
+          <!-- ── 6. RESUMO EXECUTIVO (INSIGHTS AUTOMÁTICOS DA IA - ROXO) ─────────── -->
           <div v-if="inteligencia && inteligencia.insights.length" class="space-y-2">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
               📈 RESUMO EXECUTIVO DO MOTOBOM
             </p>
-            <div class="bg-surface-container p-3 space-y-2">
+            <div class="bg-surface-container p-3 space-y-2 border border-purple-500/20">
               <div v-for="(insight, idx) in inteligencia.insights" :key="idx"
                 class="flex items-start gap-2 py-1">
-                <span class="material-symbols-outlined text-primary-container text-sm mt-0.5">lightbulb</span>
+                <span class="material-symbols-outlined text-purple-400 text-sm mt-0.5">lightbulb</span>
                 <p class="font-label text-xs text-on-surface leading-snug">{{ insight }}</p>
               </div>
             </div>
           </div>
 
-          <!-- ── 7. HISTÓRICO COMPLETO DO ODÔMETRO (KM LOGS) ─────────── -->
+          <!-- ── 7. HISTÓRICO COMPLETO DO ODÔMETRO (KM LOGS - CIANO) ─────────── -->
           <div v-if="historicoKm" class="bg-surface-container p-3">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
               EXTRATO DO ODÔMETRO · {{ historicoKm.registros.length }} registro{{ historicoKm.registros.length !== 1 ? 's' : '' }}
@@ -1068,8 +1054,8 @@ onMounted(async () => {
                 <li v-for="r in historicoKm.registros" :key="r.id"
                   class="flex items-center justify-between py-2 px-1 scannable-row">
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 bg-primary-container/10">
-                      <span class="material-symbols-outlined text-base text-primary-container">speed</span>
+                    <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 bg-cyan-500/10">
+                      <span class="material-symbols-outlined text-base text-cyan-500 dark:text-cyan-400">speed</span>
                     </div>
                     <div>
                       <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
@@ -1084,7 +1070,7 @@ onMounted(async () => {
                   <div class="flex items-center gap-2">
                     <span v-if="r.variacao !== null"
                       class="font-label text-[9px] font-bold"
-                      :class="r.variacao >= 0 ? 'text-primary-container' : 'text-secondary'">
+                      :class="r.variacao >= 0 ? 'text-cyan-600 dark:text-cyan-400' : 'text-secondary'">
                       {{ r.variacao >= 0 ? '+' : '' }}{{ r.variacao.toLocaleString('pt-BR') }}
                     </span>
                     <button @click="removerRegistroKm(r.id)"
