@@ -56,7 +56,98 @@ const historicoKm = ref<MotoHistoricoKmResumo | null>(null)
 const inteligencia = ref<InteligenciaResumo | null>(null)
 const carregandoRelatorios = ref(false)
 
+type AbaGrafico = 'nenhum' | 'rodagem' | 'comparativo' | 'extrato'
+const abaGraficoAtiva = ref<AbaGrafico>('comparativo')
+const paginaKmAtual = ref(1)
+const ITENS_POR_PAGINA_KM = 5
+
+function selecionarAbaGrafico(aba: AbaGrafico) {
+  if (abaGraficoAtiva.value === aba) {
+    abaGraficoAtiva.value = 'nenhum'
+  } else {
+    abaGraficoAtiva.value = aba
+  }
+}
+
 // ── Computed ────────────────────────────────────────────────────
+const percentualLucroRetido = computed(() => {
+  if (!inteligencia.value) return 0
+  const fat = parseFloat(inteligencia.value.comparativo.faturamento.valor_atual)
+  const luc = parseFloat(inteligencia.value.comparativo.lucro.valor_atual)
+  if (!fat || fat <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round((luc / fat) * 100)))
+})
+
+const percentualDespesasRetidas = computed(() => {
+  if (!inteligencia.value) return 0
+  const fat = parseFloat(inteligencia.value.comparativo.faturamento.valor_atual)
+  const desp = parseFloat(inteligencia.value.comparativo.despesas.valor_atual)
+  if (!fat || fat <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round((desp / fat) * 100)))
+})
+
+const totalPaginasKm = computed(() => {
+  if (!historicoKm.value || !historicoKm.value.registros.length) return 1
+  return Math.ceil(historicoKm.value.registros.length / ITENS_POR_PAGINA_KM)
+})
+
+const registrosKmPaginados = computed(() => {
+  if (!historicoKm.value) return []
+  const inicio = (paginaKmAtual.value - 1) * ITENS_POR_PAGINA_KM
+  return historicoKm.value.registros.slice(inicio, inicio + ITENS_POR_PAGINA_KM)
+})
+
+const diasSemanaOrdem = ['SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO']
+
+const comparativoGanhosDespesasDias = computed(() => {
+  if (!inteligencia.value) return []
+  const mapaGanhos = new Map(inteligencia.value.ranking_dias_ganho.map(g => [g.dia_semana, parseFloat(g.total)]))
+  const mapaDespesas = new Map(inteligencia.value.ranking_dias_despesa.map(d => [d.dia_semana, parseFloat(d.total)]))
+
+  return diasSemanaOrdem.map(ds => {
+    const ganho = mapaGanhos.get(ds) || 0
+    const despesa = mapaDespesas.get(ds) || 0
+    return {
+      dia_semana: ds,
+      label: formatarDiaSemana(ds),
+      ganho,
+      despesa,
+      lucro: ganho - despesa
+    }
+  })
+})
+
+const maxValorComparativo = computed(() => {
+  if (!comparativoGanhosDespesasDias.value.length) return 1
+  const maxG = Math.max(...comparativoGanhosDespesasDias.value.map(d => d.ganho))
+  const maxD = Math.max(...comparativoGanhosDespesasDias.value.map(d => d.despesa))
+  return Math.max(maxG, maxD, 1)
+})
+
+// ── Gráfico de Pizza SVG de Despesas ──────────────────────────────
+const despesasParaPizza = computed(() => {
+  if (!inteligencia.value || !inteligencia.value.despesas_por_categoria.length) return []
+  const cores = ['#ef4444', '#f97316', '#eab308', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981']
+  const C = 157.08 // 2 * Math.PI * 25 (raio = 25)
+  let acumulado = 0
+
+  return inteligencia.value.despesas_por_categoria.map((cat, idx) => {
+    const pct = cat.percentual
+    const dashLen = (pct / 100) * C
+    const dashArray = `${dashLen} ${C - dashLen}`
+    const dashOffset = -acumulado
+    acumulado += dashLen
+
+    return {
+      ...cat,
+      valor: parseFloat(cat.total),
+      cor: cores[idx % cores.length],
+      dashArray,
+      dashOffset
+    }
+  })
+})
+
 const lancamentosFiltrados = computed(() => lancamentos.value)
 
 const tipoFiltroApi = computed(() =>
@@ -765,88 +856,14 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- ── 1. METRICAS E EVOLUÇÃO DE QUILOMETRAGEM (KM - CIANO / ÂMBAR) ────────── -->
-          <div v-if="historicoKm" class="space-y-3">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-              🏍️ EVOLUÇÃO E ODÔMETRO DA MOTO
-            </p>
-            <div class="grid grid-cols-3 gap-2">
-              <!-- KM NO MÊS (Ciano Telemetria) -->
-              <div class="bg-surface-container p-3 border-l-2 border-cyan-500">
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">KM NO MÊS</p>
-                <p class="font-headline font-bold text-lg text-cyan-600 dark:text-cyan-400">{{ historicoKm.km_mes.toLocaleString('pt-BR') }}</p>
-                <p class="font-label text-[9px] text-on-surface-variant">km</p>
-              </div>
-              <!-- MÉDIA/DIA (Sky Blue) -->
-              <div class="bg-surface-container p-3 border-l-2 border-sky-400">
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">MÉDIA/DIA</p>
-                <p class="font-headline font-bold text-lg text-sky-600 dark:text-sky-400">{{ historicoKm.media_dia }}</p>
-                <p class="font-label text-[9px] text-on-surface-variant">km/dia</p>
-              </div>
-              <!-- TROCA ÓLEO (Âmbar Alerta Manutenção) -->
-              <div class="bg-surface-container p-3 border-l-2 border-amber-500">
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">TROCA ÓLEO</p>
-                <p class="font-headline font-bold text-lg text-amber-600 dark:text-amber-400">
-                  {{ historicoKm.previsao_troca_oleo_km !== null ? `${historicoKm.previsao_troca_oleo_km.toLocaleString('pt-BR')}` : '—' }}
-                </p>
-                <p class="font-label text-[9px] text-on-surface-variant">
-                  {{ historicoKm.previsao_troca_oleo_km !== null ? 'km restantes' : 'sem dados' }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Gráfico SVG do Odômetro (Linha e Pontos em Ciano) -->
-            <div v-if="historicoKm.registros.length >= 2" class="bg-surface-container p-4">
-              <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">EVOLUÇÃO ACUMULADA DO ODÔMETRO</p>
-              <svg viewBox="0 0 320 140" class="w-full h-auto">
-                <line v-for="i in 5" :key="'g'+i" :x1="30" :y1="10 + (i-1)*30" :x2="310" :y2="10 + (i-1)*30"
-                  stroke="currentColor" class="text-outline-variant" stroke-width="0.5" opacity="0.3" />
-                <polyline
-                  :points="registrosParaGrafico.map((r, idx, arr) => {
-                    const minKm = Math.min(...arr.map(a => a.km))
-                    const maxKm = Math.max(...arr.map(a => a.km))
-                    const range = maxKm - minKm || 1
-                    const x = 35 + (idx / Math.max(arr.length - 1, 1)) * 270
-                    const y = 120 - ((r.km - minKm) / range) * 100
-                    return `${x},${y}`
-                  }).join(' ')"
-                  fill="none"
-                  stroke="#22d3ee"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <circle v-for="(r, idx) in registrosParaGrafico" :key="'d'+r.id"
-                  :cx="35 + (idx / Math.max(registrosParaGrafico.length - 1, 1)) * 270"
-                  :cy="(() => {
-                    const minKm = Math.min(...registrosParaGrafico.map(a => a.km))
-                    const maxKm = Math.max(...registrosParaGrafico.map(a => a.km))
-                    const range = maxKm - minKm || 1
-                    return 120 - ((r.km - minKm) / range) * 100
-                  })()"
-                  r="3.5"
-                  fill="#22d3ee"
-                />
-              </svg>
-              <div class="flex justify-between mt-1">
-                <span class="font-label text-[8px] text-on-surface-variant">
-                  {{ formatarDataCriacao(registrosParaGrafico[0]?.data_criacao || '') }}
-                </span>
-                <span class="font-label text-[8px] text-on-surface-variant">
-                  {{ formatarDataCriacao(registrosParaGrafico[registrosParaGrafico.length - 1]?.data_criacao || '') }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── 2. COMPARATIVO VS MÊS ANTERIOR (VERDE & ROSA FINANCEIRO) ── -->
+          <!-- ── 1. COMPARATIVO VS MÊS ANTERIOR (VERDE & ROSA FINANCEIRO) ── -->
           <div v-if="inteligencia" class="space-y-2">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-              📊 COMPARATIVO VS MÊS ANTERIOR
+              📊 RESUMO FINANCEIRO E SALDO DO MÊS
             </p>
             <div class="grid grid-cols-3 gap-2">
 
-              <!-- CARD FATURAMENTO (VERDE LIMÃO) -->
+              <!-- CARD FATURAMENTO (VERDE) -->
               <div class="bg-surface-container p-3 border-l-2 border-primary-container">
                 <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-1">
                   FATURAMENTO
@@ -908,128 +925,153 @@ onMounted(async () => {
               </div>
 
             </div>
+
+            <!-- BARRA DE FLUXO DE CAIXA / RETENÇÃO DE LUCRO -->
+            <div class="bg-surface-container p-3 space-y-1.5 border border-outline-variant/40">
+              <div class="flex justify-between items-center font-label text-[9px] font-bold uppercase">
+                <span class="text-primary-container">Lucro Retido: {{ percentualLucroRetido }}%</span>
+                <span class="text-secondary">Despesas: {{ percentualDespesasRetidas }}%</span>
+              </div>
+              <div class="h-2.5 bg-surface-container-high relative overflow-hidden flex rounded-full">
+                <div class="h-full bg-primary-container transition-all duration-500" :style="{ width: percentualLucroRetido + '%' }" />
+                <div class="h-full bg-secondary transition-all duration-500" :style="{ width: percentualDespesasRetidas + '%' }" />
+              </div>
+            </div>
           </div>
 
-          <!-- ── 3. RAIO-X DAS DESPESAS & MAIOR VILÃO ────────────────── -->
-          <div v-if="inteligencia && inteligencia.despesas_por_categoria.length" class="space-y-2">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-              💸 RAIO-X DAS DESPESAS
-            </p>
+          <!-- ── 2. ONDE MAIS GANHA VS ONDE MAIS GASTA (FOCO FINANCEIRO DUAL) ── -->
+          <div v-if="inteligencia" class="space-y-4">
 
-            <!-- Maior Vilão destacado em ROSA/VERMELHO -->
-            <div v-if="inteligencia.maior_vilao" class="bg-secondary/10 border border-secondary/30 p-3 flex items-center gap-3">
-              <span class="material-symbols-outlined text-secondary text-xl">warning</span>
-              <div>
-                <p class="font-label text-[9px] font-bold tracking-widest text-secondary uppercase">MAIOR VILÃO DO MÊS</p>
-                <p class="font-headline font-bold text-sm text-on-surface">
-                  {{ inteligencia.maior_vilao.categoria_nome }} — <span class="text-secondary font-black">{{ formatarReais(inteligencia.maior_vilao.total) }}</span>
-                  <span class="text-[9px] text-on-surface-variant font-normal opacity-80"> ({{ inteligencia.maior_vilao.percentual.toFixed(0) }}% dos gastos)</span>
+            <!-- BLOCO 1: ONDE VOCÊ MAIS GANHA -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+                  🏆 ONDE VOCÊ MAIS GANHA (MELHORES DIAS DE FATURAMENTO)
                 </p>
               </div>
-            </div>
 
-            <!-- Ticket médio de despesas -->
-            <div class="bg-surface-container p-3 flex items-center gap-3">
-              <span class="material-symbols-outlined text-on-surface-variant text-base">confirmation_number</span>
-              <div>
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">TICKET MÉDIO DE DESPESA</p>
-                <p class="font-headline font-bold text-sm text-secondary">{{ formatarReais(inteligencia.ticket_medio_despesa) }}</p>
-              </div>
-            </div>
-
-            <!-- Barras de Despesas -->
-            <div class="bg-surface-container p-3 space-y-2.5">
-              <div v-for="cat in inteligencia.despesas_por_categoria" :key="cat.categoria_nome"
-                class="flex items-center gap-2">
-                <span class="w-20 font-label text-[9px] font-bold tracking-wider text-on-surface uppercase truncate">
-                  {{ cat.categoria_nome }}
-                </span>
-                <div class="flex-1 h-5 bg-surface-container-high relative overflow-hidden">
-                  <div class="h-full bg-secondary/80 transition-all duration-500"
-                    :style="{ width: barPercent(cat.total, maxBarWidth(inteligencia!.despesas_por_categoria)) + '%' }" />
+              <div v-if="inteligencia.ranking_dias_ganho.length" class="bg-surface-container p-3 space-y-2.5 border-l-2 border-primary-container">
+                <!-- Destaque para o #1 dia de ganho -->
+                <div class="flex items-center justify-between bg-primary-container/10 p-2 border border-primary-container/20 mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">🥇</span>
+                    <div>
+                      <p class="font-label text-[8px] font-bold tracking-widest text-primary-container uppercase">MELHOR DIA DE TRABALHO</p>
+                      <p class="font-headline font-bold text-sm text-on-surface uppercase">
+                        {{ diaSemanaCompleto(inteligencia.ranking_dias_ganho[0].dia_semana) }}
+                      </p>
+                    </div>
+                  </div>
+                  <p class="font-headline font-bold text-base text-primary-container">
+                    {{ formatarReais(inteligencia.ranking_dias_ganho[0].total) }}
+                  </p>
                 </div>
-                <span class="font-headline font-bold text-[10px] text-secondary w-20 text-right">
-                  {{ formatarReais(cat.total) }}
-                </span>
-              </div>
-            </div>
-          </div>
 
-          <!-- ── 4. RANKING DE MELHORES DIAS DE GANHO (VERDE) ────────────────── -->
-          <div v-if="inteligencia && inteligencia.ranking_dias_ganho.length" class="space-y-2">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-              🏆 RANKING — MELHORES DIAS DE GANHO
-            </p>
-            <div class="bg-surface-container p-3 space-y-2.5">
-              <div v-for="(dia, idx) in inteligencia.ranking_dias_ganho" :key="dia.dia_semana"
-                class="flex items-center gap-2">
-                <span class="w-5 text-center font-label text-[9px] font-bold text-on-surface-variant">
-                  {{ idx === 0 ? '🥇' : idx === inteligencia.ranking_dias_ganho.length - 1 ? '💸' : `${idx + 1}°` }}
-                </span>
-                <span class="w-16 font-label text-[9px] font-bold tracking-wider text-on-surface uppercase">
-                  {{ diaSemanaCompleto(dia.dia_semana) }}
-                </span>
-                <div class="flex-1 h-5 bg-surface-container-high relative overflow-hidden">
-                  <div class="h-full transition-all duration-500"
-                    :class="idx === 0 ? 'bg-primary-container' : 'bg-primary-container/40'"
-                    :style="{ width: barPercent(dia.total, maxBarWidth(inteligencia!.ranking_dias_ganho)) + '%' }" />
+                <!-- Ranking dos dias -->
+                <div v-for="(dia, idx) in inteligencia.ranking_dias_ganho" :key="dia.dia_semana"
+                  class="flex items-center gap-2">
+                  <span class="w-5 text-center font-label text-[9px] font-bold text-on-surface-variant">
+                    {{ idx === 0 ? '🥇' : idx === inteligencia.ranking_dias_ganho.length - 1 ? '💸' : `${idx + 1}°` }}
+                  </span>
+                  <span class="w-16 font-label text-[9px] font-bold tracking-wider text-on-surface uppercase">
+                    {{ diaSemanaCompleto(dia.dia_semana) }}
+                  </span>
+                  <div class="flex-1 h-4 bg-surface-container-high relative overflow-hidden">
+                    <div class="h-full transition-all duration-500"
+                      :class="idx === 0 ? 'bg-primary-container' : 'bg-primary-container/50'"
+                      :style="{ width: barPercent(dia.total, maxBarWidth(inteligencia!.ranking_dias_ganho)) + '%' }" />
+                  </div>
+                  <span class="font-headline font-bold text-[10px] text-primary-container w-20 text-right">
+                    {{ formatarReais(dia.total) }}
+                  </span>
                 </div>
-                <span class="font-headline font-bold text-[10px] text-primary-container w-20 text-right">
-                  {{ formatarReais(dia.total) }}
-                </span>
               </div>
             </div>
+
+            <!-- BLOCO 2: ONDE VOCÊ MAIS GASTA -->
+            <div v-if="inteligencia.despesas_por_categoria.length" class="space-y-2">
+              <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+                💸 ONDE VOCÊ MAIS GASTA (RAIO-X DAS DESPESAS)
+              </p>
+
+              <!-- Maior Vilão destacado em ROSA/VERMELHO -->
+              <div v-if="inteligencia.maior_vilao" class="bg-secondary/10 border border-secondary/30 p-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-secondary text-xl">warning</span>
+                  <div>
+                    <p class="font-label text-[9px] font-bold tracking-widest text-secondary uppercase">MAIOR VILÃO DO MÊS</p>
+                    <p class="font-headline font-bold text-sm text-on-surface">
+                      {{ inteligencia.maior_vilao.categoria_nome }}
+                    </p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="font-headline font-bold text-sm text-secondary">{{ formatarReais(inteligencia.maior_vilao.total) }}</p>
+                  <p class="font-label text-[8px] text-on-surface-variant opacity-80">{{ inteligencia.maior_vilao.percentual.toFixed(0) }}% das despesas</p>
+                </div>
+              </div>
+
+              <!-- GRÁFICO DE PIZZA PROEMINENTE NO RAIO-X -->
+              <div class="bg-surface-container p-3 border-l-2 border-secondary space-y-3">
+                <p class="font-label text-[9px] font-bold tracking-widest text-secondary uppercase">
+                  🍕 PROPORÇÃO E FATIA DOS GASTOS POR CATEGORIA (PIZZA DE DESPESAS)
+                </p>
+
+                <div v-if="despesasParaPizza.length" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <!-- Desenho do Gráfico de Pizza SVG -->
+                  <div class="flex justify-center items-center py-1">
+                    <div class="relative w-36 h-36 flex items-center justify-center">
+                      <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+                        <circle
+                          v-for="c in despesasParaPizza"
+                          :key="c.categoria_nome"
+                          cx="50"
+                          cy="50"
+                          r="25"
+                          fill="transparent"
+                          :stroke="c.cor"
+                          stroke-width="50"
+                          :stroke-dasharray="c.dashArray"
+                          :stroke-dashoffset="c.dashOffset"
+                          class="transition-all duration-500 hover:opacity-90 cursor-pointer"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <!-- Legenda de Categorias -->
+                  <div class="space-y-1.5">
+                    <div v-for="c in despesasParaPizza" :key="c.categoria_nome"
+                      class="bg-surface-container-high/60 p-2 border border-outline-variant/30 flex items-center justify-between">
+                      <div class="flex items-center gap-2 overflow-hidden">
+                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: c.cor }" />
+                        <span class="font-label text-[9px] font-bold text-on-surface uppercase truncate">{{ c.categoria_nome }}</span>
+                      </div>
+                      <div class="text-right flex-shrink-0">
+                        <p class="font-headline font-bold text-[10px]" :style="{ color: c.cor }">{{ formatarReais(c.total) }}</p>
+                        <p class="font-label text-[8px] text-on-surface-variant font-bold">{{ c.percentual.toFixed(0) }}% do total</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ticket médio de despesas (AGORA ABAIXO DA PIZZA) -->
+              <div class="bg-surface-container p-2.5 flex items-center justify-between border border-outline-variant/30">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-on-surface-variant text-base">confirmation_number</span>
+                  <span class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">TICKET MÉDIO DE DESPESA</span>
+                </div>
+                <span class="font-headline font-bold text-xs text-secondary">{{ formatarReais(inteligencia.ticket_medio_despesa) }}</span>
+              </div>
+            </div>
+
           </div>
 
-          <!-- ── 5. EFICIÊNCIA DO COMBUSTÍVEL (CIANO PARA TELEMETRIA + ROSA FINANCEIRO) ── -->
-          <div v-if="inteligencia" class="space-y-2">
+          <!-- ── 3. RESUMO EXECUTIVO (INSIGHTS DA IA MOTOBOM - ACIMA DA TELEMETRIA) ─────────── -->
+          <div v-if="inteligencia && inteligencia.insights.length" class="space-y-2 pt-2 border-t border-outline-variant/30">
             <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-              ⛽ EFICIÊNCIA DO COMBUSTÍVEL
-            </p>
-            <div class="grid grid-cols-2 gap-2">
-              <!-- KM/L (Ciano Telemetria) -->
-              <div class="bg-surface-container p-3 border-l-2 border-cyan-500">
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">KM/LITRO</p>
-                <p class="font-headline font-bold text-lg text-cyan-600 dark:text-cyan-400">
-                  {{ inteligencia.eficiencia_combustivel.dados_suficientes && inteligencia.eficiencia_combustivel.km_por_litro
-                    ? inteligencia.eficiencia_combustivel.km_por_litro
-                    : '—' }}
-                </p>
-                <p class="font-label text-[9px] text-on-surface-variant">
-                  {{ inteligencia.eficiencia_combustivel.dados_suficientes ? 'km por litro' : 'dados insuficientes' }}
-                </p>
-              </div>
-              <!-- CUSTO/KM (Rosa/Vermelho Financeiro) -->
-              <div class="bg-surface-container p-3 border-l-2 border-secondary">
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">CUSTO/KM</p>
-                <p class="font-headline font-bold text-lg text-secondary">
-                  {{ inteligencia.eficiencia_combustivel.dados_suficientes && inteligencia.eficiencia_combustivel.custo_por_km
-                    ? `R$ ${inteligencia.eficiencia_combustivel.custo_por_km.toFixed(2)}`
-                    : '—' }}
-                </p>
-                <p class="font-label text-[9px] text-on-surface-variant">
-                  {{ inteligencia.eficiencia_combustivel.dados_suficientes ? 'por km rodado' : 'dados insuficientes' }}
-                </p>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <!-- LITROS NO MÊS (Ciano Telemetria) -->
-              <div class="bg-surface-container p-3">
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">LITROS NO MÊS</p>
-                <p class="font-headline font-bold text-sm text-cyan-600 dark:text-cyan-400">{{ inteligencia.eficiencia_combustivel.total_litros.toFixed(1) }} L</p>
-              </div>
-              <!-- GASTO TOTAL (Rosa Financeiro) -->
-              <div class="bg-surface-container p-3">
-                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">GASTO TOTAL</p>
-                <p class="font-headline font-bold text-sm text-secondary">{{ formatarReais(inteligencia.eficiencia_combustivel.total_gasto_combustivel) }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── 6. RESUMO EXECUTIVO (INSIGHTS AUTOMÁTICOS DA IA - ROXO) ─────────── -->
-          <div v-if="inteligencia && inteligencia.insights.length" class="space-y-2">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-              📈 RESUMO EXECUTIVO DO MOTOBOM
+              💡 RESUMO EXECUTIVO DO MOTOBOM
             </p>
             <div class="bg-surface-container p-3 space-y-2 border border-purple-500/20">
               <div v-for="(insight, idx) in inteligencia.insights" :key="idx"
@@ -1040,48 +1082,289 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- ── 7. HISTÓRICO COMPLETO DO ODÔMETRO (KM LOGS - CIANO) ─────────── -->
-          <div v-if="historicoKm" class="bg-surface-container p-3">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
-              EXTRATO DO ODÔMETRO · {{ historicoKm.registros.length }} registro{{ historicoKm.registros.length !== 1 ? 's' : '' }}
+          <!-- ── 4. TELEMETRIA DA MOTO & COMBUSTÍVEL (AGRUPADOS JUNTOS) ── -->
+          <div v-if="inteligencia || historicoKm" class="space-y-3 pt-3 border-t border-outline-variant/40">
+            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+              🏍️ TELEMETRIA E HISTÓRICO DA MOTO
             </p>
-            <div v-if="!historicoKm.registros.length" class="text-center py-6 text-on-surface-variant">
-              <span class="material-symbols-outlined text-3xl opacity-30">speed</span>
-              <p class="font-label text-xs tracking-widest uppercase mt-2">Nenhum registro de KM</p>
+
+            <!-- Cards Unificados de Odômetro & Eficiência -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div v-if="historicoKm" class="bg-surface-container p-3 border-l-2 border-cyan-500">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">KM NO MÊS</p>
+                <p class="font-headline font-bold text-base text-cyan-600 dark:text-cyan-400">{{ historicoKm.km_mes.toLocaleString('pt-BR') }}</p>
+                <p class="font-label text-[8px] text-on-surface-variant">km rodados</p>
+              </div>
+
+              <div v-if="historicoKm" class="bg-surface-container p-3 border-l-2 border-sky-400">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">MÉDIA/DIA</p>
+                <p class="font-headline font-bold text-base text-sky-600 dark:text-sky-400">{{ historicoKm.media_dia }}</p>
+                <p class="font-label text-[8px] text-on-surface-variant">km/dia</p>
+              </div>
+
+              <div v-if="inteligencia" class="bg-surface-container p-3 border-l-2 border-cyan-500">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">KM/LITRO</p>
+                <p class="font-headline font-bold text-base text-cyan-600 dark:text-cyan-400">
+                  {{ inteligencia.eficiencia_combustivel.dados_suficientes && inteligencia.eficiencia_combustivel.km_por_litro
+                    ? inteligencia.eficiencia_combustivel.km_por_litro
+                    : '—' }}
+                </p>
+                <p class="font-label text-[8px] text-on-surface-variant">km por litro</p>
+              </div>
+
+              <div v-if="historicoKm" class="bg-surface-container p-3 border-l-2 border-amber-500">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">TROCA ÓLEO</p>
+                <p class="font-headline font-bold text-base text-amber-600 dark:text-amber-400">
+                  {{ historicoKm.previsao_troca_oleo_km !== null ? `${historicoKm.previsao_troca_oleo_km.toLocaleString('pt-BR')}` : '—' }}
+                </p>
+                <p class="font-label text-[8px] text-on-surface-variant">km restantes</p>
+              </div>
             </div>
-            <div v-else class="max-h-80 overflow-y-auto pr-1 space-y-1">
-              <ul class="space-y-1">
-                <li v-for="r in historicoKm.registros" :key="r.id"
-                  class="flex items-center justify-between py-2 px-1 scannable-row">
-                  <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 bg-cyan-500/10">
-                      <span class="material-symbols-outlined text-base text-cyan-500 dark:text-cyan-400">speed</span>
-                    </div>
-                    <div>
-                      <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
-                        {{ formatarDataCriacao(r.data_criacao) }}
-                        <span class="opacity-60">· {{ origemLabel(r.origem) }}</span>
-                      </p>
-                      <p class="font-headline font-bold text-sm text-on-surface">
-                        {{ r.km.toLocaleString('pt-BR') }} km
-                      </p>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span v-if="r.variacao !== null"
-                      class="font-label text-[9px] font-bold"
-                      :class="r.variacao >= 0 ? 'text-cyan-600 dark:text-cyan-400' : 'text-secondary'">
-                      {{ r.variacao >= 0 ? '+' : '' }}{{ r.variacao.toLocaleString('pt-BR') }}
+
+            <!-- ── 5. CENTRAL DE GRÁFICOS TÁTICOS ────────── -->
+            <div class="space-y-3 pt-2">
+              <div class="flex items-center justify-between">
+                <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">
+                  📊 CENTRAL DE GRÁFICOS TÁTICOS
+                </p>
+                <span v-if="abaGraficoAtiva !== 'nenhum'" class="font-label text-[8px] font-bold text-cyan-500 uppercase">
+                  Clique no botão para recolher
+                </span>
+              </div>
+
+              <!-- BOTÕES SELETORES DE GRÁFICOS (GANHOS X GASTOS ABERTO POR PADRÃO) -->
+              <div class="grid grid-cols-3 gap-1.5 pt-1">
+                <button
+                  class="py-2.5 px-2 flex flex-col items-center justify-center gap-1 font-label text-[9px] font-bold tracking-wider uppercase border transition-all cursor-pointer"
+                  :class="abaGraficoAtiva === 'comparativo'
+                    ? 'bg-primary-container/20 text-primary-container dark:text-lime-300 border-primary-container shadow-xs'
+                    : 'bg-surface-container text-on-surface-variant border-outline-variant hover:bg-surface-bright'"
+                  @click="selecionarAbaGrafico('comparativo')"
+                >
+                  <span class="material-symbols-outlined text-sm">bar_chart</span>
+                  <span>GANHOS X GASTOS</span>
+                </button>
+
+                <button
+                  class="py-2.5 px-2 flex flex-col items-center justify-center gap-1 font-label text-[9px] font-bold tracking-wider uppercase border transition-all cursor-pointer"
+                  :class="abaGraficoAtiva === 'rodagem'
+                    ? 'bg-cyan-500/20 text-cyan-500 dark:text-cyan-300 border-cyan-500 shadow-xs'
+                    : 'bg-surface-container text-on-surface-variant border-outline-variant hover:bg-surface-bright'"
+                  @click="selecionarAbaGrafico('rodagem')"
+                >
+                  <span class="material-symbols-outlined text-sm">show_chart</span>
+                  <span>RODAGEM (KM)</span>
+                </button>
+
+                <button
+                  class="py-2.5 px-2 flex flex-col items-center justify-center gap-1 font-label text-[9px] font-bold tracking-wider uppercase border transition-all cursor-pointer"
+                  :class="abaGraficoAtiva === 'extrato'
+                    ? 'bg-cyan-500/20 text-cyan-500 dark:text-cyan-300 border-cyan-500 shadow-xs'
+                    : 'bg-surface-container text-on-surface-variant border-outline-variant hover:bg-surface-bright'"
+                  @click="selecionarAbaGrafico('extrato')"
+                >
+                  <span class="material-symbols-outlined text-sm">list_alt</span>
+                  <span>EXTRATO DE KM</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ── GRÁFICO 1: RODAGEM DIÁRIA COM GRADIENTE (CIANO) ── -->
+            <div v-if="abaGraficoAtiva === 'rodagem' && historicoKm" class="bg-surface-container p-3 border border-cyan-500/40 space-y-3 animate-in fade-in duration-150">
+              <div class="flex items-center justify-between">
+                <p class="font-label text-[9px] font-bold tracking-widest text-cyan-600 dark:text-cyan-400 uppercase">
+                  📈 EVOLUÇÃO E PONTOS DE RODAGEM DO ODÔMETRO
+                </p>
+                <span class="font-label text-[8px] text-on-surface-variant opacity-80">
+                  {{ registrosParaGrafico.length }} medições
+                </span>
+              </div>
+
+              <div v-if="historicoKm.registros.length >= 2" class="space-y-2">
+                <svg viewBox="0 0 320 130" class="w-full h-auto">
+                  <defs>
+                    <linearGradient id="cyanGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.4" />
+                      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <line v-for="i in 4" :key="'g'+i" :x1="30" :y1="10 + (i-1)*30" :x2="310" :y2="10 + (i-1)*30"
+                    stroke="currentColor" class="text-outline-variant" stroke-width="0.5" opacity="0.3" />
+                  
+                  <!-- Área sombreada sob a linha -->
+                  <polygon
+                    :points="(() => {
+                      const arr = registrosParaGrafico
+                      const minKm = Math.min(...arr.map(a => a.km))
+                      const maxKm = Math.max(...arr.map(a => a.km))
+                      const range = maxKm - minKm || 1
+                      const pts = arr.map((r, idx) => {
+                        const x = 35 + (idx / Math.max(arr.length - 1, 1)) * 270
+                        const y = 100 - ((r.km - minKm) / range) * 80
+                        return `${x},${y}`
+                      })
+                      const lastX = 35 + 270
+                      const firstX = 35
+                      return `${firstX},100 ${pts.join(' ')} ${lastX},100`
+                    })()"
+                    fill="url(#cyanGradient)"
+                  />
+
+                  <!-- Linha principal Ciano -->
+                  <polyline
+                    :points="registrosParaGrafico.map((r, idx, arr) => {
+                      const minKm = Math.min(...arr.map(a => a.km))
+                      const maxKm = Math.max(...arr.map(a => a.km))
+                      const range = maxKm - minKm || 1
+                      const x = 35 + (idx / Math.max(arr.length - 1, 1)) * 270
+                      const y = 100 - ((r.km - minKm) / range) * 80
+                      return `${x},${y}`
+                    }).join(' ')"
+                    fill="none"
+                    stroke="#22d3ee"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+
+                  <!-- Circulos de medição -->
+                  <circle v-for="(r, idx) in registrosParaGrafico" :key="'d'+r.id"
+                    :cx="35 + (idx / Math.max(registrosParaGrafico.length - 1, 1)) * 270"
+                    :cy="(() => {
+                      const minKm = Math.min(...registrosParaGrafico.map(a => a.km))
+                      const maxKm = Math.max(...registrosParaGrafico.map(a => a.km))
+                      const range = maxKm - minKm || 1
+                      return 100 - ((r.km - minKm) / range) * 80
+                    })()"
+                    r="3.5"
+                    fill="#22d3ee"
+                    stroke="#1e293b"
+                    stroke-width="1"
+                  />
+                </svg>
+                <div class="flex justify-between font-label text-[8px] text-on-surface-variant opacity-80">
+                  <span>{{ formatarDataCriacao(registrosParaGrafico[0]?.data_criacao || '') }}</span>
+                  <span>{{ formatarDataCriacao(registrosParaGrafico[registrosParaGrafico.length - 1]?.data_criacao || '') }}</span>
+                </div>
+              </div>
+              <div v-else class="text-center py-4 text-on-surface-variant opacity-60 font-label text-xs">
+                Registros insuficientes para exibir o gráfico de odômetro (mínimo 2).
+              </div>
+            </div>
+
+            <!-- ── GRÁFICO 2: BARRAS DUPLAS GANHOS X GASTOS POR DIA DA SEMANA ── -->
+            <div v-if="abaGraficoAtiva === 'comparativo' && inteligencia" class="bg-surface-container p-3 border border-primary-container/40 space-y-3 animate-in fade-in duration-150">
+              <div class="flex items-center justify-between">
+                <p class="font-label text-[9px] font-bold tracking-widest text-primary-container uppercase">
+                  📊 COMPARATIVO DE LADO A LADO: GANHOS (VERDE) X GASTOS (ROSA)
+                </p>
+                <div class="flex gap-2 font-label text-[8px] font-bold uppercase">
+                  <span class="text-primary-container">🟢 Ganhos</span>
+                  <span class="text-secondary">🔴 Gastos</span>
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                <div v-for="d in comparativoGanhosDespesasDias" :key="d.dia_semana" class="space-y-1">
+                  <div class="flex justify-between font-label text-[9px] font-bold uppercase">
+                    <span class="text-on-surface">{{ d.label }}</span>
+                    <span :class="d.lucro >= 0 ? 'text-primary-container' : 'text-secondary'">
+                      Lucro: {{ formatarReais(d.lucro) }}
                     </span>
-                    <button @click="removerRegistroKm(r.id)"
-                      class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-secondary transition-colors">
-                      <span class="material-symbols-outlined text-sm">delete</span>
-                    </button>
                   </div>
-                </li>
-              </ul>
+
+                  <!-- Barras Duplas Esmeralda x Rosa -->
+                  <div class="grid grid-cols-2 gap-1.5">
+                    <!-- Barra de Ganho -->
+                    <div class="h-4 bg-surface-container-high relative overflow-hidden flex items-center justify-end pr-1">
+                      <div class="h-full bg-primary-container absolute left-0 top-0 transition-all duration-500"
+                        :style="{ width: barPercent(d.ganho.toString(), maxValorComparativo) + '%' }" />
+                      <span class="relative z-10 font-headline font-bold text-[8px] text-on-primary-container">
+                        {{ d.ganho > 0 ? formatarReais(d.ganho) : '' }}
+                      </span>
+                    </div>
+                    <!-- Barra de Gastos -->
+                    <div class="h-4 bg-surface-container-high relative overflow-hidden flex items-center justify-start pl-1">
+                      <div class="h-full bg-secondary/80 absolute left-0 top-0 transition-all duration-500"
+                        :style="{ width: barPercent(d.despesa.toString(), maxValorComparativo) + '%' }" />
+                      <span class="relative z-10 font-headline font-bold text-[8px] text-white">
+                        {{ d.despesa > 0 ? formatarReais(d.despesa) : '' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            <!-- ── GRÁFICO 4: EXTRATO COMPACTO E PAGINADO DO ODÔMETRO ── -->
+            <div v-if="abaGraficoAtiva === 'extrato' && historicoKm" class="bg-surface-container p-3 border border-cyan-500/40 space-y-2 animate-in fade-in duration-150">
+              <div class="flex items-center justify-between">
+                <p class="font-label text-[9px] font-bold tracking-widest text-cyan-600 dark:text-cyan-400 uppercase">
+                  📋 HISTÓRICO COMPACTO DE REGISTROS DE KM
+                </p>
+                <span class="font-label text-[8px] text-on-surface-variant uppercase">
+                  Pág {{ paginaKmAtual }} / {{ totalPaginasKm }}
+                </span>
+              </div>
+
+              <div v-if="!historicoKm.registros.length" class="text-center py-4 text-on-surface-variant">
+                <p class="font-label text-xs tracking-widest uppercase opacity-60">Nenhum registro de KM</p>
+              </div>
+
+              <div v-else class="space-y-1">
+                <ul class="space-y-1">
+                  <li v-for="r in registrosKmPaginados" :key="r.id"
+                    class="flex items-center justify-between py-1.5 px-2 bg-surface-container-high/40 hover:bg-surface-container-high transition-colors">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-6 h-6 flex items-center justify-center flex-shrink-0 bg-cyan-500/10 rounded">
+                        <span class="material-symbols-outlined text-xs text-cyan-500 dark:text-cyan-400">speed</span>
+                      </div>
+                      <div>
+                        <p class="font-label text-[8px] font-bold tracking-widest text-on-surface-variant uppercase">
+                          {{ formatarDataCriacao(r.data_criacao) }}
+                          <span class="opacity-60">· {{ origemLabel(r.origem) }}</span>
+                        </p>
+                        <p class="font-headline font-bold text-xs text-on-surface">
+                          {{ r.km.toLocaleString('pt-BR') }} km
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span v-if="r.variacao !== null"
+                        class="font-label text-[8px] font-bold"
+                        :class="r.variacao >= 0 ? 'text-cyan-600 dark:text-cyan-400' : 'text-secondary'">
+                        {{ r.variacao >= 0 ? '+' : '' }}{{ r.variacao.toLocaleString('pt-BR') }}
+                      </span>
+                      <button @click="removerRegistroKm(r.id)"
+                        class="w-6 h-6 flex items-center justify-center text-on-surface-variant hover:text-secondary transition-colors">
+                        <span class="material-symbols-outlined text-xs">delete</span>
+                      </button>
+                    </div>
+                  </li>
+                </ul>
+
+                <!-- Controles de Paginação -->
+                <div v-if="totalPaginasKm > 1" class="flex items-center justify-between pt-2 border-t border-outline-variant/30">
+                  <button
+                    class="h-7 px-2.5 flex items-center gap-1 font-label text-[8px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40 cursor-pointer"
+                    :disabled="paginaKmAtual <= 1"
+                    @click="paginaKmAtual--"
+                  >
+                    <span class="material-symbols-outlined text-xs">chevron_left</span>
+                    ANTERIOR
+                  </button>
+                  <button
+                    class="h-7 px-2.5 flex items-center gap-1 font-label text-[8px] font-bold tracking-widest uppercase border border-outline-variant bg-surface-container-high text-on-surface disabled:opacity-40 cursor-pointer"
+                    :disabled="paginaKmAtual >= totalPaginasKm"
+                    @click="paginaKmAtual++"
+                  >
+                    PRÓXIMO
+                    <span class="material-symbols-outlined text-xs">chevron_right</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
         </template>
 

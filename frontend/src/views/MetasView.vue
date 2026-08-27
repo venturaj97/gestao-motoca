@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { listarAlertasMetas, listarMetas, criarMeta, atualizarMeta, excluirMeta } from '@/api/metas'
 import { listarCofres, criarCofre, atualizarCofre, aportarCofre, excluirCofre } from '@/api/cofres'
 import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CofreResposta, CofreCriar, CofreAtualizar } from '@/types'
+
+const router = useRouter()
 
 // ── Estado ───────────────────────────────────────────────────
 const alertas      = ref<MetaAlertaResposta[]>([])
@@ -359,26 +362,44 @@ onMounted(carregar)
 
 <template>
   <AppLayout>
-    <div class="metas-page">
+    <div class="bg-background text-on-surface font-body min-h-screen">
+      <!-- Back button topbar override for mobile: show back button -->
+      <div class="px-5 py-4 lg:hidden">
+        <button
+          class="flex items-center gap-1 text-on-surface-variant hover:text-on-surface transition-colors text-sm font-bold"
+          @click="router.push({ name: 'dashboard' })"
+        >
+          <span class="material-symbols-outlined text-base">arrow_back</span>
+          VOLTAR
+        </button>
+      </div>
+
+      <main class="px-5 py-2 lg:py-6 space-y-6 max-w-4xl mx-auto pb-28 lg:pb-8">
 
       <!-- ══ Cabeçalho ══════════════════════════════════════════ -->
-      <section class="page-header">
+      <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <p class="label-overline">PLANEJAMENTO</p>
-          <h2 class="page-title">METAS & COFRES</h2>
-          <p class="label-overline mt-1">Controle de ritmo e reservas da moto</p>
+          <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">PLANEJAMENTO</p>
+          <h2 class="font-headline font-extrabold text-4xl tracking-tighter uppercase leading-none">METAS & COFRES</h2>
+          <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mt-1">Controle de ritmo e reservas da moto</p>
         </div>
-        <div class="header-buttons">
-          <button class="btn-novo-cofre" @click="abrirCriarCofre">
+        <div class="flex flex-wrap gap-2">
+          <button
+            class="h-11 px-5 bg-surface-container-high border border-outline font-label text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 hover:bg-surface-bright transition-all text-on-surface"
+            @click="abrirCriarCofre"
+          >
             <span class="material-symbols-outlined text-sm">savings</span>
             NOVO COFRE
           </button>
-          <button class="btn-nova-meta" @click="abrirCriarMeta">
+          <button
+            class="h-11 px-5 bg-primary-container text-on-primary-fixed font-label text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 hover:brightness-110 transition-all"
+            @click="abrirCriarMeta"
+          >
             <span class="material-symbols-outlined text-sm">add</span>
             NOVA META
           </button>
         </div>
-      </section>
+      </div>
 
       <!-- Erro -->
       <div v-if="erroCarregar" class="error-banner">
@@ -400,15 +421,14 @@ onMounted(carregar)
 
       <!-- ══ Conteúdo principal ═══════════════════════════════ -->
       <template v-else>
-        <div class="metas-content">
+        <div class="space-y-6">
 
-          <!-- ── Seção 1: Metas de Ganho ─────────────────────── -->
-          <section v-if="alertasGanho.length > 0" class="metas-secao">
-            <div class="secao-header">
-              <span class="material-symbols-outlined secao-icone secao-icone--ganho">trending_up</span>
-              <h3 class="secao-titulo">METAS DE GANHO</h3>
-              <div class="tooltip-trigger">
-                <span class="material-symbols-outlined tooltip-icon">info</span>
+          <section v-if="alertasGanho.length > 0" class="flex flex-col gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined w-8 h-8 flex items-center justify-center text-lg bg-primary-container/15 text-primary-container">trending_up</span>
+              <h3 class="font-headline font-black text-[11px] tracking-[0.15em] uppercase text-on-surface">METAS DE GANHO</h3>
+              <div class="tooltip-trigger ml-auto lg:ml-0">
+                <span class="material-symbols-outlined text-on-surface-variant text-base">info</span>
                 <div class="tooltip-box">Meta de faturamento mínimo esperado para o período.</div>
               </div>
             </div>
@@ -479,13 +499,12 @@ onMounted(carregar)
             </div>
           </section>
 
-          <!-- ── Seção 2: Teto de Despesas ────────────────────── -->
-          <section v-if="alertasDespesa.length > 0" class="metas-secao">
-            <div class="secao-header">
-              <span class="material-symbols-outlined secao-icone secao-icone--despesa">money_off</span>
-              <h3 class="secao-titulo">TETO DE DESPESAS</h3>
-              <div class="tooltip-trigger">
-                <span class="material-symbols-outlined tooltip-icon">info</span>
+          <section v-if="alertasDespesa.length > 0" class="flex flex-col gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined w-8 h-8 flex items-center justify-center text-lg bg-secondary/15 text-secondary">money_off</span>
+              <h3 class="font-headline font-black text-[11px] tracking-[0.15em] uppercase text-on-surface">TETO DE DESPESAS</h3>
+              <div class="tooltip-trigger ml-auto lg:ml-0">
+                <span class="material-symbols-outlined text-on-surface-variant text-base">info</span>
                 <div class="tooltip-box">Limite máximo de gastos para manter os custos sob controle.</div>
               </div>
             </div>
@@ -546,13 +565,12 @@ onMounted(carregar)
             </div>
           </section>
 
-          <!-- ── Seção 3: Cofres Táticos ─────────────────────── -->
-          <section class="metas-secao">
-            <div class="secao-header">
-              <span class="material-symbols-outlined secao-icone secao-icone--cofre">savings</span>
-              <h3 class="secao-titulo">COFRES TÁTICOS (RESERVAS)</h3>
-              <div class="tooltip-trigger">
-                <span class="material-symbols-outlined tooltip-icon">info</span>
+          <section class="flex flex-col gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined w-8 h-8 flex items-center justify-center text-lg bg-tertiary/15 text-tertiary">savings</span>
+              <h3 class="font-headline font-black text-[11px] tracking-[0.15em] uppercase text-on-surface">COFRES TÁTICOS (RESERVAS)</h3>
+              <div class="tooltip-trigger ml-auto lg:ml-0">
+                <span class="material-symbols-outlined text-on-surface-variant text-base">info</span>
                 <div class="tooltip-box">Reservas financeiras acumulativas para despesas futuras da moto.</div>
               </div>
             </div>
@@ -641,11 +659,10 @@ onMounted(carregar)
             <p class="empty-state__desc">Comece planejando suas metas de faturamento e cofres de emergência.</p>
           </div>
 
-          <!-- ── Lista completa de metas ativas ──────────── -->
-          <section v-if="metas.length > 0" class="metas-secao metas-lista-secao">
-            <div class="secao-header">
-              <span class="material-symbols-outlined secao-icone secao-icone--lista">list_alt</span>
-              <h3 class="secao-titulo">TODAS AS METAS ({{ metas.length }})</h3>
+          <section v-if="metas.length > 0" class="flex flex-col gap-3 pt-4 border-t border-outline-variant">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined w-8 h-8 flex items-center justify-center text-lg bg-on-surface-variant/10 text-on-surface-variant">list_alt</span>
+              <h3 class="font-headline font-black text-[11px] tracking-[0.15em] uppercase text-on-surface">TODAS AS METAS ({{ metas.length }})</h3>
             </div>
 
             <div class="metas-lista">
@@ -680,6 +697,7 @@ onMounted(carregar)
 
         </div>
       </template>
+      </main>
 
       <!-- ══ Modal: Nova / Editar Meta ═════════════════════════ -->
       <div v-if="modalMetaVisivel" class="modal-overlay" @click.self="modalMetaVisivel = false">
@@ -753,9 +771,14 @@ onMounted(carregar)
               </div>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
-                <input :value="modalMetaValor" type="text" inputmode="decimal" placeholder="0,00"
+                <input :value="modalMetaValor" type="text" inputmode="numeric" placeholder="0,00"
                   class="tactical-input pl-10 py-3 text-xl font-bold"
-                  @input="e => modalMetaValor = formatarInputMoeda((e.target as HTMLInputElement).value)" />
+                  @input="e => {
+                    const t = e.target as HTMLInputElement;
+                    const v = formatarInputMoeda(t.value);
+                    modalMetaValor = v;
+                    t.value = v;
+                  }" />
               </div>
             </div>
 
@@ -849,9 +872,14 @@ onMounted(carregar)
               </div>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
-                <input :value="modalCofreMetaValor" type="text" inputmode="decimal" placeholder="0,00"
+                <input :value="modalCofreMetaValor" type="text" inputmode="numeric" placeholder="0,00"
                   class="tactical-input pl-10 py-3 text-xl font-bold"
-                  @input="e => modalCofreMetaValor = formatarInputMoeda((e.target as HTMLInputElement).value)" />
+                  @input="e => {
+                    const t = e.target as HTMLInputElement;
+                    const v = formatarInputMoeda(t.value);
+                    modalCofreMetaValor = v;
+                    t.value = v;
+                  }" />
               </div>
             </div>
 
@@ -866,9 +894,14 @@ onMounted(carregar)
               </div>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
-                <input :value="modalCofreSaldoAtual" type="text" inputmode="decimal" placeholder="0,00"
+                <input :value="modalCofreSaldoAtual" type="text" inputmode="numeric" placeholder="0,00"
                   class="tactical-input pl-10 py-3 text-xl font-bold"
-                  @input="e => modalCofreSaldoAtual = formatarInputMoeda((e.target as HTMLInputElement).value)" />
+                  @input="e => {
+                    const t = e.target as HTMLInputElement;
+                    const v = formatarInputMoeda(t.value);
+                    modalCofreSaldoAtual = v;
+                    t.value = v;
+                  }" />
               </div>
             </div>
 
@@ -883,9 +916,14 @@ onMounted(carregar)
               </div>
               <div class="relative">
                 <span class="absolute right-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">%</span>
-                <input :value="modalCofreAutoguarda" type="text" inputmode="decimal" placeholder="0"
+                <input :value="modalCofreAutoguarda" type="text" inputmode="numeric" placeholder="0"
                   class="tactical-input pr-10 py-3 text-xl font-bold"
-                  @input="e => modalCofreAutoguarda = (e.target as HTMLInputElement).value.replace(/[^0-9.,]/g, '')" />
+                  @input="e => {
+                    const t = e.target as HTMLInputElement;
+                    const v = t.value.replace(/[^0-9.,]/g, '');
+                    modalCofreAutoguarda = v;
+                    t.value = v;
+                  }" />
               </div>
               <div class="flex gap-2 mt-2">
                 <button type="button" class="btn-preset-pct" @click="modalCofreAutoguarda = '0'">0% (Manual)</button>
@@ -944,9 +982,14 @@ onMounted(carregar)
               <label class="campo-label">VALOR DA OPERAÇÃO (R$)</label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
-                <input :value="aporteValor" type="text" inputmode="decimal" placeholder="0,00"
+                <input :value="aporteValor" type="text" inputmode="numeric" placeholder="0,00"
                   class="tactical-input pl-10 py-3 text-xl font-bold"
-                  @input="e => aporteValor = formatarInputMoeda((e.target as HTMLInputElement).value)" />
+                  @input="e => {
+                    const t = e.target as HTMLInputElement;
+                    const v = formatarInputMoeda(t.value);
+                    aporteValor = v;
+                    t.value = v;
+                  }" />
               </div>
             </div>
 
@@ -1007,13 +1050,6 @@ onMounted(carregar)
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  padding-bottom: 6rem;
-}
-
-@media (min-width: 1024px) {
-  .metas-page {
-    padding-bottom: 2rem;
-  }
 }
 
 /* ─── Page header ────────────────────────────────────────────── */
@@ -1021,14 +1057,7 @@ onMounted(carregar)
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 1.25rem 1.25rem 0;
   gap: 1rem;
-}
-
-@media (min-width: 1024px) {
-  .page-header {
-    padding: 2rem 2rem 0;
-  }
 }
 
 .header-buttons {
@@ -1117,14 +1146,6 @@ onMounted(carregar)
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  padding: 1.25rem;
-}
-
-@media (min-width: 1024px) {
-  .metas-content {
-    padding: 1.5rem 2rem;
-    max-width: 960px;
-  }
 }
 
 /* ─── Section ────────────────────────────────────────────────── */
