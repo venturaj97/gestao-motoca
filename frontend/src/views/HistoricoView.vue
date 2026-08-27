@@ -340,6 +340,7 @@ async function executarExclusaoLote() {
   executandoExclusaoLote.value = true
   try {
     await excluirLancamentosLote(idsSelecionados.value)
+    await motoStore.carregarMotos()
     idsSelecionados.value = []
     modoSelecao.value = false
     await carregarTransacoes()

@@ -10,6 +10,7 @@ from app.models.categoria import Categoria
 from app.models.lancamento import Lancamento
 from app.models.manutencao import Manutencao
 from app.models.moto_usuario import MotoUsuario
+from app.models.moto_historico_km import MotoHistoricoKm
 from app.schemas.lancamento import LancamentoCriar
 
 PERIODOS_GANHO = {"DIARIO", "CORRIDA"}
@@ -100,7 +101,12 @@ def _resolver_moto_do_lancamento(
     raise ValueError("moto_obrigatoria_informar")
 
 
-def criar_lancamento(db: Session, dados: LancamentoCriar, auto_commit: bool = True) -> Lancamento:
+def criar_lancamento(
+    db: Session,
+    dados: LancamentoCriar,
+    auto_commit: bool = True,
+    atualizar_km_moto: bool = True,
+) -> Lancamento:
     tipo = dados.tipo.upper()
 
     # valida tipo
@@ -150,6 +156,22 @@ def criar_lancamento(db: Session, dados: LancamentoCriar, auto_commit: bool = Tr
     )
 
     db.add(lancamento)
+
+    if km_corrida and km_corrida > 0 and atualizar_km_moto:
+        moto = db.execute(
+            select(MotoUsuario).where(MotoUsuario.id == moto_id)
+        ).scalar_one_or_none()
+        if moto:
+            km_adicionar = int(round(km_corrida))
+            moto.km_atual += km_adicionar
+            historico = MotoHistoricoKm(
+                usuario_id=dados.usuario_id,
+                moto_usuario_id=moto_id,
+                km=moto.km_atual,
+                origem="LANÇAMENTO",
+            )
+            db.add(historico)
+
     if tipo == "GANHO":
         from app.services.cofre_service import processar_autoguarda_cofres
         processar_autoguarda_cofres(db, dados.usuario_id, dados.valor)
@@ -299,6 +321,10 @@ def atualizar_lancamento(
 
     moto_id = _resolver_moto_do_lancamento(db, dados.usuario_id, dados.moto_usuario_id)
 
+    km_antigo = int(round(lancamento.km_corrida)) if lancamento.km_corrida and lancamento.km_corrida > 0 else 0
+    km_novo = int(round(km_corrida)) if km_corrida and km_corrida > 0 else 0
+    diff_km = km_novo - km_antigo
+
     lancamento.categoria_id = dados.categoria_id
     lancamento.moto_usuario_id = moto_id
     lancamento.tipo = tipo
@@ -309,6 +335,21 @@ def atualizar_lancamento(
     lancamento.minutos_corrida = minutos_corrida
     lancamento.km_corrida = km_corrida
     lancamento.data_lancamento = data_ref
+
+    if diff_km != 0:
+        moto = db.execute(
+            select(MotoUsuario).where(MotoUsuario.id == moto_id)
+        ).scalar_one_or_none()
+        if moto:
+            novo_km = max(0, moto.km_atual + diff_km)
+            moto.km_atual = novo_km
+            historico = MotoHistoricoKm(
+                usuario_id=dados.usuario_id,
+                moto_usuario_id=moto_id,
+                km=novo_km,
+                origem="LANÇAMENTO",
+            )
+            db.add(historico)
 
     if abastecimento:
         abastecimento.usuario_id = dados.usuario_id
@@ -341,6 +382,22 @@ def excluir_lancamento(db: Session, lancamento_id: int, usuario_id: int, auto_co
     if not lancamento:
         raise ValueError("lancamento_nao_encontrado")
 
+    if lancamento.km_corrida and lancamento.km_corrida > 0:
+        km_removido = int(round(lancamento.km_corrida))
+        moto = db.execute(
+            select(MotoUsuario).where(MotoUsuario.id == lancamento.moto_usuario_id)
+        ).scalar_one_or_none()
+        if moto and km_removido > 0:
+            novo_km = max(0, moto.km_atual - km_removido)
+            moto.km_atual = novo_km
+            historico = MotoHistoricoKm(
+                usuario_id=usuario_id,
+                moto_usuario_id=lancamento.moto_usuario_id,
+                km=novo_km,
+                origem="EXCLUSAO_LANCAMENTO",
+            )
+            db.add(historico)
+
     db.delete(lancamento)
     if auto_commit:
         db.commit()
@@ -370,6 +427,21 @@ def excluir_lancamentos_em_lote(
 
     qtd = len(itens)
     for item in itens:
+        if item.km_corrida and item.km_corrida > 0:
+            km_removido = int(round(item.km_corrida))
+            moto = db.execute(
+                select(MotoUsuario).where(MotoUsuario.id == item.moto_usuario_id)
+            ).scalar_one_or_none()
+            if moto and km_removido > 0:
+                novo_km = max(0, moto.km_atual - km_removido)
+                moto.km_atual = novo_km
+                historico = MotoHistoricoKm(
+                    usuario_id=usuario_id,
+                    moto_usuario_id=item.moto_usuario_id,
+                    km=novo_km,
+                    origem="EXCLUSAO_LANCAMENTO",
+                )
+                db.add(historico)
         db.delete(item)
 
     db.commit()

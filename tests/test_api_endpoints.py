@@ -234,3 +234,46 @@ async def test_busca_e_exclusao_em_lote_lancamentos(client):
     assert len(itens_finais) == 1
     assert itens_finais[0]["id"] == id3
 
+
+@pytest.mark.anyio
+async def test_lancamento_corrida_atualiza_km_moto(client):
+    headers = await _criar_usuario_logado(client, "km_corrida_test@test.com")
+
+    # Cadastra moto com KM inicial 50000
+    await client.post(
+        "/motos/minha",
+        headers=headers,
+        json={"marca_manual": "Honda", "modelo_manual": "CG 160", "ano_manual": 2022, "km_atual": 50000},
+    )
+
+    # Cadastra categoria de ganho
+    res_cat = await client.post(
+        "/categorias",
+        headers=headers,
+        json={"nome": "Entregas App", "tipo": "GANHO"},
+    )
+    assert res_cat.status_code == 201
+    cat_id = res_cat.json()["id"]
+
+    # Lança ganho por corrida com 120 km
+    res_lanc = await client.post(
+        "/lancamentos",
+        headers=headers,
+        json={
+            "categoria_id": cat_id,
+            "tipo": "GANHO",
+            "valor": "300.00",
+            "periodo": "CORRIDA",
+            "minutos_corrida": 34,
+            "km_corrida": 120.0,
+            "data_lancamento": "2026-08-27",
+        },
+    )
+    assert res_lanc.status_code == 201
+
+    # Verifica se o KM da moto foi atualizado para 50120
+    resp_moto = await client.get("/motos/minha", headers=headers)
+    assert resp_moto.status_code == 200
+    assert resp_moto.json()["motos"][0]["km_atual"] == 50120
+
+

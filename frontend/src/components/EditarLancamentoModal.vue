@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { atualizarLancamento, excluirLancamento } from '@/api/lancamentos'
 import { listarCategorias } from '@/api/categorias'
+import { useMotoStore } from '@/stores/moto'
 import type { LancamentoResposta, CategoriaResposta } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 
@@ -14,6 +15,8 @@ const emit = defineEmits<{
   (e: 'fechar'): void
   (e: 'salvo'): void
 }>()
+
+const motoStore = useMotoStore()
 
 // ── Estado do Formulário ─────────────────────────────────────────
 const valor = ref('')
@@ -91,6 +94,7 @@ async function salvar() {
       data_lancamento: dataLancamento.value,
       moto_usuario_id: props.lancamento.moto_usuario_id || undefined,
     })
+    await motoStore.carregarMotos()
     emit('salvo')
     emit('fechar')
   } catch {
@@ -109,6 +113,7 @@ async function excluir() {
 
   try {
     await excluirLancamento(props.lancamento.id)
+    await motoStore.carregarMotos()
     emit('salvo')
     emit('fechar')
   } catch {

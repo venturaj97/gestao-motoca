@@ -226,17 +226,18 @@ async function handleSubmit() {
 
   enviando.value = true
   try {
-    const retorno = await criarLancamentosLote(itens.map(i => ({
+    const retorno = await criarLancamentosLote(itens.map((i, idx) => ({
       tipo: tipo.value,
       categoria_id: i.catId,
       valor: i.valorNum,
       descricao: mostrarDescricao.value ? (descricao.value || undefined) : undefined,
       periodo: 'CORRIDA',
-      minutos_corrida: minutosCorrida.value ? parseInt(minutosCorrida.value) : undefined,
-      km_corrida: kmCorrida.value ? parseFloat(kmCorrida.value) : undefined,
+      minutos_corrida: idx === 0 && minutosCorrida.value ? parseInt(minutosCorrida.value) : undefined,
+      km_corrida: idx === 0 && kmCorrida.value ? parseFloat(kmCorrida.value) : undefined,
       data_lancamento: dataLancamento.value,
       moto_usuario_id: motoId.value,
     })))
+    await motoStore.carregarMotos()
     mostrarSucesso(retorno.quantidade, Number(retorno.total_valor))
     categoriasSelecionadas.value = []
     valoresPorCategoria.value = {}
@@ -281,6 +282,7 @@ async function enviarSimples() {
       }
       mostrarSucesso(retorno.quantidade, Number(retorno.total_valor))
     }
+    await motoStore.carregarMotos()
     valorUnico.value = ''
     litros.value = ''
     mostrarDescricao.value = false
@@ -317,7 +319,7 @@ onMounted(carregar)
       </button>
     </div>
 
-    <main class="px-5 py-2 lg:py-6 space-y-6 max-w-2xl mx-auto pb-40 lg:pb-8">
+    <main class="px-5 py-2 lg:py-6 space-y-6 max-w-2xl mx-auto pb-28 lg:pb-8">
 
       <!-- Toggle GANHO / DESPESA -->
       <div class="space-y-4">
@@ -629,28 +631,24 @@ onMounted(carregar)
           <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
           {{ mensagemSucesso }}
         </div>
+        <!-- Botão de registrar -->
+        <div class="pt-2">
+          <button
+            type="submit"
+            :disabled="enviando"
+            class="btn-primary h-14 text-base w-full disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
+            :class="tipo === 'DESPESA' ? 'bg-secondary text-on-secondary hover:brightness-110' : ''"
+          >
+            <span v-if="enviando" class="material-symbols-outlined animate-spin">refresh</span>
+            <template v-else>
+              <span class="material-symbols-outlined">{{ tipo === 'GANHO' ? 'add_circle' : 'remove_circle' }}</span>
+              REGISTRAR {{ tipo === 'GANHO' ? 'GANHO' : 'DESPESA' }}
+            </template>
+          </button>
+        </div>
 
       </form>
     </main>
-
-    <!-- 2. Botão de registrar fixo (acima da nav bar, sem necessidade de rolar a tela) -->
-    <div class="fixed bottom-20 left-0 right-0 z-40 px-5">
-      <div class="max-w-md mx-auto">
-        <button
-          type="submit"
-          form="form-lancamento"
-          :disabled="enviando"
-          class="btn-primary h-14 text-base w-full disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
-          :class="tipo === 'DESPESA' ? 'bg-secondary text-on-secondary hover:brightness-110' : ''"
-        >
-          <span v-if="enviando" class="material-symbols-outlined animate-spin">refresh</span>
-          <template v-else>
-            <span class="material-symbols-outlined">{{ tipo === 'GANHO' ? 'add_circle' : 'remove_circle' }}</span>
-            REGISTRAR {{ tipo === 'GANHO' ? 'GANHO' : 'DESPESA' }}
-          </template>
-        </button>
-      </div>
-    </div>
 
   </div>
   </AppLayout>

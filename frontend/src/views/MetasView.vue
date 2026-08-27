@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { listarAlertasMetas, listarMetas, criarMeta, atualizarMeta, excluirMeta } from '@/api/metas'
 import { listarCofres, criarCofre, atualizarCofre, aportarCofre, excluirCofre } from '@/api/cofres'
-import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CofreResposta, CofreCriar, CofreAtualizar, CategoriaCofre } from '@/types'
+import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CofreResposta, CofreCriar, CofreAtualizar } from '@/types'
 
 // ── Estado ───────────────────────────────────────────────────
 const alertas      = ref<MetaAlertaResposta[]>([])
