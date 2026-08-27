@@ -63,17 +63,6 @@ const tipoFiltroApi = computed(() =>
   filtroTipo.value === 'TODOS' ? undefined : filtroTipo.value
 )
 
-const totalGanhos = computed(() =>
-  lancamentos.value
-    .filter(l => l.tipo === 'GANHO')
-    .reduce((acc, l) => acc + parseFloat(l.valor), 0)
-)
-
-const totalDespesas = computed(() =>
-  lancamentos.value
-    .filter(l => l.tipo === 'DESPESA')
-    .reduce((acc, l) => acc + parseFloat(l.valor), 0)
-)
 
 const faixaPeriodo = computed(() => {
   if (!dataInicio.value || !dataFim.value) return ''
@@ -457,17 +446,6 @@ onMounted(async () => {
           {{ faixaPeriodo }}
         </p>
 
-        <!-- Resumo rápido -->
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-surface-container p-3 border-l-2 border-primary-container">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">GANHOS</p>
-            <p class="font-headline font-bold text-base text-primary-container">{{ formatarReais(totalGanhos) }}</p>
-          </div>
-          <div class="bg-surface-container p-3 border-l-2 border-secondary">
-            <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-0.5">DESPESAS</p>
-            <p class="font-headline font-bold text-base text-secondary">{{ formatarReais(totalDespesas) }}</p>
-          </div>
-        </div>
 
         <!-- Filtro de período -->
         <div class="space-y-3 bg-surface-container p-3">
