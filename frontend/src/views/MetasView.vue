@@ -1,0 +1,1348 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import AppLayout from '@/components/AppLayout.vue'
+import { listarAlertasMetas, listarMetas, criarMeta, atualizarMeta, excluirMeta } from '@/api/metas'
+import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CategoriaCofre } from '@/types'
+
+// ── Estado ───────────────────────────────────────────────────
+const alertas      = ref<MetaAlertaResposta[]>([])
+const metas        = ref<MetaResposta[]>([])
+const carregando   = ref(true)
+const erroCarregar = ref('')
+
+// ── Modal ────────────────────────────────────────────────────
+const modalVisivel       = ref(false)
+const modalModoEdicao    = ref(false)
+const modalMetaId        = ref<number | null>(null)
+const modalNome          = ref('')
+const modalTipo          = ref<'GANHO' | 'DESPESA'>('GANHO')
+const modalPeriodo       = ref<'DIARIO' | 'SEMANAL' | 'MENSAL' | 'OBJETIVO'>('SEMANAL')
+const modalValor         = ref('')
+const modalDiasTrabalho  = ref(6)
+const modalCategoriaCofre = ref<CategoriaCofre>(null)
+const modalEnviando      = ref(false)
+const modalErro          = ref('')
+
+// ── Modal de confirmação de exclusão ─────────────────────────
+const confirmarExcluir     = ref(false)
+const confirmarExcluirId   = ref<number | null>(null)
+const confirmarExcluirNome = ref('')
+const excluindo            = ref(false)
+
+// ── Categorias de cofre ──────────────────────────────────────
+const categoriasCofre: { valor: CategoriaCofre; label: string; icone: string }[] = [
+  { valor: 'PNEU',    label: 'Pneu & Relação', icone: 'tire_repair' },
+  { valor: 'SEGURO',  label: 'Seguro',         icone: 'shield' },
+  { valor: 'IPVA',    label: 'IPVA',            icone: 'receipt_long' },
+  { valor: 'REVISAO', label: 'Revisão',         icone: 'build' },
+  { valor: 'RESERVA', label: 'Reserva',         icone: 'savings' },
+  { valor: 'OUTROS',  label: 'Outros',          icone: 'more_horiz' },
+]
+
+// ── Dados derivados ──────────────────────────────────────────
+const alertasGanho = computed(() =>
+  alertas.value.filter(a => a.tipo === 'GANHO' && a.periodo !== 'OBJETIVO')
+)
+
+const alertasDespesa = computed(() =>
+  alertas.value.filter(a => a.tipo === 'DESPESA' && a.periodo !== 'OBJETIVO')
+)
+
+const alertasCofre = computed(() =>
+  alertas.value.filter(a => a.periodo === 'OBJETIVO')
+)
+
+// ── Helpers ──────────────────────────────────────────────────
+function formatarReais(valor: string | number): string {
+  const n = typeof valor === 'string' ? parseFloat(valor) : valor
+  if (isNaN(n)) return 'R$ 0,00'
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function periodoLabel(periodo: string): string {
+  const map: Record<string, string> = {
+    DIARIO: 'DIÁRIO',
+    SEMANAL: 'SEMANAL',
+    MENSAL: 'MENSAL',
+    OBJETIVO: 'COFRE',
+  }
+  return map[periodo] ?? periodo
+}
+
+function statusConfig(status: string): { cor: string; badge: string; icone: string } {
+  const map: Record<string, { cor: string; badge: string; icone: string }> = {
+    atingida:     { cor: 'status-atingida',     badge: 'Meta Atingida',   icone: 'check_circle' },
+    em_andamento: { cor: 'status-em-andamento', badge: 'Em Andamento',    icone: 'schedule' },
+    estourada:    { cor: 'status-estourada',     badge: 'Teto Excedido',  icone: 'error' },
+    atencao:      { cor: 'status-atencao',       badge: 'Atenção',        icone: 'warning' },
+    dentro_meta:  { cor: 'status-dentro-meta',   badge: 'Sob Controle',   icone: 'verified' },
+  }
+  return map[status] ?? { cor: 'status-em-andamento', badge: status, icone: 'info' }
+}
+
+function iconeCofre(categoria: CategoriaCofre): string {
+  const item = categoriasCofre.find(c => c.valor === categoria)
+  return item?.icone ?? 'savings'
+}
+
+function labelCofre(categoria: CategoriaCofre): string {
+  const item = categoriasCofre.find(c => c.valor === categoria)
+  return item?.label ?? 'Cofre'
+}
+
+// ── Carregar dados ───────────────────────────────────────────
+async function carregar() {
+  carregando.value = true
+  erroCarregar.value = ''
+  try {
+    const [alertasRes, metasRes] = await Promise.all([
+      listarAlertasMetas(),
+      listarMetas(),
+    ])
+    alertas.value = alertasRes
+    metas.value = metasRes
+  } catch {
+    erroCarregar.value = 'Erro ao carregar metas.'
+  } finally {
+    carregando.value = false
+  }
+}
+
+// ── Modal: abrir para criar ──────────────────────────────────
+function abrirCriar() {
+  modalModoEdicao.value = false
+  modalMetaId.value = null
+  modalNome.value = ''
+  modalTipo.value = 'GANHO'
+  modalPeriodo.value = 'SEMANAL'
+  modalValor.value = ''
+  modalDiasTrabalho.value = 6
+  modalCategoriaCofre.value = null
+  modalErro.value = ''
+  modalVisivel.value = true
+}
+
+// ── Modal: abrir para editar ─────────────────────────────────
+function abrirEditar(meta: MetaResposta) {
+  modalModoEdicao.value = true
+  modalMetaId.value = meta.id
+  modalNome.value = meta.nome
+  modalTipo.value = meta.tipo as 'GANHO' | 'DESPESA'
+  modalPeriodo.value = meta.periodo as 'DIARIO' | 'SEMANAL' | 'MENSAL' | 'OBJETIVO'
+  modalValor.value = parseFloat(meta.valor_meta).toString()
+  modalDiasTrabalho.value = meta.dias_trabalho_semana ?? 6
+  modalCategoriaCofre.value = meta.categoria_cofre
+  modalErro.value = ''
+  modalVisivel.value = true
+}
+
+// ── Modal: salvar ────────────────────────────────────────────
+async function salvarMeta() {
+  modalErro.value = ''
+  const valor = parseFloat(modalValor.value.replace(',', '.'))
+  if (!modalNome.value.trim()) { modalErro.value = 'Informe o nome da meta.'; return }
+  if (isNaN(valor) || valor <= 0) { modalErro.value = 'Informe um valor válido.'; return }
+
+  modalEnviando.value = true
+  try {
+    if (modalModoEdicao.value && modalMetaId.value) {
+      const dados: MetaAtualizar = {
+        nome: modalNome.value.trim(),
+        tipo: modalTipo.value,
+        periodo: modalPeriodo.value,
+        valor_meta: valor,
+        dias_trabalho_semana: modalPeriodo.value !== 'OBJETIVO' ? modalDiasTrabalho.value : undefined,
+        categoria_cofre: modalPeriodo.value === 'OBJETIVO' ? modalCategoriaCofre.value : undefined,
+      }
+      await atualizarMeta(modalMetaId.value, dados)
+    } else {
+      const dados: MetaCriar = {
+        nome: modalNome.value.trim(),
+        tipo: modalTipo.value,
+        periodo: modalPeriodo.value,
+        valor_meta: valor,
+        dias_trabalho_semana: modalPeriodo.value !== 'OBJETIVO' ? modalDiasTrabalho.value : 6,
+        categoria_cofre: modalPeriodo.value === 'OBJETIVO' ? modalCategoriaCofre.value : undefined,
+        ativa: true,
+      }
+      await criarMeta(dados)
+    }
+    modalVisivel.value = false
+    await carregar()
+  } catch {
+    modalErro.value = 'Erro ao salvar meta. Tente novamente.'
+  } finally {
+    modalEnviando.value = false
+  }
+}
+
+// ── Excluir ──────────────────────────────────────────────────
+function pedirExclusao(meta: MetaResposta) {
+  confirmarExcluirId.value = meta.id
+  confirmarExcluirNome.value = meta.nome
+  confirmarExcluir.value = true
+}
+
+async function confirmarExclusao() {
+  if (!confirmarExcluirId.value) return
+  excluindo.value = true
+  try {
+    await excluirMeta(confirmarExcluirId.value)
+    confirmarExcluir.value = false
+    await carregar()
+  } catch {
+    // silently fail
+  } finally {
+    excluindo.value = false
+  }
+}
+
+// ── Toggle ativa ─────────────────────────────────────────────
+async function toggleAtiva(meta: MetaResposta) {
+  try {
+    await atualizarMeta(meta.id, { ativa: !meta.ativa })
+    await carregar()
+  } catch {
+    // silently fail
+  }
+}
+
+onMounted(carregar)
+</script>
+
+<template>
+  <AppLayout>
+    <div class="metas-page">
+
+      <!-- ══ Cabeçalho ══════════════════════════════════════════ -->
+      <section class="page-header">
+        <div>
+          <p class="label-overline">PLANEJAMENTO</p>
+          <h2 class="page-title">METAS & COFRES</h2>
+          <p class="label-overline mt-1">Controle de ritmo e reservas da moto</p>
+        </div>
+        <button class="btn-nova-meta" @click="abrirCriar">
+          <span class="material-symbols-outlined text-sm">add</span>
+          NOVA META
+        </button>
+      </section>
+
+      <!-- Erro -->
+      <div v-if="erroCarregar" class="error-banner">
+        <span class="material-symbols-outlined text-sm">warning</span>
+        {{ erroCarregar }}
+      </div>
+
+      <!-- Skeleton -->
+      <template v-if="carregando && alertas.length === 0">
+        <div class="space-y-4 animate-pulse px-5 lg:px-8">
+          <div class="h-28 bg-surface-container-low" />
+          <div class="h-28 bg-surface-container-low" />
+          <div class="grid grid-cols-2 gap-3">
+            <div class="h-24 bg-surface-container-low" />
+            <div class="h-24 bg-surface-container-low" />
+          </div>
+        </div>
+      </template>
+
+      <!-- ══ Conteúdo principal ═══════════════════════════════ -->
+      <template v-else>
+        <div class="metas-content">
+
+          <!-- ── Seção 1: Metas de Ganho ─────────────────────── -->
+          <section v-if="alertasGanho.length > 0" class="metas-secao">
+            <div class="secao-header">
+              <span class="material-symbols-outlined secao-icone secao-icone--ganho">trending_up</span>
+              <h3 class="secao-titulo">METAS DE GANHO</h3>
+            </div>
+
+            <div class="metas-cards-grid">
+              <div v-for="alerta in alertasGanho" :key="alerta.meta_id" class="meta-card">
+                <!-- Header do card -->
+                <div class="meta-card__header">
+                  <div class="meta-card__info">
+                    <span class="meta-card__periodo">{{ periodoLabel(alerta.periodo) }}</span>
+                    <h4 class="meta-card__nome">{{ alerta.nome }}</h4>
+                  </div>
+                  <div class="meta-card__actions">
+                    <button
+                      class="meta-card__btn"
+                      title="Editar"
+                      @click="abrirEditar(metas.find(m => m.id === alerta.meta_id)!)"
+                    >
+                      <span class="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    <button
+                      class="meta-card__btn meta-card__btn--danger"
+                      title="Excluir"
+                      @click="pedirExclusao(metas.find(m => m.id === alerta.meta_id)!)"
+                    >
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Valores -->
+                <div class="meta-card__valores">
+                  <div>
+                    <span class="meta-card__label">REALIZADO</span>
+                    <span class="meta-card__valor meta-card__valor--ganho">{{ formatarReais(alerta.realizado) }}</span>
+                  </div>
+                  <div class="text-right">
+                    <span class="meta-card__label">META</span>
+                    <span class="meta-card__valor">{{ formatarReais(alerta.valor_meta) }}</span>
+                  </div>
+                </div>
+
+                <!-- Barra de progresso -->
+                <div class="progress-bar">
+                  <div
+                    class="progress-bar__fill progress-bar__fill--ganho"
+                    :style="{ width: Math.min(parseFloat(alerta.percentual_meta), 100) + '%' }"
+                  />
+                </div>
+                <div class="meta-card__progress-info">
+                  <span>{{ parseFloat(alerta.percentual_meta).toFixed(0) }}%</span>
+                  <span>{{ formatarReais(alerta.valor_restante) }} restante</span>
+                </div>
+
+                <!-- Status badge + recomendação -->
+                <div class="meta-card__status" :class="statusConfig(alerta.status).cor">
+                  <span class="material-symbols-outlined text-sm">{{ statusConfig(alerta.status).icone }}</span>
+                  <span class="meta-card__status-text">{{ alerta.recomendacao }}</span>
+                </div>
+
+                <!-- Meta diária necessária -->
+                <div v-if="alerta.dias_trabalho_restantes > 0 && parseFloat(alerta.valor_restante) > 0" class="meta-card__ritmo">
+                  <span class="material-symbols-outlined text-xs">pace</span>
+                  <span>{{ formatarReais(alerta.meta_diaria_necessaria) }}/dia · {{ alerta.dias_trabalho_restantes }} dias restantes</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ── Seção 2: Teto de Despesas ────────────────────── -->
+          <section v-if="alertasDespesa.length > 0" class="metas-secao">
+            <div class="secao-header">
+              <span class="material-symbols-outlined secao-icone secao-icone--despesa">money_off</span>
+              <h3 class="secao-titulo">TETO DE DESPESAS</h3>
+            </div>
+
+            <div class="metas-cards-grid">
+              <div v-for="alerta in alertasDespesa" :key="alerta.meta_id" class="meta-card">
+                <div class="meta-card__header">
+                  <div class="meta-card__info">
+                    <span class="meta-card__periodo">{{ periodoLabel(alerta.periodo) }}</span>
+                    <h4 class="meta-card__nome">{{ alerta.nome }}</h4>
+                  </div>
+                  <div class="meta-card__actions">
+                    <button
+                      class="meta-card__btn"
+                      title="Editar"
+                      @click="abrirEditar(metas.find(m => m.id === alerta.meta_id)!)"
+                    >
+                      <span class="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    <button
+                      class="meta-card__btn meta-card__btn--danger"
+                      title="Excluir"
+                      @click="pedirExclusao(metas.find(m => m.id === alerta.meta_id)!)"
+                    >
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Indicador de consumo -->
+                <div class="meta-card__valores">
+                  <div>
+                    <span class="meta-card__label">GASTO</span>
+                    <span class="meta-card__valor meta-card__valor--despesa">{{ formatarReais(alerta.realizado) }}</span>
+                  </div>
+                  <div class="text-right">
+                    <span class="meta-card__label">LIMITE</span>
+                    <span class="meta-card__valor">{{ formatarReais(alerta.valor_meta) }}</span>
+                  </div>
+                </div>
+
+                <div class="progress-bar">
+                  <div
+                    class="progress-bar__fill progress-bar__fill--despesa"
+                    :style="{ width: Math.min(parseFloat(alerta.percentual_meta), 100) + '%' }"
+                  />
+                </div>
+                <div class="meta-card__progress-info">
+                  <span>{{ parseFloat(alerta.percentual_meta).toFixed(0) }}% consumido</span>
+                  <span>{{ formatarReais(alerta.valor_restante) }} disponível</span>
+                </div>
+
+                <div class="meta-card__status" :class="statusConfig(alerta.status).cor">
+                  <span class="material-symbols-outlined text-sm">{{ statusConfig(alerta.status).icone }}</span>
+                  <span class="meta-card__status-text">{{ alerta.recomendacao }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ── Seção 3: Cofres Táticos ─────────────────────── -->
+          <section v-if="alertasCofre.length > 0" class="metas-secao">
+            <div class="secao-header">
+              <span class="material-symbols-outlined secao-icone secao-icone--cofre">savings</span>
+              <h3 class="secao-titulo">COFRES TÁTICOS</h3>
+            </div>
+
+            <div class="cofres-grid">
+              <div v-for="alerta in alertasCofre" :key="alerta.meta_id" class="cofre-card">
+                <div class="cofre-card__header">
+                  <div class="cofre-card__icon">
+                    <span class="material-symbols-outlined">{{ iconeCofre(alerta.categoria_cofre) }}</span>
+                  </div>
+                  <div class="cofre-card__info">
+                    <span class="cofre-card__categoria">{{ labelCofre(alerta.categoria_cofre) }}</span>
+                    <h4 class="cofre-card__nome">{{ alerta.nome }}</h4>
+                  </div>
+                  <div class="meta-card__actions">
+                    <button
+                      class="meta-card__btn"
+                      title="Editar"
+                      @click="abrirEditar(metas.find(m => m.id === alerta.meta_id)!)"
+                    >
+                      <span class="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    <button
+                      class="meta-card__btn meta-card__btn--danger"
+                      title="Excluir"
+                      @click="pedirExclusao(metas.find(m => m.id === alerta.meta_id)!)"
+                    >
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Valores acumulados -->
+                <div class="cofre-card__valores">
+                  <span class="cofre-card__realizado">{{ formatarReais(alerta.realizado) }}</span>
+                  <span class="cofre-card__separador">/</span>
+                  <span class="cofre-card__meta">{{ formatarReais(alerta.valor_meta) }}</span>
+                </div>
+
+                <!-- Barra de progresso do cofre -->
+                <div class="progress-bar progress-bar--cofre">
+                  <div
+                    class="progress-bar__fill progress-bar__fill--cofre"
+                    :style="{ width: Math.min(parseFloat(alerta.percentual_meta), 100) + '%' }"
+                  />
+                </div>
+                <div class="cofre-card__percentual">
+                  {{ parseFloat(alerta.percentual_meta).toFixed(0) }}%
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Estado vazio -->
+          <div v-if="alertas.length === 0 && !carregando" class="empty-state">
+            <span class="material-symbols-outlined empty-state__icon">flag</span>
+            <p class="empty-state__title">Nenhuma meta ativa</p>
+            <p class="empty-state__desc">Crie sua primeira meta de ganho, teto de despesa ou cofre tático.</p>
+            <button class="btn-primary h-12 max-w-xs mx-auto mt-3" @click="abrirCriar">
+              <span class="material-symbols-outlined">add</span>
+              CRIAR PRIMEIRA META
+            </button>
+          </div>
+
+          <!-- ── Lista completa de metas (toggle) ──────────── -->
+          <section v-if="metas.length > 0" class="metas-secao metas-lista-secao">
+            <div class="secao-header">
+              <span class="material-symbols-outlined secao-icone secao-icone--lista">list_alt</span>
+              <h3 class="secao-titulo">TODAS AS METAS ({{ metas.length }})</h3>
+            </div>
+
+            <div class="metas-lista">
+              <div v-for="meta in metas" :key="meta.id" class="meta-lista-item" :class="{ 'meta-lista-item--inativa': !meta.ativa }">
+                <div class="meta-lista-item__info">
+                  <span class="meta-lista-item__tipo" :class="meta.tipo === 'GANHO' ? 'text-primary-container' : 'text-secondary'">
+                    {{ meta.tipo }}
+                  </span>
+                  <span class="meta-lista-item__nome">{{ meta.nome }}</span>
+                  <span class="meta-lista-item__valor">{{ formatarReais(meta.valor_meta) }} · {{ periodoLabel(meta.periodo) }}</span>
+                </div>
+                <div class="meta-lista-item__actions">
+                  <button
+                    class="meta-card__btn"
+                    :title="meta.ativa ? 'Desativar' : 'Ativar'"
+                    @click="toggleAtiva(meta)"
+                  >
+                    <span class="material-symbols-outlined text-sm">
+                      {{ meta.ativa ? 'toggle_on' : 'toggle_off' }}
+                    </span>
+                  </button>
+                  <button class="meta-card__btn" title="Editar" @click="abrirEditar(meta)">
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                  </button>
+                  <button class="meta-card__btn meta-card__btn--danger" title="Excluir" @click="pedirExclusao(meta)">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </template>
+
+      <!-- ══ Modal: Criar / Editar Meta ═══════════════════════ -->
+      <div v-if="modalVisivel" class="modal-overlay" @click.self="modalVisivel = false">
+        <div class="modal-box">
+          <div class="modal-header">
+            <span class="material-symbols-outlined text-primary-container">{{ modalModoEdicao ? 'edit' : 'add_circle' }}</span>
+            <h3 class="modal-titulo">{{ modalModoEdicao ? 'EDITAR META' : 'NOVA META' }}</h3>
+          </div>
+
+          <form class="modal-form" @submit.prevent="salvarMeta">
+            <!-- Tipo -->
+            <div>
+              <label class="campo-label">TIPO</label>
+              <div class="campo-toggle-group">
+                <button type="button"
+                  class="campo-toggle" :class="{ 'campo-toggle--active-ganho': modalTipo === 'GANHO' }"
+                  @click="modalTipo = 'GANHO'">GANHO</button>
+                <button type="button"
+                  class="campo-toggle" :class="{ 'campo-toggle--active-despesa': modalTipo === 'DESPESA' }"
+                  @click="modalTipo = 'DESPESA'">DESPESA</button>
+              </div>
+            </div>
+
+            <!-- Período -->
+            <div>
+              <label class="campo-label">PERÍODO</label>
+              <div class="campo-toggle-group">
+                <button type="button" v-for="p in (['DIARIO', 'SEMANAL', 'MENSAL', 'OBJETIVO'] as const)" :key="p"
+                  class="campo-toggle" :class="{ 'campo-toggle--active': modalPeriodo === p }"
+                  @click="modalPeriodo = p">{{ periodoLabel(p) }}</button>
+              </div>
+            </div>
+
+            <!-- Nome -->
+            <div>
+              <label class="campo-label">NOME DA META</label>
+              <input v-model="modalNome" type="text" class="tactical-input py-3"
+                placeholder="Ex: Meta semanal de ganho" />
+            </div>
+
+            <!-- Valor -->
+            <div>
+              <label class="campo-label">VALOR (R$)</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
+                <input :value="modalValor" inputmode="decimal" placeholder="0,00"
+                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  @input="e => modalValor = (e.target as HTMLInputElement).value" />
+              </div>
+            </div>
+
+            <!-- Dias de trabalho (exceto OBJETIVO) -->
+            <div v-if="modalPeriodo !== 'OBJETIVO'">
+              <label class="campo-label">DIAS DE TRABALHO POR SEMANA</label>
+              <div class="dias-trabalho-grid">
+                <button type="button" v-for="d in 7" :key="d"
+                  class="dia-btn" :class="{ 'dia-btn--active': modalDiasTrabalho === d }"
+                  @click="modalDiasTrabalho = d">{{ d }}</button>
+              </div>
+            </div>
+
+            <!-- Categoria de cofre (apenas OBJETIVO) -->
+            <div v-if="modalPeriodo === 'OBJETIVO'">
+              <label class="campo-label">CATEGORIA DO COFRE</label>
+              <div class="cofre-select-grid">
+                <button type="button" v-for="cat in categoriasCofre" :key="cat.label"
+                  class="cofre-select-btn" :class="{ 'cofre-select-btn--active': modalCategoriaCofre === cat.valor }"
+                  @click="modalCategoriaCofre = cat.valor">
+                  <span class="material-symbols-outlined text-base">{{ cat.icone }}</span>
+                  <span>{{ cat.label }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Erro -->
+            <div v-if="modalErro" class="error-banner">
+              <span class="material-symbols-outlined text-sm">error</span>
+              {{ modalErro }}
+            </div>
+
+            <!-- Botões -->
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary h-12" @click="modalVisivel = false">CANCELAR</button>
+              <button type="submit" class="btn-primary h-12" :disabled="modalEnviando">
+                <span v-if="modalEnviando" class="material-symbols-outlined animate-spin">refresh</span>
+                <template v-else>
+                  <span class="material-symbols-outlined">{{ modalModoEdicao ? 'save' : 'add' }}</span>
+                  {{ modalModoEdicao ? 'SALVAR' : 'CRIAR META' }}
+                </template>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ══ Modal: Confirmar Exclusão ═════════════════════════ -->
+      <div v-if="confirmarExcluir" class="modal-overlay" @click.self="confirmarExcluir = false">
+        <div class="modal-box modal-box--sm">
+          <div class="modal-header">
+            <span class="material-symbols-outlined text-secondary">delete_forever</span>
+            <h3 class="modal-titulo">EXCLUIR META</h3>
+          </div>
+          <p class="font-body text-sm text-on-surface px-1 py-2">
+            Tem certeza que deseja excluir a meta <strong>{{ confirmarExcluirNome }}</strong>?
+          </p>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary h-11" @click="confirmarExcluir = false">CANCELAR</button>
+            <button type="button"
+              class="h-11 w-full bg-secondary text-on-secondary font-headline font-black tracking-widest uppercase flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+              :disabled="excluindo"
+              @click="confirmarExclusao">
+              <span v-if="excluindo" class="material-symbols-outlined animate-spin">refresh</span>
+              <template v-else>
+                <span class="material-symbols-outlined">delete</span>
+                EXCLUIR
+              </template>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </AppLayout>
+</template>
+
+<style scoped>
+/* ─── Page layout ────────────────────────────────────────────── */
+.metas-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-bottom: 6rem;
+}
+
+@media (min-width: 1024px) {
+  .metas-page {
+    padding-bottom: 2rem;
+  }
+}
+
+/* ─── Page header ────────────────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .page-header {
+    padding: 2rem 2rem 0;
+  }
+}
+
+.label-overline {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.page-title {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: rgb(var(--color-on-surface));
+}
+
+.btn-nova-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1rem;
+  background: rgb(var(--color-primary-container));
+  color: rgb(var(--color-on-primary-fixed));
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-nova-meta:hover {
+  filter: brightness(1.1);
+}
+
+.btn-nova-meta:active {
+  transform: scale(0.97);
+}
+
+/* ─── Error banner ───────────────────────────────────────────── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgb(var(--color-error-container));
+  color: rgb(var(--color-on-error-container));
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 1.25rem 0;
+  font-size: 12px;
+}
+
+/* ─── Content area ───────────────────────────────────────────── */
+.metas-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .metas-content {
+    padding: 1.5rem 2rem;
+    max-width: 960px;
+  }
+}
+
+/* ─── Section ────────────────────────────────────────────────── */
+.metas-secao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.secao-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.secao-icone {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.secao-icone--ganho {
+  background: rgb(var(--color-primary-container) / 0.15);
+  color: rgb(var(--color-primary-container));
+}
+
+.secao-icone--despesa {
+  background: rgb(var(--color-secondary) / 0.15);
+  color: rgb(var(--color-secondary));
+}
+
+.secao-icone--cofre {
+  background: rgb(var(--color-tertiary) / 0.15);
+  color: rgb(var(--color-tertiary));
+}
+
+.secao-icone--lista {
+  background: rgb(var(--color-on-surface-variant) / 0.1);
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.secao-titulo {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface));
+}
+
+/* ─── Meta cards grid ────────────────────────────────────────── */
+.metas-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .metas-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  }
+}
+
+/* ─── Meta card ──────────────────────────────────────────────── */
+.meta-card {
+  background: rgb(var(--color-surface-container));
+  padding: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform 0.15s;
+}
+
+.meta-card:hover {
+  transform: translateY(-1px);
+}
+
+.meta-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.meta-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.meta-card__periodo {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.meta-card__nome {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: rgb(var(--color-on-surface));
+  text-transform: uppercase;
+}
+
+.meta-card__actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.meta-card__btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgb(var(--color-on-surface-variant));
+  transition: all 0.15s;
+}
+
+.meta-card__btn:hover {
+  color: rgb(var(--color-primary-container));
+  background: rgb(var(--color-primary-container) / 0.1);
+}
+
+.meta-card__btn--danger:hover {
+  color: rgb(var(--color-secondary));
+  background: rgb(var(--color-secondary) / 0.1);
+}
+
+/* ─── Valores ────────────────────────────────────────────────── */
+.meta-card__valores {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.meta-card__label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface-variant));
+  margin-bottom: 0.125rem;
+}
+
+.meta-card__valor {
+  display: block;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 800;
+  font-size: 16px;
+  color: rgb(var(--color-on-surface));
+}
+
+.meta-card__valor--ganho {
+  color: rgb(var(--color-primary-container));
+}
+
+.meta-card__valor--despesa {
+  color: rgb(var(--color-secondary));
+}
+
+/* ─── Progress bar ───────────────────────────────────────────── */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgb(var(--color-surface-container-highest));
+  overflow: hidden;
+}
+
+.progress-bar--cofre {
+  height: 8px;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  transition: width 0.6s ease;
+}
+
+.progress-bar__fill--ganho {
+  background: rgb(var(--color-primary-container));
+}
+
+.progress-bar__fill--despesa {
+  background: rgb(var(--color-secondary));
+}
+
+.progress-bar__fill--cofre {
+  background: linear-gradient(90deg, rgb(var(--color-tertiary)), rgb(var(--color-primary-container)));
+}
+
+.meta-card__progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+/* ─── Status badge ───────────────────────────────────────────── */
+.meta-card__status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.meta-card__status-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-atingida {
+  background: rgb(var(--color-primary-container) / 0.12);
+  color: rgb(var(--color-primary-container));
+  border-left: 3px solid rgb(var(--color-primary-container));
+}
+
+.status-em-andamento {
+  background: rgb(var(--color-surface-container-high) / 0.5);
+  color: rgb(var(--color-on-surface-variant));
+  border-left: 3px solid rgb(var(--color-on-surface-variant));
+}
+
+.status-estourada {
+  background: rgb(var(--color-error-container));
+  color: rgb(var(--color-on-error-container));
+  border-left: 3px solid rgb(var(--color-error));
+}
+
+.status-atencao {
+  background: rgb(var(--color-secondary) / 0.1);
+  color: rgb(var(--color-secondary));
+  border-left: 3px solid rgb(var(--color-secondary));
+}
+
+.status-dentro-meta {
+  background: rgb(var(--color-primary-container) / 0.08);
+  color: rgb(var(--color-primary-container));
+  border-left: 3px solid rgb(var(--color-primary-container) / 0.5);
+}
+
+/* ─── Ritmo diário ───────────────────────────────────────────── */
+.meta-card__ritmo {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  background: rgb(var(--color-primary-container) / 0.06);
+  color: rgb(var(--color-primary-container));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Cofres grid ────────────────────────────────────────────── */
+.cofres-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+/* ─── Cofre card ─────────────────────────────────────────────── */
+.cofre-card {
+  background: rgb(var(--color-surface-container));
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  transition: transform 0.15s;
+}
+
+.cofre-card:hover {
+  transform: translateY(-1px);
+}
+
+.cofre-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.cofre-card__icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--color-tertiary) / 0.12);
+  color: rgb(var(--color-tertiary));
+  flex-shrink: 0;
+}
+
+.cofre-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cofre-card__categoria {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgb(var(--color-tertiary));
+}
+
+.cofre-card__nome {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 700;
+  font-size: 12px;
+  color: rgb(var(--color-on-surface));
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cofre-card__valores {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.cofre-card__realizado {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 900;
+  font-size: 18px;
+  color: rgb(var(--color-primary-container));
+}
+
+.cofre-card__separador {
+  font-size: 14px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.cofre-card__meta {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.cofre-card__percentual {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgb(var(--color-on-surface-variant));
+  text-align: right;
+}
+
+/* ─── Empty state ────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.empty-state__icon {
+  font-size: 48px;
+  color: rgb(var(--color-on-surface-variant) / 0.3);
+  margin-bottom: 1rem;
+}
+
+.empty-state__title {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 800;
+  font-size: 16px;
+  color: rgb(var(--color-on-surface));
+  text-transform: uppercase;
+}
+
+.empty-state__desc {
+  font-size: 13px;
+  color: rgb(var(--color-on-surface-variant));
+  margin-top: 0.25rem;
+}
+
+/* ─── Lista completa ─────────────────────────────────────────── */
+.metas-lista-secao {
+  border-top: 1px solid rgb(var(--color-outline-variant));
+  padding-top: 1rem;
+}
+
+.metas-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-lista-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid rgb(var(--color-outline-variant) / 0.5);
+  transition: background 0.1s;
+  gap: 0.5rem;
+}
+
+.meta-lista-item:hover {
+  background: rgb(var(--color-surface-container) / 0.5);
+}
+
+.meta-lista-item--inativa {
+  opacity: 0.45;
+}
+
+.meta-lista-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.meta-lista-item__tipo {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.meta-lista-item__nome {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 700;
+  font-size: 13px;
+  color: rgb(var(--color-on-surface));
+  text-transform: uppercase;
+}
+
+.meta-lista-item__valor {
+  font-size: 11px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.meta-lista-item__actions {
+  display: flex;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
+/* ─── Modal ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgb(0 0 0 / 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.modal-box {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: rgb(var(--color-surface-container-high));
+  border: 1px solid rgb(var(--color-outline-variant));
+  padding: 1.5rem;
+}
+
+.modal-box--sm {
+  max-width: 380px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-titulo {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface));
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* ─── Campo label ────────────────────────────────────────────── */
+.campo-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface-variant));
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Toggle group ───────────────────────────────────────────── */
+.campo-toggle-group {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.campo-toggle {
+  padding: 0.5rem 0.875rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-on-surface-variant));
+  border: 1px solid rgb(var(--color-outline-variant));
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.campo-toggle:hover {
+  background: rgb(var(--color-surface-variant));
+}
+
+.campo-toggle--active {
+  background: rgb(var(--color-primary-container));
+  color: rgb(var(--color-on-primary-fixed));
+  border-color: rgb(var(--color-primary-container));
+  font-weight: 900;
+}
+
+.campo-toggle--active-ganho {
+  background: rgb(var(--color-primary-container));
+  color: rgb(var(--color-on-primary-fixed));
+  border-color: rgb(var(--color-primary-container));
+  font-weight: 900;
+}
+
+.campo-toggle--active-despesa {
+  background: rgb(var(--color-secondary));
+  color: rgb(var(--color-on-secondary));
+  border-color: rgb(var(--color-secondary));
+  font-weight: 900;
+}
+
+/* ─── Dias de trabalho ───────────────────────────────────────── */
+.dias-trabalho-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.375rem;
+}
+
+.dia-btn {
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 700;
+  font-size: 13px;
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-on-surface-variant));
+  border: 1px solid rgb(var(--color-outline-variant));
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dia-btn:hover {
+  background: rgb(var(--color-surface-variant));
+}
+
+.dia-btn--active {
+  background: rgb(var(--color-primary-container));
+  color: rgb(var(--color-on-primary-fixed));
+  border-color: rgb(var(--color-primary-container));
+  font-weight: 900;
+}
+
+/* ─── Cofre select ───────────────────────────────────────────── */
+.cofre-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.375rem;
+}
+
+.cofre-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-on-surface-variant));
+  border: 1px solid rgb(var(--color-outline-variant));
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cofre-select-btn:hover {
+  background: rgb(var(--color-surface-variant));
+}
+
+.cofre-select-btn--active {
+  background: rgb(var(--color-tertiary) / 0.15);
+  color: rgb(var(--color-tertiary));
+  border-color: rgb(var(--color-tertiary));
+  font-weight: 900;
+}
+</style>

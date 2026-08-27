@@ -10,6 +10,8 @@ class MetaCriar(BaseModel):
     tipo: str
     periodo: str
     valor_meta: Decimal = Field(gt=0, decimal_places=2)
+    dias_trabalho_semana: Optional[int] = Field(default=6, ge=1, le=7)
+    categoria_cofre: Optional[str] = None
     ativa: bool = True
 
 
@@ -18,6 +20,8 @@ class MetaAtualizar(BaseModel):
     tipo: Optional[str] = None
     periodo: Optional[str] = None
     valor_meta: Optional[Decimal] = Field(default=None, gt=0, decimal_places=2)
+    dias_trabalho_semana: Optional[int] = Field(default=None, ge=1, le=7)
+    categoria_cofre: Optional[str] = None
     ativa: Optional[bool] = None
 
 
@@ -28,6 +32,8 @@ class MetaResposta(BaseModel):
     tipo: str
     periodo: str
     valor_meta: Decimal
+    dias_trabalho_semana: Optional[int] = 6
+    categoria_cofre: Optional[str] = None
     ativa: bool
     data_criacao: datetime
 
@@ -41,9 +47,14 @@ class MetaAlertaResposta(BaseModel):
     tipo: str
     periodo: str
     valor_meta: Decimal
+    dias_trabalho_semana: Optional[int] = 6
+    categoria_cofre: Optional[str] = None
     periodo_inicio: date
     periodo_fim: date
     realizado: Decimal
+    valor_restante: Decimal
+    meta_diaria_necessaria: Optional[Decimal] = Decimal("0")
+    dias_trabalho_restantes: Optional[int] = 0
     progresso_periodo_percentual: Decimal
     percentual_meta: Decimal
     status: str
