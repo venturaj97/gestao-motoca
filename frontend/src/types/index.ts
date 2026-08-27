@@ -393,3 +393,42 @@ export interface InteligenciaResumo {
   insights: string[]
 }
 
+// === COFRE ===
+export interface CofreCriar {
+  nome: string
+  categoria: string
+  valor_meta: number
+  saldo_atual?: number
+  porcentagem_autoguarda?: number
+  ativa?: boolean
+}
+
+export interface CofreAtualizar {
+  nome?: string
+  categoria?: string
+  valor_meta?: number
+  saldo_atual?: number
+  porcentagem_autoguarda?: number
+  ativa?: boolean
+}
+
+export interface CofreAporte {
+  valor: number
+  tipo_operacao: 'DEPOSITO' | 'SAQUE'
+}
+
+export interface CofreResposta {
+  id: number
+  usuario_id: number
+  nome: string
+  categoria: string
+  valor_meta: string
+  saldo_atual: string
+  porcentagem_autoguarda: string
+  ativa: boolean
+  valor_restante: string
+  percentual_meta: number
+  data_criacao: string
+}
+
+

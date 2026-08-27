@@ -137,6 +137,7 @@ def listar_alertas_metas(db: Session, usuario_id: int, data_ref: date | None = N
         select(Meta).where(
             Meta.usuario_id == usuario_id,
             Meta.ativa == True,  # noqa: E712
+            Meta.periodo != "OBJETIVO",
         )
     ).scalars().all()
 
@@ -144,23 +145,14 @@ def listar_alertas_metas(db: Session, usuario_id: int, data_ref: date | None = N
     for meta in metas_ativas:
         inicio, fim = _inicio_fim_periodo(hoje, meta.periodo)
 
-        if meta.periodo == "OBJETIVO":
-            # Para metas de objetivo/cofre, soma todo o saldo líquido ou ganhos destinados
-            realizado_raw = db.execute(
-                select(func.coalesce(func.sum(Lancamento.valor), 0)).where(
-                    Lancamento.usuario_id == usuario_id,
-                    Lancamento.tipo == meta.tipo,
-                )
-            ).scalar_one()
-        else:
-            realizado_raw = db.execute(
-                select(func.coalesce(func.sum(Lancamento.valor), 0)).where(
-                    Lancamento.usuario_id == usuario_id,
-                    Lancamento.tipo == meta.tipo,
-                    Lancamento.data_lancamento >= inicio,
-                    Lancamento.data_lancamento <= hoje,
-                )
-            ).scalar_one()
+        realizado_raw = db.execute(
+            select(func.coalesce(func.sum(Lancamento.valor), 0)).where(
+                Lancamento.usuario_id == usuario_id,
+                Lancamento.tipo == meta.tipo,
+                Lancamento.data_lancamento >= inicio,
+                Lancamento.data_lancamento <= hoje,
+            )
+        ).scalar_one()
 
         realizado = Decimal(realizado_raw or 0)
         valor_meta = Decimal(meta.valor_meta)

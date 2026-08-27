@@ -2,35 +2,58 @@
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { listarAlertasMetas, listarMetas, criarMeta, atualizarMeta, excluirMeta } from '@/api/metas'
-import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CategoriaCofre } from '@/types'
+import { listarCofres, criarCofre, atualizarCofre, aportarCofre, excluirCofre } from '@/api/cofres'
+import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CofreResposta, CofreCriar, CofreAtualizar, CategoriaCofre } from '@/types'
 
 // ── Estado ───────────────────────────────────────────────────
 const alertas      = ref<MetaAlertaResposta[]>([])
 const metas        = ref<MetaResposta[]>([])
+const cofres       = ref<CofreResposta[]>([])
 const carregando   = ref(true)
 const erroCarregar = ref('')
 
-// ── Modal ────────────────────────────────────────────────────
-const modalVisivel       = ref(false)
-const modalModoEdicao    = ref(false)
-const modalMetaId        = ref<number | null>(null)
-const modalNome          = ref('')
-const modalTipo          = ref<'GANHO' | 'DESPESA'>('GANHO')
-const modalPeriodo       = ref<'DIARIO' | 'SEMANAL' | 'MENSAL' | 'OBJETIVO'>('SEMANAL')
-const modalValor         = ref('')
-const modalDiasTrabalho  = ref(6)
-const modalCategoriaCofre = ref<CategoriaCofre>(null)
-const modalEnviando      = ref(false)
-const modalErro          = ref('')
+// ── Modal: META ──────────────────────────────────────────────
+const modalMetaVisivel    = ref(false)
+const modalMetaModoEdicao = ref(false)
+const modalMetaId         = ref<number | null>(null)
+const modalMetaNome       = ref('')
+const modalMetaTipo       = ref<'GANHO' | 'DESPESA'>('GANHO')
+const modalMetaPeriodo    = ref<'DIARIO' | 'SEMANAL' | 'MENSAL'>('SEMANAL')
+const modalMetaValor      = ref('')
+const modalMetaDias       = ref(6)
+const modalMetaEnviando   = ref(false)
+const modalMetaErro       = ref('')
 
-// ── Modal de confirmação de exclusão ─────────────────────────
+// ── Modal: COFRE ─────────────────────────────────────────────
+const modalCofreVisivel     = ref(false)
+const modalCofreModoEdicao  = ref(false)
+const modalCofreId          = ref<number | null>(null)
+const modalCofreNome        = ref('')
+const modalCofreCategoria   = ref<string>('PNEU')
+const modalCofreMetaValor   = ref('')
+const modalCofreSaldoAtual  = ref('')
+const modalCofreAutoguarda  = ref('')
+const modalCofreEnviando    = ref(false)
+const modalCofreErro        = ref('')
+
+// ── Modal: APORTE NO COFRE ───────────────────────────────────
+const modalAporteVisivel  = ref(false)
+const aporteCofreId       = ref<number | null>(null)
+const aporteCofreNome     = ref('')
+const aporteTipoOperacao  = ref<'DEPOSITO' | 'SAQUE'>('DEPOSITO')
+const aporteValor         = ref('')
+const aporteEnviando      = ref(false)
+const aporteErro          = ref('')
+
+// ── Modal: Exclusão ──────────────────────────────────────────
 const confirmarExcluir     = ref(false)
+const confirmarExcluirTipo = ref<'META' | 'COFRE'>('META')
 const confirmarExcluirId   = ref<number | null>(null)
 const confirmarExcluirNome = ref('')
 const excluindo            = ref(false)
 
 // ── Categorias de cofre ──────────────────────────────────────
-const categoriasCofre: { valor: CategoriaCofre; label: string; icone: string }[] = [
+const categoriasCofre: { valor: string; label: string; icone: string }[] = [
   { valor: 'PNEU',    label: 'Pneu & Relação', icone: 'tire_repair' },
   { valor: 'SEGURO',  label: 'Seguro',         icone: 'shield' },
   { valor: 'IPVA',    label: 'IPVA',            icone: 'receipt_long' },
@@ -40,17 +63,8 @@ const categoriasCofre: { valor: CategoriaCofre; label: string; icone: string }[]
 ]
 
 // ── Dados derivados ──────────────────────────────────────────
-const alertasGanho = computed(() =>
-  alertas.value.filter(a => a.tipo === 'GANHO' && a.periodo !== 'OBJETIVO')
-)
-
-const alertasDespesa = computed(() =>
-  alertas.value.filter(a => a.tipo === 'DESPESA' && a.periodo !== 'OBJETIVO')
-)
-
-const alertasCofre = computed(() =>
-  alertas.value.filter(a => a.periodo === 'OBJETIVO')
-)
+const alertasGanho = computed(() => alertas.value.filter(a => a.tipo === 'GANHO'))
+const alertasDespesa = computed(() => alertas.value.filter(a => a.tipo === 'DESPESA'))
 
 // ── Helpers ──────────────────────────────────────────────────
 function formatarReais(valor: string | number): string {
@@ -64,7 +78,6 @@ function periodoLabel(periodo: string): string {
     DIARIO: 'DIÁRIO',
     SEMANAL: 'SEMANAL',
     MENSAL: 'MENSAL',
-    OBJETIVO: 'COFRE',
   }
   return map[periodo] ?? periodo
 }
@@ -80,14 +93,38 @@ function statusConfig(status: string): { cor: string; badge: string; icone: stri
   return map[status] ?? { cor: 'status-em-andamento', badge: status, icone: 'info' }
 }
 
-function iconeCofre(categoria: CategoriaCofre): string {
+function iconeCofre(categoria: string): string {
   const item = categoriasCofre.find(c => c.valor === categoria)
   return item?.icone ?? 'savings'
 }
 
-function labelCofre(categoria: CategoriaCofre): string {
+function labelCofre(categoria: string): string {
   const item = categoriasCofre.find(c => c.valor === categoria)
   return item?.label ?? 'Cofre'
+}
+
+function formatarInputMoeda(val: string): string {
+  val = val.replace(/[^0-9.,]/g, '')
+  let separadorEncontrado = false
+  let resultado = ''
+  for (let i = 0; i < val.length; i++) {
+    const char = val[i]
+    if (char === ',' || char === '.') {
+      if (!separadorEncontrado) {
+        resultado += ','
+        separadorEncontrado = true
+      }
+    } else {
+      resultado += char
+    }
+  }
+  if (separadorEncontrado) {
+    const partes = resultado.split(',')
+    if (partes[1] && partes[1].length > 2) {
+      resultado = partes[0] + ',' + partes[1].slice(0, 2)
+    }
+  }
+  return resultado
 }
 
 // ── Carregar dados ───────────────────────────────────────────
@@ -95,91 +132,197 @@ async function carregar() {
   carregando.value = true
   erroCarregar.value = ''
   try {
-    const [alertasRes, metasRes] = await Promise.all([
+    const [alertasRes, metasRes, cofresRes] = await Promise.all([
       listarAlertasMetas(),
       listarMetas(),
+      listarCofres(),
     ])
     alertas.value = alertasRes
-    metas.value = metasRes
+    metas.value = metasRes.filter(m => m.periodo !== 'OBJETIVO')
+    cofres.value = cofresRes
   } catch {
-    erroCarregar.value = 'Erro ao carregar metas.'
+    erroCarregar.value = 'Erro ao carregar planejamento.'
   } finally {
     carregando.value = false
   }
 }
 
-// ── Modal: abrir para criar ──────────────────────────────────
-function abrirCriar() {
-  modalModoEdicao.value = false
+// ── Handlers: META ───────────────────────────────────────────
+function abrirCriarMeta() {
+  modalMetaModoEdicao.value = false
   modalMetaId.value = null
-  modalNome.value = ''
-  modalTipo.value = 'GANHO'
-  modalPeriodo.value = 'SEMANAL'
-  modalValor.value = ''
-  modalDiasTrabalho.value = 6
-  modalCategoriaCofre.value = null
-  modalErro.value = ''
-  modalVisivel.value = true
+  modalMetaNome.value = ''
+  modalMetaTipo.value = 'GANHO'
+  modalMetaPeriodo.value = 'SEMANAL'
+  modalMetaValor.value = ''
+  modalMetaDias.value = 6
+  modalMetaErro.value = ''
+  modalMetaVisivel.value = true
 }
 
-// ── Modal: abrir para editar ─────────────────────────────────
-function abrirEditar(meta: MetaResposta) {
-  modalModoEdicao.value = true
+function abrirEditarMeta(meta: MetaResposta) {
+  modalMetaModoEdicao.value = true
   modalMetaId.value = meta.id
-  modalNome.value = meta.nome
-  modalTipo.value = meta.tipo as 'GANHO' | 'DESPESA'
-  modalPeriodo.value = meta.periodo as 'DIARIO' | 'SEMANAL' | 'MENSAL' | 'OBJETIVO'
-  modalValor.value = parseFloat(meta.valor_meta).toString()
-  modalDiasTrabalho.value = meta.dias_trabalho_semana ?? 6
-  modalCategoriaCofre.value = meta.categoria_cofre
-  modalErro.value = ''
-  modalVisivel.value = true
+  modalMetaNome.value = meta.nome
+  modalMetaTipo.value = meta.tipo as 'GANHO' | 'DESPESA'
+  modalMetaPeriodo.value = meta.periodo as 'DIARIO' | 'SEMANAL' | 'MENSAL'
+  modalMetaValor.value = meta.valor_meta ? parseFloat(meta.valor_meta).toString().replace('.', ',') : ''
+  modalMetaDias.value = meta.dias_trabalho_semana ?? 6
+  modalMetaErro.value = ''
+  modalMetaVisivel.value = true
 }
 
-// ── Modal: salvar ────────────────────────────────────────────
 async function salvarMeta() {
-  modalErro.value = ''
-  const valor = parseFloat(modalValor.value.replace(',', '.'))
-  if (!modalNome.value.trim()) { modalErro.value = 'Informe o nome da meta.'; return }
-  if (isNaN(valor) || valor <= 0) { modalErro.value = 'Informe um valor válido.'; return }
+  modalMetaErro.value = ''
+  const valor = parseFloat(modalMetaValor.value.replace(',', '.'))
+  if (!modalMetaNome.value.trim()) { modalMetaErro.value = 'Informe o nome da meta.'; return }
+  if (isNaN(valor) || valor <= 0) { modalMetaErro.value = 'Informe um valor válido.'; return }
 
-  modalEnviando.value = true
+  modalMetaEnviando.value = true
   try {
-    if (modalModoEdicao.value && modalMetaId.value) {
+    if (modalMetaModoEdicao.value && modalMetaId.value) {
       const dados: MetaAtualizar = {
-        nome: modalNome.value.trim(),
-        tipo: modalTipo.value,
-        periodo: modalPeriodo.value,
+        nome: modalMetaNome.value.trim(),
+        tipo: modalMetaTipo.value,
+        periodo: modalMetaPeriodo.value,
         valor_meta: valor,
-        dias_trabalho_semana: modalPeriodo.value !== 'OBJETIVO' ? modalDiasTrabalho.value : undefined,
-        categoria_cofre: modalPeriodo.value === 'OBJETIVO' ? modalCategoriaCofre.value : undefined,
+        dias_trabalho_semana: modalMetaDias.value,
       }
       await atualizarMeta(modalMetaId.value, dados)
     } else {
       const dados: MetaCriar = {
-        nome: modalNome.value.trim(),
-        tipo: modalTipo.value,
-        periodo: modalPeriodo.value,
+        nome: modalMetaNome.value.trim(),
+        tipo: modalMetaTipo.value,
+        periodo: modalMetaPeriodo.value,
         valor_meta: valor,
-        dias_trabalho_semana: modalPeriodo.value !== 'OBJETIVO' ? modalDiasTrabalho.value : 6,
-        categoria_cofre: modalPeriodo.value === 'OBJETIVO' ? modalCategoriaCofre.value : undefined,
+        dias_trabalho_semana: modalMetaDias.value,
         ativa: true,
       }
       await criarMeta(dados)
     }
-    modalVisivel.value = false
+    modalMetaVisivel.value = false
     await carregar()
   } catch {
-    modalErro.value = 'Erro ao salvar meta. Tente novamente.'
+    modalMetaErro.value = 'Erro ao salvar meta. Tente novamente.'
   } finally {
-    modalEnviando.value = false
+    modalMetaEnviando.value = false
   }
 }
 
-// ── Excluir ──────────────────────────────────────────────────
-function pedirExclusao(meta: MetaResposta) {
+// ── Handlers: COFRE ──────────────────────────────────────────
+function abrirCriarCofre() {
+  modalCofreModoEdicao.value = false
+  modalCofreId.value = null
+  modalCofreNome.value = ''
+  modalCofreCategoria.value = 'PNEU'
+  modalCofreMetaValor.value = ''
+  modalCofreSaldoAtual.value = '0,00'
+  modalCofreAutoguarda.value = '0'
+  modalCofreErro.value = ''
+  modalCofreVisivel.value = true
+}
+
+function abrirEditarCofre(cofre: CofreResposta) {
+  modalCofreModoEdicao.value = true
+  modalCofreId.value = cofre.id
+  modalCofreNome.value = cofre.nome
+  modalCofreCategoria.value = cofre.categoria
+  modalCofreMetaValor.value = parseFloat(cofre.valor_meta).toString().replace('.', ',')
+  modalCofreSaldoAtual.value = parseFloat(cofre.saldo_atual).toString().replace('.', ',')
+  modalCofreAutoguarda.value = parseFloat(cofre.porcentagem_autoguarda).toString()
+  modalCofreErro.value = ''
+  modalCofreVisivel.value = true
+}
+
+async function salvarCofre() {
+  modalCofreErro.value = ''
+  const metaVal = parseFloat(modalCofreMetaValor.value.replace(',', '.'))
+  const saldoVal = parseFloat(modalCofreSaldoAtual.value.replace(',', '.')) || 0
+  const autoVal = parseFloat(modalCofreAutoguarda.value.replace(',', '.')) || 0
+
+  if (!modalCofreNome.value.trim()) { modalCofreErro.value = 'Informe o nome do cofre.'; return }
+  if (isNaN(metaVal) || metaVal <= 0) { modalCofreErro.value = 'Informe um valor de meta válido.'; return }
+  if (autoVal < 0 || autoVal > 100) { modalCofreErro.value = 'Porcentagem de autoguarda deve ser entre 0 e 100%.'; return }
+
+  modalCofreEnviando.value = true
+  try {
+    if (modalCofreModoEdicao.value && modalCofreId.value) {
+      const dados: CofreAtualizar = {
+        nome: modalCofreNome.value.trim(),
+        categoria: modalCofreCategoria.value,
+        valor_meta: metaVal,
+        saldo_atual: saldoVal,
+        porcentagem_autoguarda: autoVal,
+      }
+      await atualizarCofre(modalCofreId.value, dados)
+    } else {
+      const dados: CofreCriar = {
+        nome: modalCofreNome.value.trim(),
+        categoria: modalCofreCategoria.value,
+        valor_meta: metaVal,
+        saldo_atual: saldoVal,
+        porcentagem_autoguarda: autoVal,
+        ativa: true,
+      }
+      await criarCofre(dados)
+    }
+    modalCofreVisivel.value = false
+    await carregar()
+  } catch {
+    modalCofreErro.value = 'Erro ao salvar cofre. Tente novamente.'
+  } finally {
+    modalCofreEnviando.value = false
+  }
+}
+
+// ── Handlers: APORTE NO COFRE ────────────────────────────────
+function abrirAporteCofre(cofre: CofreResposta) {
+  aporteCofreId.value = cofre.id
+  aporteCofreNome.value = cofre.nome
+  aporteTipoOperacao.value = 'DEPOSITO'
+  aporteValor.value = ''
+  aporteErro.value = ''
+  modalAporteVisivel.value = true
+}
+
+async function confirmarAporte() {
+  aporteErro.value = ''
+  const val = parseFloat(aporteValor.value.replace(',', '.'))
+  if (isNaN(val) || val <= 0) { aporteErro.value = 'Informe um valor válido.'; return }
+  if (!aporteCofreId.value) return
+
+  aporteEnviando.value = true
+  try {
+    await aportarCofre(aporteCofreId.value, {
+      valor: val,
+      tipo_operacao: aporteTipoOperacao.value,
+    })
+    modalAporteVisivel.value = false
+    await carregar()
+  } catch (err: unknown) {
+    const errorObj = err as { response?: { data?: { detail?: string } } }
+    if (errorObj.response?.data?.detail === 'saldo_insuficiente') {
+      aporteErro.value = 'Saldo insuficiente no cofre para este saque.'
+    } else {
+      aporteErro.value = 'Erro ao realizar operação no cofre.'
+    }
+  } finally {
+    aporteEnviando.value = false
+  }
+}
+
+// ── Exclusão ─────────────────────────────────────────────────
+function pedirExclusaoMeta(meta: MetaResposta) {
+  confirmarExcluirTipo.value = 'META'
   confirmarExcluirId.value = meta.id
   confirmarExcluirNome.value = meta.nome
+  confirmarExcluir.value = true
+}
+
+function pedirExclusaoCofre(cofre: CofreResposta) {
+  confirmarExcluirTipo.value = 'COFRE'
+  confirmarExcluirId.value = cofre.id
+  confirmarExcluirNome.value = cofre.nome
   confirmarExcluir.value = true
 }
 
@@ -187,7 +330,11 @@ async function confirmarExclusao() {
   if (!confirmarExcluirId.value) return
   excluindo.value = true
   try {
-    await excluirMeta(confirmarExcluirId.value)
+    if (confirmarExcluirTipo.value === 'META') {
+      await excluirMeta(confirmarExcluirId.value)
+    } else {
+      await excluirCofre(confirmarExcluirId.value)
+    }
     confirmarExcluir.value = false
     await carregar()
   } catch {
@@ -198,7 +345,7 @@ async function confirmarExclusao() {
 }
 
 // ── Toggle ativa ─────────────────────────────────────────────
-async function toggleAtiva(meta: MetaResposta) {
+async function toggleAtivaMeta(meta: MetaResposta) {
   try {
     await atualizarMeta(meta.id, { ativa: !meta.ativa })
     await carregar()
@@ -221,10 +368,16 @@ onMounted(carregar)
           <h2 class="page-title">METAS & COFRES</h2>
           <p class="label-overline mt-1">Controle de ritmo e reservas da moto</p>
         </div>
-        <button class="btn-nova-meta" @click="abrirCriar">
-          <span class="material-symbols-outlined text-sm">add</span>
-          NOVA META
-        </button>
+        <div class="header-buttons">
+          <button class="btn-novo-cofre" @click="abrirCriarCofre">
+            <span class="material-symbols-outlined text-sm">savings</span>
+            NOVO COFRE
+          </button>
+          <button class="btn-nova-meta" @click="abrirCriarMeta">
+            <span class="material-symbols-outlined text-sm">add</span>
+            NOVA META
+          </button>
+        </div>
       </section>
 
       <!-- Erro -->
@@ -234,8 +387,8 @@ onMounted(carregar)
       </div>
 
       <!-- Skeleton -->
-      <template v-if="carregando && alertas.length === 0">
-        <div class="space-y-4 animate-pulse px-5 lg:px-8">
+      <template v-if="carregando && alertas.length === 0 && cofres.length === 0">
+        <div class="space-y-4 animate-pulse px-5 lg:px-8 mt-4">
           <div class="h-28 bg-surface-container-low" />
           <div class="h-28 bg-surface-container-low" />
           <div class="grid grid-cols-2 gap-3">
@@ -254,6 +407,10 @@ onMounted(carregar)
             <div class="secao-header">
               <span class="material-symbols-outlined secao-icone secao-icone--ganho">trending_up</span>
               <h3 class="secao-titulo">METAS DE GANHO</h3>
+              <div class="tooltip-trigger">
+                <span class="material-symbols-outlined tooltip-icon">info</span>
+                <div class="tooltip-box">Meta de faturamento mínimo esperado para o período.</div>
+              </div>
             </div>
 
             <div class="metas-cards-grid">
@@ -268,14 +425,14 @@ onMounted(carregar)
                     <button
                       class="meta-card__btn"
                       title="Editar"
-                      @click="abrirEditar(metas.find(m => m.id === alerta.meta_id)!)"
+                      @click="abrirEditarMeta(metas.find(m => m.id === alerta.meta_id)!)"
                     >
                       <span class="material-symbols-outlined text-sm">edit</span>
                     </button>
                     <button
                       class="meta-card__btn meta-card__btn--danger"
                       title="Excluir"
-                      @click="pedirExclusao(metas.find(m => m.id === alerta.meta_id)!)"
+                      @click="pedirExclusaoMeta(metas.find(m => m.id === alerta.meta_id)!)"
                     >
                       <span class="material-symbols-outlined text-sm">delete</span>
                     </button>
@@ -313,9 +470,10 @@ onMounted(carregar)
                 </div>
 
                 <!-- Meta diária necessária -->
-                <div v-if="alerta.dias_trabalho_restantes > 0 && parseFloat(alerta.valor_restante) > 0" class="meta-card__ritmo">
+                <div v-if="alerta.dias_trabalho_restantes > 0 && parseFloat(alerta.valor_restante) > 0" class="meta-card__ritmo tooltip-trigger">
                   <span class="material-symbols-outlined text-xs">pace</span>
                   <span>{{ formatarReais(alerta.meta_diaria_necessaria) }}/dia · {{ alerta.dias_trabalho_restantes }} dias restantes</span>
+                  <div class="tooltip-box">Valor diário necessário nos dias de trabalho restantes para bater a meta.</div>
                 </div>
               </div>
             </div>
@@ -326,6 +484,10 @@ onMounted(carregar)
             <div class="secao-header">
               <span class="material-symbols-outlined secao-icone secao-icone--despesa">money_off</span>
               <h3 class="secao-titulo">TETO DE DESPESAS</h3>
+              <div class="tooltip-trigger">
+                <span class="material-symbols-outlined tooltip-icon">info</span>
+                <div class="tooltip-box">Limite máximo de gastos para manter os custos sob controle.</div>
+              </div>
             </div>
 
             <div class="metas-cards-grid">
@@ -339,14 +501,14 @@ onMounted(carregar)
                     <button
                       class="meta-card__btn"
                       title="Editar"
-                      @click="abrirEditar(metas.find(m => m.id === alerta.meta_id)!)"
+                      @click="abrirEditarMeta(metas.find(m => m.id === alerta.meta_id)!)"
                     >
                       <span class="material-symbols-outlined text-sm">edit</span>
                     </button>
                     <button
                       class="meta-card__btn meta-card__btn--danger"
                       title="Excluir"
-                      @click="pedirExclusao(metas.find(m => m.id === alerta.meta_id)!)"
+                      @click="pedirExclusaoMeta(metas.find(m => m.id === alerta.meta_id)!)"
                     >
                       <span class="material-symbols-outlined text-sm">delete</span>
                     </button>
@@ -385,73 +547,101 @@ onMounted(carregar)
           </section>
 
           <!-- ── Seção 3: Cofres Táticos ─────────────────────── -->
-          <section v-if="alertasCofre.length > 0" class="metas-secao">
+          <section class="metas-secao">
             <div class="secao-header">
               <span class="material-symbols-outlined secao-icone secao-icone--cofre">savings</span>
-              <h3 class="secao-titulo">COFRES TÁTICOS</h3>
+              <h3 class="secao-titulo">COFRES TÁTICOS (RESERVAS)</h3>
+              <div class="tooltip-trigger">
+                <span class="material-symbols-outlined tooltip-icon">info</span>
+                <div class="tooltip-box">Reservas financeiras acumulativas para despesas futuras da moto.</div>
+              </div>
             </div>
 
-            <div class="cofres-grid">
-              <div v-for="alerta in alertasCofre" :key="alerta.meta_id" class="cofre-card">
+            <!-- Grid de cofres -->
+            <div v-if="cofres.length > 0" class="cofres-grid">
+              <div v-for="cofre in cofres" :key="cofre.id" class="cofre-card">
                 <div class="cofre-card__header">
                   <div class="cofre-card__icon">
-                    <span class="material-symbols-outlined">{{ iconeCofre(alerta.categoria_cofre) }}</span>
+                    <span class="material-symbols-outlined">{{ iconeCofre(cofre.categoria) }}</span>
                   </div>
                   <div class="cofre-card__info">
-                    <span class="cofre-card__categoria">{{ labelCofre(alerta.categoria_cofre) }}</span>
-                    <h4 class="cofre-card__nome">{{ alerta.nome }}</h4>
+                    <span class="cofre-card__categoria">{{ labelCofre(cofre.categoria) }}</span>
+                    <h4 class="cofre-card__nome">{{ cofre.nome }}</h4>
                   </div>
                   <div class="meta-card__actions">
                     <button
                       class="meta-card__btn"
                       title="Editar"
-                      @click="abrirEditar(metas.find(m => m.id === alerta.meta_id)!)"
+                      @click="abrirEditarCofre(cofre)"
                     >
                       <span class="material-symbols-outlined text-sm">edit</span>
                     </button>
                     <button
                       class="meta-card__btn meta-card__btn--danger"
                       title="Excluir"
-                      @click="pedirExclusao(metas.find(m => m.id === alerta.meta_id)!)"
+                      @click="pedirExclusaoCofre(cofre)"
                     >
                       <span class="material-symbols-outlined text-sm">delete</span>
                     </button>
                   </div>
                 </div>
 
+                <!-- Autoguarda Badge -->
+                <div v-if="parseFloat(cofre.porcentagem_autoguarda) > 0" class="cofre-badge-autoguarda">
+                  <span class="material-symbols-outlined text-xs">bolt</span>
+                  <span>Guarda {{ cofre.porcentagem_autoguarda }}% de cada ganho</span>
+                </div>
+
                 <!-- Valores acumulados -->
                 <div class="cofre-card__valores">
-                  <span class="cofre-card__realizado">{{ formatarReais(alerta.realizado) }}</span>
-                  <span class="cofre-card__separador">/</span>
-                  <span class="cofre-card__meta">{{ formatarReais(alerta.valor_meta) }}</span>
+                  <div>
+                    <span class="cofre-card__label">GUARDADO</span>
+                    <span class="cofre-card__realizado">{{ formatarReais(cofre.saldo_atual) }}</span>
+                  </div>
+                  <div class="text-right">
+                    <span class="cofre-card__label">META</span>
+                    <span class="cofre-card__meta">{{ formatarReais(cofre.valor_meta) }}</span>
+                  </div>
                 </div>
 
                 <!-- Barra de progresso do cofre -->
                 <div class="progress-bar progress-bar--cofre">
                   <div
                     class="progress-bar__fill progress-bar__fill--cofre"
-                    :style="{ width: Math.min(parseFloat(alerta.percentual_meta), 100) + '%' }"
+                    :style="{ width: Math.min(cofre.percentual_meta, 100) + '%' }"
                   />
                 </div>
-                <div class="cofre-card__percentual">
-                  {{ parseFloat(alerta.percentual_meta).toFixed(0) }}%
+                <div class="cofre-card__progress-info">
+                  <span>{{ cofre.percentual_meta.toFixed(0) }}% alcançado</span>
+                  <span>Faltam {{ formatarReais(cofre.valor_restante) }}</span>
                 </div>
+
+                <!-- Botão de Aporte Rápido -->
+                <button class="btn-aporte-cofre mt-1" @click="abrirAporteCofre(cofre)">
+                  <span class="material-symbols-outlined text-sm">account_balance_wallet</span>
+                  GUARDAR / SACAR
+                </button>
               </div>
+            </div>
+
+            <!-- Estado Vazio de Cofres -->
+            <div v-else class="empty-state-cofre">
+              <p class="empty-state__desc">Nenhum cofre criado. Crie cofres para guardar reservas de pneu, seguro e revisão.</p>
+              <button class="btn-novo-cofre mx-auto mt-2" @click="abrirCriarCofre">
+                <span class="material-symbols-outlined text-sm">savings</span>
+                CRIAR PRIMEIRO COFRE
+              </button>
             </div>
           </section>
 
-          <!-- Estado vazio -->
-          <div v-if="alertas.length === 0 && !carregando" class="empty-state">
+          <!-- Estado vazio geral se nada existir -->
+          <div v-if="alertas.length === 0 && cofres.length === 0 && !carregando" class="empty-state">
             <span class="material-symbols-outlined empty-state__icon">flag</span>
-            <p class="empty-state__title">Nenhuma meta ativa</p>
-            <p class="empty-state__desc">Crie sua primeira meta de ganho, teto de despesa ou cofre tático.</p>
-            <button class="btn-primary h-12 max-w-xs mx-auto mt-3" @click="abrirCriar">
-              <span class="material-symbols-outlined">add</span>
-              CRIAR PRIMEIRA META
-            </button>
+            <p class="empty-state__title">Sem metas ou cofres</p>
+            <p class="empty-state__desc">Comece planejando suas metas de faturamento e cofres de emergência.</p>
           </div>
 
-          <!-- ── Lista completa de metas (toggle) ──────────── -->
+          <!-- ── Lista completa de metas ativas ──────────── -->
           <section v-if="metas.length > 0" class="metas-secao metas-lista-secao">
             <div class="secao-header">
               <span class="material-symbols-outlined secao-icone secao-icone--lista">list_alt</span>
@@ -471,16 +661,16 @@ onMounted(carregar)
                   <button
                     class="meta-card__btn"
                     :title="meta.ativa ? 'Desativar' : 'Ativar'"
-                    @click="toggleAtiva(meta)"
+                    @click="toggleAtivaMeta(meta)"
                   >
                     <span class="material-symbols-outlined text-sm">
                       {{ meta.ativa ? 'toggle_on' : 'toggle_off' }}
                     </span>
                   </button>
-                  <button class="meta-card__btn" title="Editar" @click="abrirEditar(meta)">
+                  <button class="meta-card__btn" title="Editar" @click="abrirEditarMeta(meta)">
                     <span class="material-symbols-outlined text-sm">edit</span>
                   </button>
-                  <button class="meta-card__btn meta-card__btn--danger" title="Excluir" @click="pedirExclusao(meta)">
+                  <button class="meta-card__btn meta-card__btn--danger" title="Excluir" @click="pedirExclusaoMeta(meta)">
                     <span class="material-symbols-outlined text-sm">delete</span>
                   </button>
                 </div>
@@ -491,93 +681,289 @@ onMounted(carregar)
         </div>
       </template>
 
-      <!-- ══ Modal: Criar / Editar Meta ═══════════════════════ -->
-      <div v-if="modalVisivel" class="modal-overlay" @click.self="modalVisivel = false">
+      <!-- ══ Modal: Nova / Editar Meta ═════════════════════════ -->
+      <div v-if="modalMetaVisivel" class="modal-overlay" @click.self="modalMetaVisivel = false">
         <div class="modal-box">
           <div class="modal-header">
-            <span class="material-symbols-outlined text-primary-container">{{ modalModoEdicao ? 'edit' : 'add_circle' }}</span>
-            <h3 class="modal-titulo">{{ modalModoEdicao ? 'EDITAR META' : 'NOVA META' }}</h3>
+            <span class="material-symbols-outlined text-primary-container">{{ modalMetaModoEdicao ? 'edit' : 'add_circle' }}</span>
+            <h3 class="modal-titulo">{{ modalMetaModoEdicao ? 'EDITAR META' : 'NOVA META' }}</h3>
           </div>
 
           <form class="modal-form" @submit.prevent="salvarMeta">
             <!-- Tipo -->
             <div>
-              <label class="campo-label">TIPO</label>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">TIPO DE META</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Ganho = faturamento mínimo desejado | Despesa = limite máximo de gastos.</div>
+                </div>
+              </div>
               <div class="campo-toggle-group">
                 <button type="button"
-                  class="campo-toggle" :class="{ 'campo-toggle--active-ganho': modalTipo === 'GANHO' }"
-                  @click="modalTipo = 'GANHO'">GANHO</button>
+                  class="campo-toggle" :class="{ 'campo-toggle--active-ganho': modalMetaTipo === 'GANHO' }"
+                  @click="modalMetaTipo = 'GANHO'">GANHO</button>
                 <button type="button"
-                  class="campo-toggle" :class="{ 'campo-toggle--active-despesa': modalTipo === 'DESPESA' }"
-                  @click="modalTipo = 'DESPESA'">DESPESA</button>
+                  class="campo-toggle" :class="{ 'campo-toggle--active-despesa': modalMetaTipo === 'DESPESA' }"
+                  @click="modalMetaTipo = 'DESPESA'">DESPESA</button>
               </div>
+              <p class="campo-dica">
+                {{ modalMetaTipo === 'GANHO' ? 'Meta de faturamento (quanto mais, melhor)' : 'Teto limite de gastos (quanto menos, melhor)' }}
+              </p>
             </div>
 
             <!-- Período -->
             <div>
-              <label class="campo-label">PERÍODO</label>
-              <div class="campo-toggle-group">
-                <button type="button" v-for="p in (['DIARIO', 'SEMANAL', 'MENSAL', 'OBJETIVO'] as const)" :key="p"
-                  class="campo-toggle" :class="{ 'campo-toggle--active': modalPeriodo === p }"
-                  @click="modalPeriodo = p">{{ periodoLabel(p) }}</button>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">PERÍODO</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Frequência da meta (Diário, Semanal ou Mensal).</div>
+                </div>
               </div>
+              <div class="campo-toggle-group">
+                <button type="button" v-for="p in (['DIARIO', 'SEMANAL', 'MENSAL'] as const)" :key="p"
+                  class="campo-toggle" :class="{ 'campo-toggle--active': modalMetaPeriodo === p }"
+                  @click="modalMetaPeriodo = p">{{ periodoLabel(p) }}</button>
+              </div>
+              <p class="campo-dica">Acompanha o ritmo {{ modalMetaPeriodo.toLowerCase() }} de trabalho</p>
             </div>
 
             <!-- Nome -->
             <div>
-              <label class="campo-label">NOME DA META</label>
-              <input v-model="modalNome" type="text" class="tactical-input py-3"
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">NOME DA META</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Nome de identificação (ex: Meta Semanal de Faturamento).</div>
+                </div>
+              </div>
+              <input v-model="modalMetaNome" type="text" class="tactical-input py-3"
                 placeholder="Ex: Meta semanal de ganho" />
             </div>
 
             <!-- Valor -->
             <div>
-              <label class="campo-label">VALOR (R$)</label>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">VALOR (R$)</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Valor alvo a ser atingido ou limite máximo a não ultrapassar.</div>
+                </div>
+              </div>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
-                <input :value="modalValor" inputmode="decimal" placeholder="0,00"
+                <input :value="modalMetaValor" type="text" inputmode="decimal" placeholder="0,00"
                   class="tactical-input pl-10 py-3 text-xl font-bold"
-                  @input="e => modalValor = (e.target as HTMLInputElement).value" />
+                  @input="e => modalMetaValor = formatarInputMoeda((e.target as HTMLInputElement).value)" />
               </div>
             </div>
 
-            <!-- Dias de trabalho (exceto OBJETIVO) -->
-            <div v-if="modalPeriodo !== 'OBJETIVO'">
-              <label class="campo-label">DIAS DE TRABALHO POR SEMANA</label>
+            <!-- Dias de trabalho -->
+            <div>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">DIAS DE TRABALHO POR SEMANA</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Quantos dias na semana você costuma rodar na pista.</div>
+                </div>
+              </div>
               <div class="dias-trabalho-grid">
                 <button type="button" v-for="d in 7" :key="d"
-                  class="dia-btn" :class="{ 'dia-btn--active': modalDiasTrabalho === d }"
-                  @click="modalDiasTrabalho = d">{{ d }}</button>
+                  class="dia-btn" :class="{ 'dia-btn--active': modalMetaDias === d }"
+                  @click="modalMetaDias = d">{{ d }}</button>
               </div>
+              <p class="campo-dica">Usado para calcular a meta diária necessária nos dias restantes.</p>
             </div>
 
-            <!-- Categoria de cofre (apenas OBJETIVO) -->
-            <div v-if="modalPeriodo === 'OBJETIVO'">
-              <label class="campo-label">CATEGORIA DO COFRE</label>
+            <!-- Erro -->
+            <div v-if="modalMetaErro" class="error-banner">
+              <span class="material-symbols-outlined text-sm">error</span>
+              {{ modalMetaErro }}
+            </div>
+
+            <!-- Botões -->
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary h-12" @click="modalMetaVisivel = false">CANCELAR</button>
+              <button type="submit" class="btn-primary h-12" :disabled="modalMetaEnviando">
+                <span v-if="modalMetaEnviando" class="material-symbols-outlined animate-spin">refresh</span>
+                <template v-else>
+                  <span class="material-symbols-outlined">{{ modalMetaModoEdicao ? 'save' : 'add' }}</span>
+                  {{ modalMetaModoEdicao ? 'SALVAR' : 'CRIAR META' }}
+                </template>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ══ Modal: Novo / Editar Cofre ════════════════════════ -->
+      <div v-if="modalCofreVisivel" class="modal-overlay" @click.self="modalCofreVisivel = false">
+        <div class="modal-box">
+          <div class="modal-header">
+            <span class="material-symbols-outlined text-tertiary">{{ modalCofreModoEdicao ? 'edit' : 'savings' }}</span>
+            <h3 class="modal-titulo">{{ modalCofreModoEdicao ? 'EDITAR COFRE' : 'NOVO COFRE TÁTICO' }}</h3>
+          </div>
+
+          <form class="modal-form" @submit.prevent="salvarCofre">
+            <!-- Categoria -->
+            <div>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">CATEGORIA DO COFRE</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Finalidade da reserva (Pneu, Seguro, IPVA, Revisão, etc).</div>
+                </div>
+              </div>
               <div class="cofre-select-grid">
-                <button type="button" v-for="cat in categoriasCofre" :key="cat.label"
-                  class="cofre-select-btn" :class="{ 'cofre-select-btn--active': modalCategoriaCofre === cat.valor }"
-                  @click="modalCategoriaCofre = cat.valor">
+                <button type="button" v-for="cat in categoriasCofre" :key="cat.valor"
+                  class="cofre-select-btn" :class="{ 'cofre-select-btn--active': modalCofreCategoria === cat.valor }"
+                  @click="modalCofreCategoria = cat.valor">
                   <span class="material-symbols-outlined text-base">{{ cat.icone }}</span>
                   <span>{{ cat.label }}</span>
                 </button>
               </div>
             </div>
 
+            <!-- Nome -->
+            <div>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">NOME DO COFRE</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Nome do seu objetivo (ex: Troca de Pneu Traseiro).</div>
+                </div>
+              </div>
+              <input v-model="modalCofreNome" type="text" class="tactical-input py-3"
+                placeholder="Ex: Reserva para Pneu Traseiro" />
+            </div>
+
+            <!-- Meta do Cofre -->
+            <div>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">VALOR ALVO DA RESERVA (R$)</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Valor total que você precisa acumular para esse objetivo.</div>
+                </div>
+              </div>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
+                <input :value="modalCofreMetaValor" type="text" inputmode="decimal" placeholder="0,00"
+                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  @input="e => modalCofreMetaValor = formatarInputMoeda((e.target as HTMLInputElement).value)" />
+              </div>
+            </div>
+
+            <!-- Saldo Inicial -->
+            <div>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">SALDO ATUAL GUARDADO (R$)</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Quanto você já possui guardado neste cofre no momento.</div>
+                </div>
+              </div>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
+                <input :value="modalCofreSaldoAtual" type="text" inputmode="decimal" placeholder="0,00"
+                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  @input="e => modalCofreSaldoAtual = formatarInputMoeda((e.target as HTMLInputElement).value)" />
+              </div>
+            </div>
+
+            <!-- Autoguarda por Porcentagem -->
+            <div>
+              <div class="campo-label-box">
+                <label class="campo-label mb-0">GUARDAR % AUTOMÁTICA DO GANHO</label>
+                <div class="tooltip-trigger">
+                  <span class="material-symbols-outlined tooltip-icon">info</span>
+                  <div class="tooltip-box">Porcentagem de cada ganho lançado que irá AUTOMATICAMENTE para este cofre (ex: 5%).</div>
+                </div>
+              </div>
+              <div class="relative">
+                <span class="absolute right-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">%</span>
+                <input :value="modalCofreAutoguarda" type="text" inputmode="decimal" placeholder="0"
+                  class="tactical-input pr-10 py-3 text-xl font-bold"
+                  @input="e => modalCofreAutoguarda = (e.target as HTMLInputElement).value.replace(/[^0-9.,]/g, '')" />
+              </div>
+              <div class="flex gap-2 mt-2">
+                <button type="button" class="btn-preset-pct" @click="modalCofreAutoguarda = '0'">0% (Manual)</button>
+                <button type="button" class="btn-preset-pct" @click="modalCofreAutoguarda = '3'">3%</button>
+                <button type="button" class="btn-preset-pct" @click="modalCofreAutoguarda = '5'">5%</button>
+                <button type="button" class="btn-preset-pct" @click="modalCofreAutoguarda = '10'">10%</button>
+              </div>
+              <p class="campo-dica">Se colocar 5%, de cada R$ 100 faturados, R$ 5,00 sobem pro cofre automaticamente.</p>
+            </div>
+
             <!-- Erro -->
-            <div v-if="modalErro" class="error-banner">
+            <div v-if="modalCofreErro" class="error-banner">
               <span class="material-symbols-outlined text-sm">error</span>
-              {{ modalErro }}
+              {{ modalCofreErro }}
             </div>
 
             <!-- Botões -->
             <div class="modal-actions">
-              <button type="button" class="btn-secondary h-12" @click="modalVisivel = false">CANCELAR</button>
-              <button type="submit" class="btn-primary h-12" :disabled="modalEnviando">
-                <span v-if="modalEnviando" class="material-symbols-outlined animate-spin">refresh</span>
+              <button type="button" class="btn-secondary h-12" @click="modalCofreVisivel = false">CANCELAR</button>
+              <button type="submit" class="btn-primary h-12" :disabled="modalCofreEnviando">
+                <span v-if="modalCofreEnviando" class="material-symbols-outlined animate-spin">refresh</span>
                 <template v-else>
-                  <span class="material-symbols-outlined">{{ modalModoEdicao ? 'save' : 'add' }}</span>
-                  {{ modalModoEdicao ? 'SALVAR' : 'CRIAR META' }}
+                  <span class="material-symbols-outlined">{{ modalCofreModoEdicao ? 'save' : 'savings' }}</span>
+                  {{ modalCofreModoEdicao ? 'SALVAR' : 'CRIAR COFRE' }}
+                </template>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ══ Modal: Aporte / Saque Rápido no Cofre ────────────── -->
+      <div v-if="modalAporteVisivel" class="modal-overlay" @click.self="modalAporteVisivel = false">
+        <div class="modal-box modal-box--sm">
+          <div class="modal-header">
+            <span class="material-symbols-outlined text-primary-container">account_balance_wallet</span>
+            <h3 class="modal-titulo">AJUSTAR SALDO: {{ aporteCofreNome }}</h3>
+          </div>
+
+          <form class="modal-form" @submit.prevent="confirmarAporte">
+            <!-- Operação -->
+            <div>
+              <label class="campo-label">OPERACÃO</label>
+              <div class="campo-toggle-group">
+                <button type="button"
+                  class="campo-toggle" :class="{ 'campo-toggle--active-ganho': aporteTipoOperacao === 'DEPOSITO' }"
+                  @click="aporteTipoOperacao = 'DEPOSITO'">+ DEPOSITAR (GUARDAR)</button>
+                <button type="button"
+                  class="campo-toggle" :class="{ 'campo-toggle--active-despesa': aporteTipoOperacao === 'SAQUE' }"
+                  @click="aporteTipoOperacao = 'SAQUE'">- SACAR (RETIRAR)</button>
+              </div>
+            </div>
+
+            <!-- Valor -->
+            <div>
+              <label class="campo-label">VALOR DA OPERAÇÃO (R$)</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
+                <input :value="aporteValor" type="text" inputmode="decimal" placeholder="0,00"
+                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  @input="e => aporteValor = formatarInputMoeda((e.target as HTMLInputElement).value)" />
+              </div>
+            </div>
+
+            <!-- Erro -->
+            <div v-if="aporteErro" class="error-banner">
+              <span class="material-symbols-outlined text-sm">error</span>
+              {{ aporteErro }}
+            </div>
+
+            <!-- Ações -->
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary h-11" @click="modalAporteVisivel = false">CANCELAR</button>
+              <button type="submit" class="btn-primary h-11" :disabled="aporteEnviando">
+                <span v-if="aporteEnviando" class="material-symbols-outlined animate-spin">refresh</span>
+                <template v-else>
+                  <span class="material-symbols-outlined">check</span>
+                  CONFIRMAR
                 </template>
               </button>
             </div>
@@ -590,10 +976,10 @@ onMounted(carregar)
         <div class="modal-box modal-box--sm">
           <div class="modal-header">
             <span class="material-symbols-outlined text-secondary">delete_forever</span>
-            <h3 class="modal-titulo">EXCLUIR META</h3>
+            <h3 class="modal-titulo">EXCLUIR {{ confirmarExcluirTipo }}</h3>
           </div>
           <p class="font-body text-sm text-on-surface px-1 py-2">
-            Tem certeza que deseja excluir a meta <strong>{{ confirmarExcluirNome }}</strong>?
+            Tem certeza que deseja excluir <strong>{{ confirmarExcluirNome }}</strong>?
           </p>
           <div class="modal-actions">
             <button type="button" class="btn-secondary h-11" @click="confirmarExcluir = false">CANCELAR</button>
@@ -645,6 +1031,13 @@ onMounted(carregar)
   }
 }
 
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .label-overline {
   font-size: 9px;
   font-weight: 700;
@@ -667,7 +1060,7 @@ onMounted(carregar)
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.625rem 1rem;
+  padding: 0.625rem 0.875rem;
   background: rgb(var(--color-primary-container));
   color: rgb(var(--color-on-primary-fixed));
   font-size: 10px;
@@ -681,11 +1074,29 @@ onMounted(carregar)
   flex-shrink: 0;
 }
 
-.btn-nova-meta:hover {
+.btn-novo-cofre {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 0.875rem;
+  background: rgb(var(--color-surface-container-high));
+  color: rgb(var(--color-on-surface));
+  border: 1px solid rgb(var(--color-outline));
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-nova-meta:hover, .btn-novo-cofre:hover {
   filter: brightness(1.1);
 }
 
-.btn-nova-meta:active {
+.btn-nova-meta:active, .btn-novo-cofre:active {
   transform: scale(0.97);
 }
 
@@ -917,7 +1328,7 @@ onMounted(carregar)
   background: linear-gradient(90deg, rgb(var(--color-tertiary)), rgb(var(--color-primary-container)));
 }
 
-.meta-card__progress-info {
+.meta-card__progress-info, .cofre-card__progress-info {
   display: flex;
   justify-content: space-between;
   font-size: 10px;
@@ -983,17 +1394,16 @@ onMounted(carregar)
   letter-spacing: 0.02em;
 }
 
-/* ─── Cofres grid ────────────────────────────────────────────── */
+/* ─── Cofres grid & card ─────────────────────────────────────── */
 .cofres-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 0.75rem;
 }
 
-/* ─── Cofre card ─────────────────────────────────────────────── */
 .cofre-card {
   background: rgb(var(--color-surface-container));
-  padding: 1rem;
+  padding: 1.125rem;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
@@ -1016,7 +1426,7 @@ onMounted(carregar)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(var(--color-tertiary) / 0.12);
+  background: rgb(var(--color-tertiary) / 0.15);
   color: rgb(var(--color-tertiary));
   flex-shrink: 0;
 }
@@ -1037,8 +1447,8 @@ onMounted(carregar)
 
 .cofre-card__nome {
   font-family: var(--font-headline, 'Space Grotesk', sans-serif);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 800;
+  font-size: 13px;
   color: rgb(var(--color-on-surface));
   text-transform: uppercase;
   white-space: nowrap;
@@ -1046,35 +1456,75 @@ onMounted(carregar)
   text-overflow: ellipsis;
 }
 
+.cofre-badge-autoguarda {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: rgb(var(--color-primary-container) / 0.12);
+  color: rgb(var(--color-primary-container));
+  font-size: 10px;
+  font-weight: 700;
+  width: fit-content;
+}
+
 .cofre-card__valores {
   display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.cofre-card__label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgb(var(--color-on-surface-variant));
+  margin-bottom: 0.125rem;
 }
 
 .cofre-card__realizado {
   font-family: var(--font-headline, 'Space Grotesk', sans-serif);
   font-weight: 900;
-  font-size: 18px;
+  font-size: 17px;
   color: rgb(var(--color-primary-container));
 }
 
-.cofre-card__separador {
-  font-size: 14px;
-  color: rgb(var(--color-on-surface-variant));
-}
-
 .cofre-card__meta {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-weight: 700;
+  font-size: 15px;
   color: rgb(var(--color-on-surface-variant));
 }
 
-.cofre-card__percentual {
-  font-size: 11px;
+.btn-aporte-cofre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  background: rgb(var(--color-surface-container-high));
+  color: rgb(var(--color-on-surface));
+  border: 1px solid rgb(var(--color-outline-variant));
+  font-size: 10px;
   font-weight: 800;
-  color: rgb(var(--color-on-surface-variant));
-  text-align: right;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-aporte-cofre:hover {
+  background: rgb(var(--color-surface-bright));
+  border-color: rgb(var(--color-outline));
+}
+
+.empty-state-cofre {
+  background: rgb(var(--color-surface-container-low));
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px dashed rgb(var(--color-outline-variant));
 }
 
 /* ─── Empty state ────────────────────────────────────────────── */
@@ -1101,7 +1551,7 @@ onMounted(carregar)
 }
 
 .empty-state__desc {
-  font-size: 13px;
+  font-size: 12px;
   color: rgb(var(--color-on-surface-variant));
   margin-top: 0.25rem;
 }
@@ -1234,6 +1684,20 @@ onMounted(carregar)
   margin-bottom: 0.5rem;
 }
 
+.campo-label-box {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.campo-dica {
+  font-size: 10px;
+  color: rgb(var(--color-on-surface-variant));
+  margin-top: 0.375rem;
+  font-weight: 500;
+}
+
 /* ─── Toggle group ───────────────────────────────────────────── */
 .campo-toggle-group {
   display: flex;
@@ -1259,9 +1723,9 @@ onMounted(carregar)
 }
 
 .campo-toggle--active {
-  background: rgb(var(--color-primary-container));
-  color: rgb(var(--color-on-primary-fixed));
-  border-color: rgb(var(--color-primary-container));
+  background: rgb(var(--color-on-surface));
+  color: rgb(var(--color-background));
+  border-color: rgb(var(--color-on-surface));
   font-weight: 900;
 }
 
@@ -1306,9 +1770,9 @@ onMounted(carregar)
 }
 
 .dia-btn--active {
-  background: rgb(var(--color-primary-container));
-  color: rgb(var(--color-on-primary-fixed));
-  border-color: rgb(var(--color-primary-container));
+  background: rgb(var(--color-on-surface));
+  color: rgb(var(--color-background));
+  border-color: rgb(var(--color-on-surface));
   font-weight: 900;
 }
 
@@ -1344,5 +1808,71 @@ onMounted(carregar)
   color: rgb(var(--color-tertiary));
   border-color: rgb(var(--color-tertiary));
   font-weight: 900;
+}
+
+.btn-preset-pct {
+  padding: 0.25rem 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgb(var(--color-surface-container));
+  border: 1px solid rgb(var(--color-outline-variant));
+  color: rgb(var(--color-on-surface));
+  cursor: pointer;
+}
+
+.btn-preset-pct:hover {
+  background: rgb(var(--color-surface-bright));
+}
+
+/* ─── Tooltip & Dicas de ajuda ───────────────────────────────── */
+.tooltip-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.tooltip-icon {
+  font-size: 14px;
+  color: rgb(var(--color-on-surface-variant));
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.tooltip-trigger:hover .tooltip-icon {
+  opacity: 1;
+  color: rgb(var(--color-primary-container));
+}
+
+.tooltip-box {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: rgb(var(--color-surface-bright));
+  color: rgb(var(--color-on-surface));
+  border: 1px solid rgb(var(--color-outline-variant));
+  padding: 0.375rem 0.625rem;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  width: max-content;
+  max-width: 220px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.tooltip-trigger:hover .tooltip-box,
+.tooltip-trigger:focus .tooltip-box,
+.tooltip-trigger:active .tooltip-box {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(-8px);
 }
 </style>

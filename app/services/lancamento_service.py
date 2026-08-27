@@ -150,6 +150,10 @@ def criar_lancamento(db: Session, dados: LancamentoCriar, auto_commit: bool = Tr
     )
 
     db.add(lancamento)
+    if tipo == "GANHO":
+        from app.services.cofre_service import processar_autoguarda_cofres
+        processar_autoguarda_cofres(db, dados.usuario_id, dados.valor)
+
     if auto_commit:
         db.commit()
         db.refresh(lancamento)
