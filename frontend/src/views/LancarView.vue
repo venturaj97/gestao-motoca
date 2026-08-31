@@ -5,7 +5,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
 import { criarLancamentosLote } from '@/api/lancamentos'
 import { criarAbastecimento } from '@/api/abastecimentos'
-import { listarCategorias } from '@/api/categorias'
+import { listarCategorias, criarCategoria } from '@/api/categorias'
 import type { CategoriaResposta, TipoLancamento, PeriodoLancamento, GrupoDespesa } from '@/types'
 import LancarDateInput from '@/components/LancarDateInput.vue'
 import AppLayout from '@/components/AppLayout.vue'
@@ -50,6 +50,60 @@ const enviando    = ref(false)
 const erro        = ref('')
 const sucesso     = ref(false)
 const mensagemSucesso = ref('')
+
+// Estado da modal de criação de categoria
+const mostrarModalNovaCategoria = ref(false)
+const novaCategoriaNome          = ref('')
+const novaCategoriaGrupo         = ref<GrupoDespesa>('GERAL')
+const enviandoNovaCategoria     = ref(false)
+const erroNovaCategoria         = ref('')
+const gruposDespesa: GrupoDespesa[] = ['GERAL', 'ABASTECIMENTO', 'MANUTENCAO', 'IMPOSTO']
+
+function abrirModalNovaCategoria() {
+  novaCategoriaNome.value = ''
+  novaCategoriaGrupo.value = grupoDespesaAtivo.value || 'GERAL'
+  erroNovaCategoria.value = ''
+  mostrarModalNovaCategoria.value = true
+}
+
+async function handleCriarCategoria() {
+  const nomeTrim = novaCategoriaNome.value.trim()
+  if (!nomeTrim) {
+    erroNovaCategoria.value = 'Informe o nome da categoria.'
+    return
+  }
+
+  enviandoNovaCategoria.value = true
+  erroNovaCategoria.value = ''
+
+  try {
+    const novaCat = await criarCategoria({
+      nome: nomeTrim,
+      tipo: tipo.value,
+      grupo_despesa: tipo.value === 'DESPESA' ? novaCategoriaGrupo.value : undefined,
+    })
+
+    categorias.value.push(novaCat)
+
+    if (ehSimples.value) {
+      categoriaUnicaId.value = novaCat.id
+    } else {
+      if (tipo.value === 'DESPESA' && novaCat.grupo_despesa) {
+        grupoDespesaAtivo.value = novaCat.grupo_despesa
+      }
+      if (!categoriasSelecionadas.value.includes(novaCat.id)) {
+        categoriasSelecionadas.value.push(novaCat.id)
+        valoresPorCategoria.value[novaCat.id] = ''
+      }
+    }
+
+    mostrarModalNovaCategoria.value = false
+  } catch (err: any) {
+    erroNovaCategoria.value = err.response?.data?.detail || 'Erro ao criar categoria.'
+  } finally {
+    enviandoNovaCategoria.value = false
+  }
+}
 
 const MAX_VALOR_CENTAVOS = 99_999_999
 const MAX_DIGITOS_VALOR  = String(MAX_VALOR_CENTAVOS).length
@@ -433,13 +487,25 @@ onMounted(carregar)
           </div>
 
           <!-- Categoria -->
-          <div v-if="!carregando && categoriasFiltradas.length > 0">
-            <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-              CATEGORIA
-              <span v-if="tipo === 'GANHO'" class="font-normal normal-case tracking-normal text-[9px] ml-1 opacity-60">(opcional)</span>
-              <span v-else class="font-normal text-secondary text-[9px] ml-1">*obrigatório</span>
-            </label>
+          <div v-if="!carregando">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant uppercase">
+                CATEGORIA
+                <span v-if="tipo === 'GANHO'" class="font-normal normal-case tracking-normal text-[9px] ml-1 opacity-60">(opcional)</span>
+                <span v-else class="font-normal text-secondary text-[9px] ml-1">*obrigatório</span>
+              </label>
+              <button
+                type="button"
+                class="font-label text-[10px] font-bold tracking-wider uppercase flex items-center gap-1 hover:underline transition-colors"
+                :class="tipo === 'DESPESA' ? 'text-secondary' : 'text-primary-container'"
+                @click="abrirModalNovaCategoria"
+              >
+                <span class="material-symbols-outlined text-xs">add</span>
+                NOVA CATEGORIA
+              </button>
+            </div>
             <select
+              v-if="categoriasFiltradas.length > 0"
               v-model="categoriaUnicaId"
               class="tactical-input w-full px-3.5 py-3 text-sm font-bold bg-surface-container"
               :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
@@ -449,6 +515,9 @@ onMounted(carregar)
                 {{ cat.nome }}
               </option>
             </select>
+            <div v-else class="text-xs text-on-surface-variant bg-surface-container p-3 border border-outline-variant flex items-center justify-between">
+              <span>Nenhuma categoria de {{ tipo.toLowerCase() }} cadastrada.</span>
+            </div>
           </div>
 
           <!-- Campo Litros (apenas para Combustível / Abastecimento em DESPESA) -->
@@ -476,9 +545,19 @@ onMounted(carregar)
 
           <!-- Categorias multi-select -->
           <div>
-            <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">
-              CATEGORIAS
-            </label>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant uppercase">
+                CATEGORIAS
+              </label>
+              <button
+                type="button"
+                class="font-label text-[10px] font-bold tracking-wider uppercase flex items-center gap-1 hover:underline transition-colors text-primary-container"
+                @click="abrirModalNovaCategoria"
+              >
+                <span class="material-symbols-outlined text-xs">add</span>
+                NOVA CATEGORIA
+              </button>
+            </div>
             <div v-if="carregando" class="h-12 bg-surface-container-low animate-pulse" />
             <div v-else class="space-y-3">
               <div class="space-y-2">
@@ -649,6 +728,86 @@ onMounted(carregar)
 
       </form>
     </main>
+
+    <!-- ══ Modal Criar Nova Categoria ══════════════════════════ -->
+    <div
+      v-if="mostrarModalNovaCategoria"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      @click.self="mostrarModalNovaCategoria = false"
+    >
+      <div class="bg-surface-container-high border border-outline-variant p-5 max-w-sm w-full space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-outline-variant pb-3">
+          <div class="flex items-center gap-2">
+            <span
+              class="material-symbols-outlined text-base"
+              :class="tipo === 'DESPESA' ? 'text-secondary' : 'text-primary-container'"
+            >label</span>
+            <h3 class="font-headline font-bold text-sm uppercase tracking-wide">
+              Nova Categoria ({{ tipo }})
+            </h3>
+          </div>
+          <button
+            type="button"
+            class="text-on-surface-variant hover:text-on-surface transition-colors"
+            @click="mostrarModalNovaCategoria = false"
+          >
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div v-if="erroNovaCategoria" class="bg-error-container text-on-error-container text-xs px-3 py-2 border-l-2 border-error">
+          {{ erroNovaCategoria }}
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-1">
+              NOME DA CATEGORIA <span class="text-secondary">*</span>
+            </label>
+            <input
+              v-model="novaCategoriaNome"
+              type="text"
+              placeholder="Ex: UBER, 99, Manutenção preventiva..."
+              class="tactical-input px-3.5 py-2.5 text-sm w-full"
+              :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
+              @keyup.enter="handleCriarCategoria"
+            />
+          </div>
+
+          <div v-if="tipo === 'DESPESA'">
+            <label class="block font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mb-1">
+              GRUPO DA DESPESA
+            </label>
+            <select
+              v-model="novaCategoriaGrupo"
+              class="tactical-input px-3.5 py-2.5 text-sm w-full bg-surface-container focus:!border-secondary"
+            >
+              <option v-for="g in gruposDespesa" :key="g" :value="g">{{ g }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <button
+            type="button"
+            class="h-10 border border-outline-variant font-label text-[10px] font-bold tracking-widest uppercase hover:bg-surface-bright transition-all"
+            @click="mostrarModalNovaCategoria = false"
+          >
+            CANCELAR
+          </button>
+          <button
+            type="button"
+            class="h-10 font-label text-[10px] font-bold tracking-widest uppercase flex items-center justify-center gap-1 text-on-primary-fixed transition-all hover:brightness-110 disabled:opacity-50"
+            :class="tipo === 'DESPESA' ? 'bg-secondary text-on-secondary' : 'bg-primary-container'"
+            :disabled="enviandoNovaCategoria"
+            @click="handleCriarCategoria"
+          >
+            <span v-if="enviandoNovaCategoria" class="material-symbols-outlined text-xs animate-spin">refresh</span>
+            <template v-else>CRIAR</template>
+          </button>
+        </div>
+      </div>
+    </div>
 
   </div>
   </AppLayout>
