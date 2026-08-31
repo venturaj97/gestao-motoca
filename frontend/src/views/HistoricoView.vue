@@ -1294,6 +1294,7 @@ onMounted(async () => {
                   </div>
                 </div>
               </div>
+            </div>
 
             <!-- ── GRÁFICO 4: EXTRATO COMPACTO E PAGINADO DO ODÔMETRO ── -->
             <div v-if="abaGraficoAtiva === 'extrato' && historicoKm" class="bg-surface-container p-3 border border-cyan-500/40 space-y-2 animate-in fade-in duration-150">
@@ -1364,7 +1365,6 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-        </div>
 
         </template>
 
