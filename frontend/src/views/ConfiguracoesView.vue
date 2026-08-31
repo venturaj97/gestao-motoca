@@ -512,13 +512,13 @@ onMounted(async () => {
 
         <div class="bg-surface-container p-3 space-y-2">
           <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">Nova categoria</p>
-          <input v-model="novaCategoriaNome" type="text" placeholder="Nome da categoria" class="tactical-input py-2 text-sm" />
+          <input v-model="novaCategoriaNome" type="text" placeholder="Nome da categoria" class="tactical-input px-3.5 py-2 text-sm" />
           <div class="grid grid-cols-2 gap-2">
-            <select v-model="novaCategoriaTipo" class="tactical-input py-2 text-sm">
+            <select v-model="novaCategoriaTipo" class="tactical-input px-3.5 py-2 text-sm">
               <option value="GANHO">GANHO</option>
               <option value="DESPESA">DESPESA</option>
             </select>
-            <select v-if="novaCategoriaTipo === 'DESPESA'" v-model="novaCategoriaGrupo" class="tactical-input py-2 text-sm">
+            <select v-if="novaCategoriaTipo === 'DESPESA'" v-model="novaCategoriaGrupo" class="tactical-input px-3.5 py-2 text-sm">
               <option v-for="g in gruposDespesa" :key="g" :value="g">{{ g }}</option>
             </select>
           </div>
@@ -554,7 +554,7 @@ onMounted(async () => {
               </div>
             </div>
             <div v-else class="space-y-2">
-              <input v-model="editCategoriaNome" type="text" class="tactical-input py-2 text-sm" />
+              <input v-model="editCategoriaNome" type="text" class="tactical-input px-3.5 py-2 text-sm" />
               <div class="grid grid-cols-2 gap-2">
                 <button class="h-9 border border-outline-variant text-xs" @click="cancelarEdicaoCategoria">Cancelar</button>
                 <button class="h-9 bg-primary-container text-on-primary-fixed text-xs" @click="salvarCategoria">Salvar</button>
@@ -590,8 +590,8 @@ onMounted(async () => {
               </div>
             </div>
             <div v-else class="space-y-2">
-              <input v-model="editCategoriaNome" type="text" class="tactical-input py-2 text-sm" />
-              <select v-model="editCategoriaGrupo" class="tactical-input py-2 text-sm">
+              <input v-model="editCategoriaNome" type="text" class="tactical-input px-3.5 py-2 text-sm" />
+              <select v-model="editCategoriaGrupo" class="tactical-input px-3.5 py-2 text-sm">
                 <option v-for="g in gruposDespesa" :key="g" :value="g">{{ g }}</option>
               </select>
               <div class="grid grid-cols-2 gap-2">
@@ -615,7 +615,7 @@ onMounted(async () => {
             <AppDateInput v-model="lancDataFim" tone="system" :min="lancDataInicio || undefined" />
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <select v-model="lancTipoFiltro" class="tactical-input py-2 text-sm">
+            <select v-model="lancTipoFiltro" class="tactical-input px-3.5 py-2 text-sm">
               <option value="TODOS">TODOS</option>
               <option value="GANHO">GANHO</option>
               <option value="DESPESA">DESPESA</option>
@@ -672,11 +672,11 @@ onMounted(async () => {
               </div>
             </div>
             <div v-else class="space-y-2">
-              <select v-model.number="editLancCategoriaId" class="tactical-input py-2 text-sm">
+              <select v-model.number="editLancCategoriaId" class="tactical-input px-3.5 py-2 text-sm">
                 <option v-for="cat in categoriasParaEdicaoLancamento" :key="cat.id" :value="cat.id">{{ cat.nome }}</option>
               </select>
-              <input v-model="editLancValor" type="text" inputmode="decimal" class="tactical-input py-2 text-sm" placeholder="Valor" />
-              <input v-model="editLancDescricao" type="text" class="tactical-input py-2 text-sm" placeholder="Descrição" />
+              <input v-model="editLancValor" type="text" inputmode="decimal" class="tactical-input px-3.5 py-2 text-sm" placeholder="Valor" />
+              <input v-model="editLancDescricao" type="text" class="tactical-input px-3.5 py-2 text-sm" placeholder="Descrição" />
               <AppDateInput v-model="editLancData" :tone="editLancTipo === 'DESPESA' ? 'despesa' : 'system'" />
               <div class="grid grid-cols-2 gap-2">
                 <button class="h-9 border border-outline-variant text-xs" @click="cancelarEdicaoLancamento">Cancelar</button>

@@ -742,7 +742,7 @@ onMounted(carregar)
                   <div class="tooltip-box">Nome de identificação (ex: Meta Semanal de Faturamento).</div>
                 </div>
               </div>
-              <input v-model="modalMetaNome" type="text" class="tactical-input py-3"
+              <input v-model="modalMetaNome" type="text" class="tactical-input px-3.5 py-3"
                 placeholder="Ex: Meta semanal de ganho" />
             </div>
 
@@ -758,7 +758,7 @@ onMounted(carregar)
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
                 <input :value="modalMetaValor" type="text" inputmode="numeric" placeholder="0,00"
-                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  class="tactical-input pl-10 pr-3.5 py-3 text-xl font-bold"
                   @input="e => {
                     const t = e.target as HTMLInputElement;
                     const v = formatarInputMoeda(t.value);
@@ -843,7 +843,7 @@ onMounted(carregar)
                   <div class="tooltip-box">Nome do seu objetivo (ex: Troca de Pneu Traseiro).</div>
                 </div>
               </div>
-              <input v-model="modalCofreNome" type="text" class="tactical-input py-3"
+              <input v-model="modalCofreNome" type="text" class="tactical-input px-3.5 py-3"
                 placeholder="Ex: Reserva para Pneu Traseiro" />
             </div>
 
@@ -859,7 +859,7 @@ onMounted(carregar)
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
                 <input :value="modalCofreMetaValor" type="text" inputmode="numeric" placeholder="0,00"
-                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  class="tactical-input pl-10 pr-3.5 py-3 text-xl font-bold"
                   @input="e => {
                     const t = e.target as HTMLInputElement;
                     const v = formatarInputMoeda(t.value);
@@ -881,7 +881,7 @@ onMounted(carregar)
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
                 <input :value="modalCofreSaldoAtual" type="text" inputmode="numeric" placeholder="0,00"
-                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  class="tactical-input pl-10 pr-3.5 py-3 text-xl font-bold"
                   @input="e => {
                     const t = e.target as HTMLInputElement;
                     const v = formatarInputMoeda(t.value);
@@ -903,7 +903,7 @@ onMounted(carregar)
               <div class="relative">
                 <span class="absolute right-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">%</span>
                 <input :value="modalCofreAutoguarda" type="text" inputmode="numeric" placeholder="0"
-                  class="tactical-input pr-10 py-3 text-xl font-bold"
+                  class="tactical-input pl-3.5 pr-10 py-3 text-xl font-bold"
                   @input="e => {
                     const t = e.target as HTMLInputElement;
                     const v = t.value.replace(/[^0-9.,]/g, '');
@@ -969,7 +969,7 @@ onMounted(carregar)
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
                 <input :value="aporteValor" type="text" inputmode="numeric" placeholder="0,00"
-                  class="tactical-input pl-10 py-3 text-xl font-bold"
+                  class="tactical-input pl-10 pr-3.5 py-3 text-xl font-bold"
                   @input="e => {
                     const t = e.target as HTMLInputElement;
                     const v = formatarInputMoeda(t.value);

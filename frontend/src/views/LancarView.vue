@@ -398,7 +398,7 @@ onMounted(carregar)
                 inputmode="numeric"
                 placeholder="0,00"
                 maxlength="11"
-                class="tactical-input pl-10 py-4 text-2xl font-headline font-black w-full"
+                class="tactical-input pl-10 pr-3.5 py-4 text-2xl font-headline font-black w-full"
                 :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
                 @input="formatarValorUnicoInput"
                 @paste.prevent="handlePasteValorUnico"
@@ -441,7 +441,7 @@ onMounted(carregar)
             </label>
             <select
               v-model="categoriaUnicaId"
-              class="tactical-input w-full py-3 text-sm font-bold bg-surface-container"
+              class="tactical-input w-full px-3.5 py-3 text-sm font-bold bg-surface-container"
               :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
             >
               <option v-if="tipo === 'DESPESA'" :value="null" disabled>Selecione uma categoria...</option>
@@ -522,7 +522,7 @@ onMounted(carregar)
                         inputmode="numeric"
                         placeholder="0,00"
                         maxlength="10"
-                        class="tactical-input pl-8 py-2 text-sm font-bold focus:!border-primary-container"
+                        class="tactical-input pl-8 pr-3.5 py-2 text-sm font-bold focus:!border-primary-container"
                         @input="formatarValorCategoriaInput(cat.id, $event)"
                         @paste.prevent="handlePasteValorCategoria(cat.id, $event)"
                       />
@@ -548,12 +548,12 @@ onMounted(carregar)
             <div>
               <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">MINUTOS</label>
               <input v-model="minutosCorrida" type="number" min="0" placeholder="Ex: 45"
-                class="tactical-input py-3 text-lg focus:!border-primary-container" />
+                class="tactical-input px-3.5 py-3 text-lg focus:!border-primary-container" />
             </div>
             <div>
               <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">KM</label>
               <input v-model="kmCorrida" type="number" min="0" step="0.1" placeholder="Ex: 8.5"
-                class="tactical-input py-3 text-lg focus:!border-primary-container" />
+                class="tactical-input px-3.5 py-3 text-lg focus:!border-primary-container" />
             </div>
           </div>
 
@@ -600,7 +600,7 @@ onMounted(carregar)
             <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">DESCRIÇÃO</label>
             <div class="relative">
               <input v-model="descricao" type="text" placeholder="Ex: Corrida extra, diária iFood"
-                class="tactical-input py-3 pr-10"
+                class="tactical-input px-3.5 py-3 pr-10"
                 :class="tipo === 'DESPESA' ? 'focus:!border-secondary' : 'focus:!border-primary-container'"
               />
               <button type="button"

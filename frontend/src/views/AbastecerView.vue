@@ -150,7 +150,7 @@ onMounted(carregar)
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-sm">R$</span>
               <input :value="valorTotal" inputmode="decimal" placeholder="0,00"
-                class="tactical-input pl-8 py-3 text-xl font-bold"
+                class="tactical-input pl-8 pr-3.5 py-3 text-xl font-bold"
                 @input="e => { valorTotal = (e.target as HTMLInputElement).value; calcularVPL() }" />
             </div>
           </div>
@@ -158,7 +158,7 @@ onMounted(carregar)
             <label class="block font-label text-[10px] font-bold tracking-[0.2em] text-on-surface-variant mb-2 uppercase">LITROS</label>
             <div class="relative">
               <input :value="litros" inputmode="decimal" placeholder="0,000"
-                class="tactical-input py-3 pr-8 text-xl font-bold"
+                class="tactical-input pl-3.5 pr-8 py-3 text-xl font-bold"
                 @input="e => { litros = (e.target as HTMLInputElement).value; calcularVPL() }" />
               <span class="absolute right-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs">L</span>
             </div>
@@ -213,7 +213,7 @@ onMounted(carregar)
           <div class="relative">
             <input v-model="kmAtual" type="number" min="0"
               :placeholder="motoStore.motoAtiva?.km_atual?.toString() ?? 'Ex: 12450'"
-              class="tactical-input py-3 pr-12 text-lg" />
+              class="tactical-input pl-3.5 pr-12 py-3 text-lg" />
             <span class="absolute right-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs font-bold">KM</span>
           </div>
         </div>
@@ -224,7 +224,7 @@ onMounted(carregar)
             POSTO <span class="font-normal text-outline">(opcional)</span>
           </label>
           <input v-model="posto" type="text" placeholder="Ex: Ipiranga Av. Brasil"
-            class="tactical-input py-3" />
+            class="tactical-input px-3.5 py-3" />
         </div>
 
         <!-- Data -->

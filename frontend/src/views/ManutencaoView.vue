@@ -164,7 +164,7 @@ onMounted(carregar)
           <div class="relative">
             <span class="absolute left-4 top-1/2 -translate-y-1/2 font-headline font-bold text-on-surface-variant">R$</span>
             <input :value="valorTotal" inputmode="decimal" placeholder="0,00"
-              class="tactical-input pl-10 py-4 text-2xl font-bold"
+              class="tactical-input pl-10 pr-3.5 py-4 text-2xl font-bold"
               @input="e => valorTotal = (e.target as HTMLInputElement).value" />
           </div>
         </div>
@@ -193,7 +193,7 @@ onMounted(carregar)
           </label>
           <input v-model="descricaoServico" type="text"
             placeholder="Ex: Troca de óleo 10W40"
-            class="tactical-input py-3" />
+            class="tactical-input px-3.5 py-3" />
         </div>
 
         <!-- Oficina -->
@@ -203,7 +203,7 @@ onMounted(carregar)
           </label>
           <input v-model="oficina" type="text"
             placeholder="Ex: Auto Center Silva"
-            class="tactical-input py-3" />
+            class="tactical-input px-3.5 py-3" />
         </div>
 
         <!-- KM Atual -->
@@ -214,7 +214,7 @@ onMounted(carregar)
           <div class="relative">
             <input v-model="kmAtual" type="number" min="0"
               :placeholder="motoStore.motoAtiva?.km_atual?.toString() ?? 'Ex: 12450'"
-              class="tactical-input py-3 pr-12 text-lg" />
+              class="tactical-input pl-3.5 pr-12 py-3 text-lg" />
             <span class="absolute right-3 top-1/2 -translate-y-1/2 font-label text-on-surface-variant text-xs font-bold">KM</span>
           </div>
         </div>
