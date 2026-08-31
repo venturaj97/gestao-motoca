@@ -16,7 +16,6 @@ const navItems = [
   { name: 'historico',     label: 'Histórico',  icon: 'history'     },
   { name: 'lancar',        label: 'Lançar',     icon: 'add_box'     },
   { name: 'metas',         label: 'Metas',      icon: 'flag'        },
-  { name: 'configuracoes', label: 'Config',     icon: 'settings'    },
 ]
 
 const primeiroNome = computed(() => {
@@ -96,8 +95,21 @@ function logout() {
       <!-- Spacer -->
       <div class="flex-1" />
 
-      <!-- Rodapé sidebar: tema + logout -->
+      <!-- Rodapé sidebar: config + tema + logout -->
       <div class="sidebar-footer">
+        <button
+          class="sidebar-footer-btn"
+          :class="{ 'sidebar-footer-btn--active': isActive('configuracoes') }"
+          title="Configurações"
+          @click="router.push({ name: 'configuracoes' })"
+        >
+          <span
+            class="material-symbols-outlined text-xl"
+            :style="navIconStyle('configuracoes')"
+          >settings</span>
+          <span class="font-label text-[11px] font-bold tracking-widest uppercase">Config</span>
+        </button>
+
         <button
           class="sidebar-footer-btn"
           :title="theme.escuro ? 'Ativar modo claro' : 'Ativar modo escuro'"
@@ -144,6 +156,17 @@ function logout() {
         </div>
 
         <div class="flex items-center gap-2">
+          <button
+            class="topbar-icon-btn"
+            :class="{ 'topbar-icon-btn--active': isActive('configuracoes') }"
+            title="Configurações"
+            @click="router.push({ name: 'configuracoes' })"
+          >
+            <span
+              class="material-symbols-outlined text-xl"
+              :style="navIconStyle('configuracoes')"
+            >settings</span>
+          </button>
           <button
             class="topbar-icon-btn"
             :title="theme.escuro ? 'Ativar modo claro' : 'Ativar modo escuro'"
@@ -331,6 +354,12 @@ function logout() {
   color: rgb(var(--color-on-surface));
 }
 
+.sidebar-footer-btn--active {
+  background: rgb(var(--color-primary-container) / 0.12);
+  color: rgb(var(--color-primary-container));
+  font-weight: 700;
+}
+
 .sidebar-footer-btn--danger:hover {
   background: rgb(var(--color-error-container));
   color: rgb(var(--color-on-error-container));
@@ -342,6 +371,7 @@ function logout() {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 /* ─── Topbar Mobile ──────────────────────────────────────── */
@@ -375,7 +405,8 @@ function logout() {
   transition: color 0.15s;
 }
 
-.topbar-icon-btn:hover {
+.topbar-icon-btn:hover,
+.topbar-icon-btn--active {
   color: rgb(var(--color-primary-container));
 }
 
@@ -394,7 +425,7 @@ function logout() {
   background: rgb(var(--color-surface));
   border-top: 1px solid rgb(var(--color-outline-variant));
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   box-shadow: 0 -2px 10px rgb(0 0 0 / 0.06);
 }
 

@@ -180,7 +180,7 @@
 
   /* Input tático (fundo recessed) */
   .tactical-input {
-    @apply w-full bg-surface-container-lowest border-0 border-b-2 border-outline-variant
+    @apply w-full px-3.5 bg-surface-container-lowest border-0 border-b-2 border-outline-variant
            focus:border-primary-container focus:ring-0 focus:outline-none
            text-on-surface font-headline font-medium tracking-wide
            placeholder:text-outline transition-colors;
