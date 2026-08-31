@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { listarAlertasMetas, listarMetas, criarMeta, atualizarMeta, excluirMeta } from '@/api/metas'
 import { listarCofres, criarCofre, atualizarCofre, aportarCofre, excluirCofre } from '@/api/cofres'
 import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CofreResposta, CofreCriar, CofreAtualizar } from '@/types'
-
-const router = useRouter()
 
 // ── Estado ───────────────────────────────────────────────────
 const alertas      = ref<MetaAlertaResposta[]>([])
@@ -363,36 +360,25 @@ onMounted(carregar)
 <template>
   <AppLayout>
     <div class="bg-background text-on-surface font-body min-h-screen">
-      <!-- Back button topbar override for mobile: show back button -->
-      <div class="px-5 py-4 lg:hidden">
-        <button
-          class="flex items-center gap-1 text-on-surface-variant hover:text-on-surface transition-colors text-sm font-bold"
-          @click="router.push({ name: 'dashboard' })"
-        >
-          <span class="material-symbols-outlined text-base">arrow_back</span>
-          VOLTAR
-        </button>
-      </div>
-
-      <main class="px-5 py-2 lg:py-6 space-y-6 max-w-4xl mx-auto pb-28 lg:pb-8">
+      <main class="px-5 py-5 lg:px-8 lg:py-6 space-y-5 max-w-4xl mx-auto pb-28 lg:pb-8">
 
       <!-- ══ Cabeçalho ══════════════════════════════════════════ -->
-      <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">PLANEJAMENTO</p>
           <h2 class="font-headline font-extrabold text-4xl tracking-tighter uppercase leading-none">METAS & COFRES</h2>
           <p class="font-label text-[9px] font-bold tracking-widest text-on-surface-variant uppercase mt-1">Controle de ritmo e reservas da moto</p>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex">
           <button
-            class="h-11 px-5 bg-surface-container-high border border-outline font-label text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 hover:bg-surface-bright transition-all text-on-surface"
+            class="h-11 px-3 sm:px-5 bg-surface-container-high border border-outline font-label text-[10px] font-bold tracking-widest uppercase flex items-center justify-center gap-1.5 hover:bg-surface-bright transition-all text-on-surface w-full sm:w-auto"
             @click="abrirCriarCofre"
           >
             <span class="material-symbols-outlined text-sm">savings</span>
             NOVO COFRE
           </button>
           <button
-            class="h-11 px-5 bg-primary-container text-on-primary-fixed font-label text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 hover:brightness-110 transition-all"
+            class="h-11 px-3 sm:px-5 bg-primary-container text-on-primary-fixed font-label text-[10px] font-bold tracking-widest uppercase flex items-center justify-center gap-1.5 hover:brightness-110 transition-all w-full sm:w-auto"
             @click="abrirCriarMeta"
           >
             <span class="material-symbols-outlined text-sm">add</span>
@@ -1201,15 +1187,14 @@ onMounted(carregar)
 
 /* ─── Meta cards grid ────────────────────────────────────────── */
 .metas-cards-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 0.75rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .metas-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   }
 }
 
@@ -1221,6 +1206,8 @@ onMounted(carregar)
   flex-direction: column;
   gap: 0.75rem;
   transition: transform 0.15s;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .meta-card:hover {
@@ -1239,6 +1226,7 @@ onMounted(carregar)
   flex-direction: column;
   gap: 0.125rem;
   min-width: 0;
+  flex: 1;
 }
 
 .meta-card__periodo {
@@ -1256,6 +1244,7 @@ onMounted(carregar)
   letter-spacing: 0.02em;
   color: rgb(var(--color-on-surface));
   text-transform: uppercase;
+  word-break: break-word;
 }
 
 .meta-card__actions {
@@ -1292,6 +1281,7 @@ onMounted(carregar)
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  gap: 0.5rem;
 }
 
 .meta-card__label {
@@ -1413,13 +1403,20 @@ onMounted(carregar)
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  flex-wrap: wrap;
 }
 
 /* ─── Cofres grid & card ─────────────────────────────────────── */
 .cofres-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .cofres-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
 }
 
 .cofre-card {
@@ -1429,6 +1426,7 @@ onMounted(carregar)
   flex-direction: column;
   gap: 0.625rem;
   transition: transform 0.15s;
+  overflow: hidden;
 }
 
 .cofre-card:hover {
@@ -1524,7 +1522,8 @@ onMounted(carregar)
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  padding: 0.5rem;
+  padding: 0.625rem 0.5rem;
+  min-height: 40px;
   background: rgb(var(--color-surface-container-high));
   color: rgb(var(--color-on-surface));
   border: 1px solid rgb(var(--color-outline-variant));
@@ -1611,6 +1610,7 @@ onMounted(carregar)
   flex-direction: column;
   gap: 0.125rem;
   min-width: 0;
+  flex: 1;
 }
 
 .meta-lista-item__tipo {
@@ -1626,6 +1626,7 @@ onMounted(carregar)
   font-size: 13px;
   color: rgb(var(--color-on-surface));
   text-transform: uppercase;
+  word-break: break-word;
 }
 
 .meta-lista-item__valor {
@@ -1648,7 +1649,7 @@ onMounted(carregar)
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 0.75rem;
 }
 
 .modal-box {
@@ -1658,7 +1659,7 @@ onMounted(carregar)
   overflow-y: auto;
   background: rgb(var(--color-surface-container-high));
   border: 1px solid rgb(var(--color-outline-variant));
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .modal-box--sm {
@@ -1768,17 +1769,19 @@ onMounted(carregar)
 .dias-trabalho-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.375rem;
+  gap: 0.25rem;
 }
 
 .dia-btn {
   height: 2.25rem;
+  min-width: 0;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-headline, 'Space Grotesk', sans-serif);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   background: rgb(var(--color-surface));
   color: rgb(var(--color-on-surface-variant));
   border: 1px solid rgb(var(--color-outline-variant));
@@ -1800,8 +1803,14 @@ onMounted(carregar)
 /* ─── Cofre select ───────────────────────────────────────────── */
 .cofre-select-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.375rem;
+}
+
+@media (min-width: 400px) {
+  .cofre-select-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .cofre-select-btn {
@@ -1879,7 +1888,7 @@ onMounted(carregar)
   line-height: 1.35;
   white-space: normal;
   width: max-content;
-  max-width: 220px;
+  max-width: min(220px, 80vw);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   z-index: 99;
   opacity: 0;

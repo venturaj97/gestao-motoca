@@ -342,6 +342,7 @@ function logout() {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 /* ─── Topbar Mobile ──────────────────────────────────────── */
