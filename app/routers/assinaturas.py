@@ -31,6 +31,12 @@ def rota_criar_checkout(
     usuario: Usuario = Depends(get_usuario_logado),
 ):
     """Cria uma sessão de checkout do Stripe e retorna a URL."""
+    if dados.price_id and dados.price_id.startswith("prod_"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"O ID '{dados.price_id}' configurado é um ID de Produto (prod_). Por favor, use o ID do Preço (price_...) gerado dentro desse produto no Stripe."
+        )
+
     prices_validos = [
         settings.stripe_price_mensal,
         settings.stripe_price_anual,
