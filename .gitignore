@@ -220,3 +220,5 @@ stitch/
 prompt_ia/
 
 .codex
+.agents/
+.impeccable/
