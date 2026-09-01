@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="", validation_alias="STRIPE_WEBHOOK_SECRET")
     stripe_price_mensal: str = Field(default="", validation_alias="STRIPE_PRICE_MENSAL")
     stripe_price_anual: str = Field(default="", validation_alias="STRIPE_PRICE_ANUAL")
+    stripe_payment_method_configuration: str = Field(default="", validation_alias="STRIPE_PAYMENT_METHOD_CONFIGURATION")
     frontend_url: str = Field(default="http://localhost:5173", validation_alias="FRONTEND_URL")
 
     @property

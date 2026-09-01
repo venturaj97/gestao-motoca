@@ -31,17 +31,29 @@ def criar_checkout_session(db: Session, usuario: Usuario, price_id: str) -> dict
     """Cria uma Stripe Embedded Checkout Session e retorna client_secret."""
     customer_id = _obter_ou_criar_customer(db, usuario)
 
-    session = stripe.checkout.Session.create(
-        customer=customer_id,
-        ui_mode="embedded",
-        mode="subscription",
-        line_items=[{"price": price_id, "quantity": 1}],
-        return_url=f"{settings.frontend_url}/configuracoes?assinatura=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
-        subscription_data={
+    params = {
+        "customer": customer_id,
+        "ui_mode": "embedded",
+        "mode": "subscription",
+        "line_items": [{"price": price_id, "quantity": 1}],
+        "return_url": f"{settings.frontend_url}/configuracoes?assinatura=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
+        "subscription_data": {
             "metadata": {"usuario_id": str(usuario.id)},
         },
-        allow_promotion_codes=True,
-    )
+        "allow_promotion_codes": True,
+    }
+
+    if settings.stripe_payment_method_configuration and settings.stripe_payment_method_configuration.strip().startswith("pmc_"):
+        params["payment_method_configuration"] = settings.stripe_payment_method_configuration.strip()
+
+    try:
+        session = stripe.checkout.Session.create(**params)
+    except stripe.error.InvalidRequestError as err:
+        if "payment_method_configuration" in str(err) and "payment_method_configuration" in params:
+            params.pop("payment_method_configuration", None)
+            session = stripe.checkout.Session.create(**params)
+        else:
+            raise err
 
     return {
         "client_secret": session.client_secret,
