@@ -405,6 +405,9 @@ async function cancelarMinhaAssinatura() {
 }
 
 onMounted(async () => {
+  if (route.query.aba === 'PLANO') {
+    abaAtiva.value = 'PLANO'
+  }
   if (route.query.assinatura === 'sucesso') {
     abaAtiva.value = 'PLANO'
     avisoAssinatura.value = '🎉 Pagamento confirmado! Sua conta agora é Gestão Motoca PRO.'
