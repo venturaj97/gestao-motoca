@@ -65,6 +65,24 @@ function logout() {
           <p class="sidebar-title">GESTÃO</p>
           <p class="sidebar-title sidebar-title--accent">MOTOCA</p>
         </div>
+        <div class="ml-auto">
+          <button
+            v-if="auth.ehPro"
+            class="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-black tracking-widest text-amber-300 border border-amber-400/40 uppercase"
+            title="Plano PRO Ativo"
+            @click="router.push('/configuracoes')"
+          >
+            PRO ⭐
+          </button>
+          <button
+            v-else
+            class="rounded-full bg-amber-500 hover:bg-amber-400 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-950 uppercase transition-all shadow-sm"
+            title="Assinar Gestão Motoca PRO"
+            @click="router.push('/configuracoes')"
+          >
+            PRO ⭐
+          </button>
+        </div>
       </div>
 
       <!-- Info Moto -->
@@ -155,7 +173,21 @@ function logout() {
           </h1>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
+          <button
+            v-if="auth.ehPro"
+            class="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-black text-amber-300 border border-amber-400/40 uppercase"
+            @click="router.push('/configuracoes')"
+          >
+            PRO ⭐
+          </button>
+          <button
+            v-else
+            class="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black text-slate-950 uppercase shadow-sm"
+            @click="router.push('/configuracoes')"
+          >
+            PRO ⭐
+          </button>
           <button
             class="topbar-icon-btn"
             :class="{ 'topbar-icon-btn--active': isActive('configuracoes') }"

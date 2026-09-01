@@ -5,6 +5,8 @@ import { listarLancamentos, excluirLancamentosLote } from '@/api/lancamentos'
 import { obterHistoricoKm, excluirHistoricoKm } from '@/api/motos'
 import { obterInteligenciaResumo } from '@/api/inteligencia'
 import { useMotoStore } from '@/stores/moto'
+import { useAuthStore } from '@/stores/auth'
+import PaywallOverlay from '@/components/PaywallOverlay.vue'
 import type {
   LancamentoResposta, TipoLancamento,
   MotoHistoricoKmResumo,
@@ -16,6 +18,7 @@ import AppLayout from '@/components/AppLayout.vue'
 
 const router   = useRouter()
 const motoStore = useMotoStore()
+const authStore = useAuthStore()
 
 // ── 2 Abas Táticas: Transações vs Relatórios ─────────────────────
 type AbaId = 'transacoes' | 'relatorios'
@@ -839,8 +842,16 @@ onMounted(async () => {
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <template v-else-if="abaAtiva === 'relatorios'">
 
+        <!-- Paywall para não-PRO -->
+        <div v-if="!authStore.ehPro" class="py-4">
+          <PaywallOverlay
+            titulo="Relatórios Inteligentes Exclusivos PRO"
+            descricao="Veja o faturamento vs mês anterior, rendimento médio por KM rodado, análise de custos e comparativos em tempo real."
+          />
+        </div>
+
         <!-- Skeleton -->
-        <div v-if="carregandoRelatorios" class="space-y-3 animate-pulse">
+        <div v-else-if="carregandoRelatorios" class="space-y-3 animate-pulse">
           <div class="h-24 bg-surface-container-low" />
           <div class="h-36 bg-surface-container-low" />
           <div class="h-32 bg-surface-container-low" />

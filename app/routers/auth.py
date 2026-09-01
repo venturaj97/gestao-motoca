@@ -62,6 +62,8 @@ def rota_me(usuario: Usuario = Depends(get_usuario_logado)):
         nome=usuario.nome,
         email=usuario.email,
         email_confirmado=usuario.email_confirmado,
+        plano=usuario.plano,
+        plano_expira_em=usuario.plano_expira_em,
     )
 
 

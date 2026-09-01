@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -28,7 +31,10 @@ class UsuarioLogadoResposta(BaseModel):
     nome: str
     email: EmailStr
     email_confirmado: bool = False
+    plano: str = "FREE"
+    plano_expira_em: Optional[datetime] = None
 
 
 class ConfirmarEmailEntrada(BaseModel):
     codigo_pin: str = Field(min_length=6, max_length=6)
+

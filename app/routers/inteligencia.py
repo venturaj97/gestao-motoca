@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.dependencies import get_usuario_logado
+from app.dependencies import requer_plano_pro
 from app.models.usuario import Usuario
 from app.schemas.inteligencia import InteligenciaResumo
 from app.services.inteligencia_service import obter_inteligencia_resumo
@@ -18,7 +18,7 @@ def rota_inteligencia_resumo(
     ano: int = Query(default=None, ge=2000, le=2100),
     mes: int = Query(default=None, ge=1, le=12),
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_logado),
+    usuario: Usuario = Depends(requer_plano_pro),
 ):
     hoje = date.today()
     return obter_inteligencia_resumo(

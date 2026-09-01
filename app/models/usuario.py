@@ -14,3 +14,10 @@ class Usuario(Base):
     situacao = Column(String(20), nullable=False, default="ATIVO", server_default="ATIVO")
     data = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     data_criacao = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # ── Plano / Assinatura ──
+    plano = Column(String(20), nullable=False, default="FREE", server_default="FREE")
+    plano_expira_em = Column(DateTime(timezone=True), nullable=True)
+    stripe_customer_id = Column(String(100), nullable=True)
+    stripe_subscription_id = Column(String(100), nullable=True)
+

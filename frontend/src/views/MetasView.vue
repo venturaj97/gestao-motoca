@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
+import PaywallOverlay from '@/components/PaywallOverlay.vue'
+import { useAuthStore } from '@/stores/auth'
 import { listarAlertasMetas, listarMetas, criarMeta, atualizarMeta, excluirMeta } from '@/api/metas'
 import { listarCofres, criarCofre, atualizarCofre, aportarCofre, excluirCofre } from '@/api/cofres'
 import type { MetaAlertaResposta, MetaResposta, MetaCriar, MetaAtualizar, CofreResposta, CofreCriar, CofreAtualizar } from '@/types'
+
+const authStore = useAuthStore()
 
 // ── Estado ───────────────────────────────────────────────────
 const alertas      = ref<MetaAlertaResposta[]>([])
@@ -387,6 +391,15 @@ onMounted(carregar)
         </div>
       </div>
 
+      <!-- Paywall para usuários não-PRO -->
+      <div v-if="!authStore.ehPro" class="py-4">
+        <PaywallOverlay
+          titulo="Desbloqueie Metas & Cofres"
+          descricao="Defina metas diárias/semanais de faturamento, teto de despesas e crie cofres automáticos para manutenção e licenciamento."
+        />
+      </div>
+
+      <template v-else>
       <!-- Erro -->
       <div v-if="erroCarregar" class="error-banner">
         <span class="material-symbols-outlined text-sm">warning</span>
@@ -682,6 +695,7 @@ onMounted(carregar)
           </section>
 
         </div>
+      </template>
       </template>
       </main>
 

@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     smtp_from: str = Field(default="", validation_alias="SMTP_FROM")
     smtp_tls: bool = Field(default=True, validation_alias="SMTP_TLS")
 
+    # ── Stripe ──
+    stripe_secret_key: str = Field(default="", validation_alias="STRIPE_SECRET_KEY")
+    stripe_publishable_key: str = Field(default="", validation_alias="STRIPE_PUBLISHABLE_KEY")
+    stripe_webhook_secret: str = Field(default="", validation_alias="STRIPE_WEBHOOK_SECRET")
+    stripe_price_mensal: str = Field(default="", validation_alias="STRIPE_PRICE_MENSAL")
+    stripe_price_anual: str = Field(default="", validation_alias="STRIPE_PRICE_ANUAL")
+    frontend_url: str = Field(default="http://localhost:5173", validation_alias="FRONTEND_URL")
+
     @property
     def database_url(self) -> str:
         from urllib.parse import quote_plus

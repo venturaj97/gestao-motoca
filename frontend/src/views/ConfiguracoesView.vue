@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
+import { useAuthStore } from '@/stores/auth'
+import PaywallOverlay from '@/components/PaywallOverlay.vue'
+import { cancelarAssinaturaStripe } from '@/api/assinaturas'
 import { atualizarMoto } from '@/api/motos'
 import { listarCategorias, criarCategoria, atualizarCategoria, excluirCategoria } from '@/api/categorias'
 import { listarLancamentos, atualizarLancamento, excluirLancamento } from '@/api/lancamentos'
@@ -20,10 +23,15 @@ import AppLayout from '@/components/AppLayout.vue'
 import { alterarSenhaLogado } from '@/api/recuperacao'
 
 const router = useRouter()
+const route = useRoute()
 const motoStore = useMotoStore()
+const authStore = useAuthStore()
 
-type AbaConfig = 'MOTO' | 'CATEGORIAS' | 'LANCAMENTOS' | 'SEGURANCA'
+type AbaConfig = 'MOTO' | 'CATEGORIAS' | 'LANCAMENTOS' | 'SEGURANCA' | 'PLANO'
 const abaAtiva = ref<AbaConfig>('MOTO')
+
+const avisoAssinatura = ref('')
+const carregandoCancelamento = ref(false)
 
 // Estados para alteração de senha estando logado
 const senhaAtual = ref('')
@@ -382,7 +390,29 @@ function tipoClasseBadge(tipo: TipoLancamento): string {
     : 'bg-secondary/10 text-secondary border-secondary/40'
 }
 
+async function cancelarMinhaAssinatura() {
+  if (!confirm('Deseja realmente cancelar a sua assinatura PRO? Seu acesso continuará ativo até o final do período pago.')) return
+  try {
+    carregandoCancelamento.value = true
+    const res = await cancelarAssinaturaStripe()
+    avisoAssinatura.value = res.mensagem
+    await authStore.carregarStatusAssinatura()
+  } catch (e: any) {
+    avisoAssinatura.value = e?.response?.data?.detail || 'Erro ao cancelar assinatura.'
+  } finally {
+    carregandoCancelamento.value = false
+  }
+}
+
 onMounted(async () => {
+  if (route.query.assinatura === 'sucesso') {
+    abaAtiva.value = 'PLANO'
+    avisoAssinatura.value = '🎉 Pagamento confirmado! Sua conta agora é Gestão Motoca PRO.'
+    await authStore.carregarUsuario()
+  } else if (route.query.assinatura === 'cancelado') {
+    abaAtiva.value = 'PLANO'
+    avisoAssinatura.value = 'O pagamento não foi concluído. Se precisar de ajuda, entre em contato.'
+  }
   await Promise.all([carregarCategorias(), carregarLancamentos(1)])
 })
 </script>
@@ -396,27 +426,35 @@ onMounted(async () => {
         <h2 class="font-headline font-extrabold text-3xl uppercase tracking-tight">CONFIGURAÇÕES</h2>
       </div>
 
-      <div class="grid grid-cols-4 gap-1.5">
+      <div class="grid grid-cols-5 gap-1 font-mono">
         <button
-          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border"
+          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border truncate px-1"
           :class="abaAtiva === 'MOTO' ? 'bg-primary-container text-on-primary-fixed border-primary-container' : 'bg-surface-container text-on-surface-variant border-outline-variant'"
           @click="abaAtiva = 'MOTO'"
         >MOTO</button>
         <button
-          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border"
+          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border truncate px-1"
           :class="abaAtiva === 'CATEGORIAS' ? 'bg-primary-container text-on-primary-fixed border-primary-container' : 'bg-surface-container text-on-surface-variant border-outline-variant'"
           @click="abaAtiva = 'CATEGORIAS'"
         >CATEGORIAS</button>
         <button
-          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border"
+          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border truncate px-1"
           :class="abaAtiva === 'LANCAMENTOS' ? 'bg-primary-container text-on-primary-fixed border-primary-container' : 'bg-surface-container text-on-surface-variant border-outline-variant'"
           @click="abaAtiva = 'LANCAMENTOS'"
         >LANÇAMENTOS</button>
         <button
-          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border"
+          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border truncate px-1"
           :class="abaAtiva === 'SEGURANCA' ? 'bg-primary-container text-on-primary-fixed border-primary-container' : 'bg-surface-container text-on-surface-variant border-outline-variant'"
           @click="abaAtiva = 'SEGURANCA'"
         >SENHA</button>
+        <button
+          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border truncate px-1 flex items-center justify-center gap-0.5"
+          :class="abaAtiva === 'PLANO' ? 'bg-amber-500 text-slate-950 border-amber-400 font-black' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'"
+          @click="abaAtiva = 'PLANO'"
+        >
+          <span>⭐</span>
+          <span>PLANO</span>
+        </button>
       </div>
 
       <section v-if="abaAtiva === 'MOTO'" class="space-y-3">
@@ -797,6 +835,76 @@ onMounted(async () => {
               ATUALIZAR SENHA
             </button>
           </form>
+        </div>
+      </section>
+
+      <!-- ── ABA PLANO & ASSINATURA ── -->
+      <section v-if="abaAtiva === 'PLANO'" class="space-y-4">
+        <!-- Aviso / Notificação de Retorno de Checkout -->
+        <div v-if="avisoAssinatura" class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-semibold text-amber-300">
+          {{ avisoAssinatura }}
+        </div>
+
+        <!-- Se o Usuário for PRO -->
+        <div v-if="authStore.ehPro" class="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/90 to-slate-950 p-6 space-y-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 text-2xl text-amber-300 border border-amber-400/40">
+                ⭐
+              </div>
+              <div>
+                <span class="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase text-amber-300 border border-amber-400/40">
+                  {{ authStore.statusAssinatura?.em_trial ? 'Período de Teste Grátis (7 Dias)' : 'Plano PRO Ativo' }}
+                </span>
+                <h3 class="text-xl font-black text-white mt-1">Gestão Motoca PRO</h3>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 space-y-1">
+              <span class="text-slate-400">Status do Acesso</span>
+              <p class="text-sm font-bold text-emerald-400 flex items-center gap-1">
+                <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Ativo & Ilimitado
+              </p>
+            </div>
+
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 space-y-1">
+              <span class="text-slate-400">
+                {{ authStore.statusAssinatura?.em_trial ? 'Dias de Teste Restantes' : 'Validade / Renovação' }}
+              </span>
+              <p class="text-sm font-bold text-slate-200">
+                <template v-if="authStore.statusAssinatura?.em_trial">
+                  {{ authStore.statusAssinatura.dias_trial_restantes }} dias grátis
+                </template>
+                <template v-else-if="authStore.usuario?.plano_expira_em">
+                  {{ new Date(authStore.usuario.plano_expira_em).toLocaleDateString('pt-BR') }}
+                </template>
+                <template v-else>
+                  Ativo
+                </template>
+              </p>
+            </div>
+          </div>
+
+          <!-- Ação: Cancelar Assinatura (somente se tiver assinatura Stripe) -->
+          <div v-if="authStore.statusAssinatura?.stripe_subscription_id" class="pt-2">
+            <button
+              type="button"
+              @click="cancelarMinhaAssinatura"
+              :disabled="carregandoCancelamento"
+              class="text-xs text-red-400 hover:text-red-300 underline font-semibold transition-colors disabled:opacity-50"
+            >
+              <span v-if="carregandoCancelamento">Cancelando...</span>
+              <span v-else>Cancelar renovação da assinatura</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Se o Usuário for FREE -->
+        <div v-else>
+          <PaywallOverlay />
         </div>
       </section>
     </main>
