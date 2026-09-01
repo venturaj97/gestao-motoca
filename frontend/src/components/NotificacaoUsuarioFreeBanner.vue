@@ -20,71 +20,51 @@ function irParaPlanos() {
 </script>
 
 <template>
-  <div v-if="authStore.usuario && !authStore.ehPro && !fechado" class="mb-6">
+  <div v-if="authStore.usuario && !authStore.ehPro && !fechado" class="mt-6 mb-2">
     <div
-      class="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-slate-950 p-5 sm:p-6 shadow-xl backdrop-blur-md"
+      class="relative overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-slate-950 p-3.5 sm:p-4 shadow-lg backdrop-blur-md"
     >
-      <!-- Efeito de iluminação suave em segundo plano -->
-      <div class="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-500/10 blur-2xl"></div>
-      <div class="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-yellow-500/10 blur-2xl"></div>
+      <!-- Efeito de iluminação suave -->
+      <div class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-500/10 blur-xl"></div>
 
       <!-- Botão de Fechar -->
       <button
         type="button"
-        class="absolute top-3.5 right-3.5 text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800/60 z-10"
+        class="absolute top-2.5 right-2.5 text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-slate-800/60 z-10"
         title="Ocultar notificação"
         @click="fecharNotificacao"
       >
-        <span class="material-symbols-outlined text-lg">close</span>
+        <span class="material-symbols-outlined text-base">close</span>
       </button>
 
-      <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
-        <!-- Conteúdo textual e ícone principal -->
-        <div class="space-y-3 max-w-3xl">
-          <div class="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-300 shadow-sm">
-            <span class="material-symbols-outlined text-xs">workspace_premium</span>
-            <span>Vantagens Exclusivas para Você</span>
+      <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pr-6 sm:pr-0">
+        <!-- Texto conciso -->
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+            <span class="material-symbols-outlined text-lg">workspace_premium</span>
           </div>
-
-          <h3 class="font-headline text-lg sm:text-xl font-black tracking-tight text-white uppercase">
-            Aproveite ao Máximo o Gestão Motoca! 🚀
-          </h3>
-
-          <p class="font-body text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Como usuário no plano FREE, você tem acesso às ferramentas essenciais do seu dia a dia. Desbloqueie a <strong class="text-amber-300">Exibição de Relatórios Inteligentes</strong> para ver o custo exato por KM da sua moto e o <strong class="text-amber-300">Módulo de Metas & Cofres de Economia</strong> para guardar seu dinheiro e realizar todos os seus sonhos!
-          </p>
-
-          <!-- Destaques dos Recursos em Mini Cards -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-            <div class="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-xs text-slate-200">
-              <span class="material-symbols-outlined text-amber-400 text-xl flex-shrink-0">analytics</span>
-              <div>
-                <span class="font-bold block text-amber-300">Exibição de Relatórios</span>
-                <span class="text-[11px] text-slate-400">Lucro real, raio-X de despesas e rendimento por KM</span>
-              </div>
+          <div>
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300 border border-amber-500/30">
+                PRO ⭐
+              </span>
+              <span class="text-xs font-bold text-white uppercase tracking-tight">Evolua no Gestão Motoca</span>
             </div>
-
-            <div class="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-xs text-slate-200">
-              <span class="material-symbols-outlined text-amber-400 text-xl flex-shrink-0">savings</span>
-              <div>
-                <span class="font-bold block text-amber-300">Módulo de Metas & Cofre</span>
-                <span class="text-[11px] text-slate-400">Guarde seu dinheiro para a moto e realize seus sonhos</span>
-              </div>
-            </div>
+            <p class="text-[11px] sm:text-xs text-slate-300 leading-snug max-w-xl">
+              Desbloqueie Relatórios por KM, Metas Semanais e Cofres de Economia para acelerar seus ganhos.
+            </p>
           </div>
         </div>
 
-        <!-- Botão Call To Action -->
-        <div class="w-full lg:w-auto flex flex-col sm:flex-row lg:flex-col items-stretch lg:items-end justify-end gap-2.5 flex-shrink-0 pt-2 lg:pt-0">
-          <button
-            type="button"
-            class="h-12 px-6 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 font-headline font-black text-xs tracking-wider uppercase shadow-lg shadow-amber-500/20 hover:from-amber-300 hover:to-yellow-400 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-            @click="irParaPlanos"
-          >
-            <span>Seja PRO e Tenha Vantagens ⭐</span>
-            <span class="material-symbols-outlined text-base">arrow_forward</span>
-          </button>
-        </div>
+        <!-- Botão CTA -->
+        <button
+          type="button"
+          class="h-9 px-4 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-headline font-black text-[11px] uppercase shadow hover:from-amber-300 hover:to-yellow-400 transition-all flex items-center justify-center gap-1.5 shrink-0 w-full sm:w-auto"
+          @click="irParaPlanos"
+        >
+          <span>Seja PRO</span>
+          <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </button>
       </div>
     </div>
   </div>

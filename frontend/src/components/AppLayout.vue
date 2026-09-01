@@ -56,31 +56,36 @@ function logout() {
     <aside class="sidebar">
       <!-- Logo / Marca -->
       <div class="sidebar-brand">
-        <div class="sidebar-avatar">
-          <span class="font-headline font-black text-sm">
-            {{ primeiroNome.charAt(0) }}
-          </span>
+        <div class="flex items-center gap-3">
+          <div class="sidebar-avatar">
+            <span class="font-headline font-black text-sm">
+              {{ primeiroNome.charAt(0) }}
+            </span>
+          </div>
+          <div>
+            <p class="sidebar-title">GESTÃO</p>
+            <p class="sidebar-title sidebar-title--accent">MOTOCA</p>
+          </div>
         </div>
-        <div>
-          <p class="sidebar-title">GESTÃO</p>
-          <p class="sidebar-title sidebar-title--accent">MOTOCA</p>
-        </div>
-        <div class="ml-auto">
+
+        <div class="w-full pt-1">
           <button
             v-if="auth.ehPro"
-            class="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-black tracking-widest text-amber-300 border border-amber-400/40 uppercase whitespace-nowrap"
+            class="w-full rounded-lg bg-amber-500/20 px-2.5 py-1 text-[10px] font-black tracking-widest text-amber-300 border border-amber-400/40 uppercase whitespace-nowrap text-center flex items-center justify-center gap-1 cursor-pointer"
             title="Plano PRO Ativo"
             @click="router.push('/configuracoes')"
           >
-            PRO ⭐
+            <span>PLANO PRO</span>
+            <span>⭐</span>
           </button>
           <button
             v-else
-            class="rounded-full bg-amber-500 hover:bg-amber-400 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-950 uppercase transition-all shadow-sm whitespace-nowrap"
+            class="w-full rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 px-2.5 py-1 text-[10px] font-black tracking-widest text-slate-950 uppercase transition-all shadow-sm whitespace-nowrap text-center flex items-center justify-center gap-1 cursor-pointer active:scale-95"
             title="Assinar Gestão Motoca PRO"
             @click="router.push('/configuracoes')"
           >
-            SEJA PRO ⭐
+            <span>SEJA PRO</span>
+            <span>⭐</span>
           </button>
         </div>
       </div>
@@ -277,7 +282,8 @@ function logout() {
 
 .sidebar-brand {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.75rem;
   padding: 0 1.25rem;
   margin-bottom: 1.25rem;

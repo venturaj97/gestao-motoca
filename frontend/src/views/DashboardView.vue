@@ -197,9 +197,6 @@ onMounted(() => {
       <!-- Banner de Confirmação de E-mail -->
       <ConfirmarEmailBanner />
 
-      <!-- Notificação de Vantagens para Usuário Free -->
-      <NotificacaoUsuarioFreeBanner />
-
       <!-- ══ Cabeçalho da página ═════════════════════════════ -->
       <section class="page-header">
         <div>
@@ -396,6 +393,9 @@ onMounted(() => {
         </div>
 
       </div>
+
+      <!-- Notificação de Vantagens para Usuário Free (No final da página de início) -->
+      <NotificacaoUsuarioFreeBanner />
     </div>
   </AppLayout>
 </template>
