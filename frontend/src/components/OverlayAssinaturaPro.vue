@@ -81,7 +81,9 @@ async function assinar() {
       destruirCheckout()
 
       const initEmbedded = (stripe as any).createEmbeddedCheckoutPage || (stripe as any).initEmbeddedCheckout
-      const checkout = await initEmbedded.call(stripe, { clientSecret: client_secret })
+      const checkout = await initEmbedded.call(stripe, {
+        clientSecret: client_secret,
+      })
       embeddedCheckoutInstance = checkout
       if (embeddedCheckoutInstance) {
         embeddedCheckoutInstance.mount('#stripe-checkout-mount')
@@ -126,8 +128,8 @@ async function assinar() {
         </span>
       </div>
 
-      <!-- Container do Stripe Checkout Incorporado -->
-      <div class="min-h-[450px] w-full rounded-2xl bg-white p-2 md:p-4 shadow-inner overflow-hidden">
+      <!-- Container do Stripe Checkout Incorporado com Tema Escuro -->
+      <div class="min-h-[450px] w-full rounded-2xl bg-slate-900/90 border border-slate-800/80 p-3 md:p-5 shadow-2xl overflow-hidden backdrop-blur-md">
         <div id="stripe-checkout-mount"></div>
       </div>
     </div>
