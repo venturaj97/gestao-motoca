@@ -114,7 +114,12 @@ def enviar_codigo_confirmacao_email(db: Session, usuario: Usuario) -> None:
     db.commit()
 
     # Reutiliza o serviço de e-mail enviando o PIN
-    enviar_email_codigo_recuperacao(usuario.email, codigo_pin)
+    enviar_email_codigo_recuperacao(
+        usuario.email,
+        codigo_pin,
+        assunto="✉️ Gestão Motoca — Código para Confirmação de E-mail",
+        titulo="Confirmação de E-mail",
+    )
 
 
 def confirmar_email_usuario(db: Session, usuario: Usuario, codigo_pin: str) -> None:

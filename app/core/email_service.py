@@ -8,14 +8,15 @@ from app.core.config import settings
 logger = logging.getLogger("uvicorn.error")
 
 
-def enviar_email_codigo_recuperacao(email_destino: str, codigo_pin: str) -> bool:
+def enviar_email_codigo_recuperacao(
+    email_destino: str,
+    codigo_pin: str,
+    assunto: str = "🔑 Gestão Motoca — Código para Redefinição de Senha",
+    titulo: str = "Redefinição de Senha",
+) -> bool:
     """
-    Envia um e-mail HTML contendo o código PIN de 6 dígitos para recuperação de senha.
-    MODO DEV ATIVO: Apenas exibe o código no log do console sem realizar envio SMTP real.
+    Envia um e-mail HTML contendo o código PIN de 6 dígitos para recuperação de senha ou confirmação de e-mail.
     """
-    # DESABILITADO TEMPORARIAMENTE PARA DESENVOLVIMENTO
-    logger.info(f"[EMAIL DEV MOCK] Código PIN para '{email_destino}': {codigo_pin}")
-    return True
 
     if not settings.smtp_user or not settings.smtp_password:
         logger.warning(
@@ -23,7 +24,6 @@ def enviar_email_codigo_recuperacao(email_destino: str, codigo_pin: str) -> bool
         )
         return False
 
-    assunto = "🔑 Gestão Motoca — Código para Redefinição de Senha"
     remetente = settings.smtp_from or settings.smtp_user
 
     html_content = f"""
@@ -48,14 +48,14 @@ def enviar_email_codigo_recuperacao(email_destino: str, codigo_pin: str) -> bool
         </div>
         <p style="color: #334155; font-size: 16px; margin-bottom: 8px;">Olá,</p>
         <p style="color: #475569; font-size: 15px; line-height: 1.5;">
-          Recebemos uma solicitação para redefinir a senha da sua conta no <strong>Gestão Motoca</strong>. Use o código de verificação abaixo:
+          Recebemos uma solicitação de <strong>{titulo.lower()}</strong> para a sua conta no <strong>Gestão Motoca</strong>. Use o código de verificação abaixo:
         </p>
         
         <div class="pin-box">{codigo_pin}</div>
 
         <p class="info">
           Este código é válido por <strong>15 minutos</strong>.<br>
-          Se você não solicitou a alteração, pode ignorar este e-mail com segurança.
+          Se você não solicitou este procedimento, pode ignorar este e-mail com segurança.
         </p>
         
         <div class="footer">
@@ -72,7 +72,7 @@ def enviar_email_codigo_recuperacao(email_destino: str, codigo_pin: str) -> bool
     msg["To"] = email_destino
 
     part_text = MIMEText(
-        f"Seu código de redefinição de senha no Gestão Motoca é: {codigo_pin}. Válido por 15 minutos.",
+        f"Seu código no Gestão Motoca ({titulo}) é: {codigo_pin}. Válido por 15 minutos.",
         "plain",
         "utf-8",
     )
