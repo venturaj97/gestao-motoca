@@ -34,8 +34,11 @@ def rota_criar_checkout(
     if dados.price_id not in prices_validos:
         raise HTTPException(status_code=400, detail="Plano invalido")
 
-    url = criar_checkout_session(db, usuario, dados.price_id)
-    return CheckoutResposta(checkout_url=url)
+    res = criar_checkout_session(db, usuario, dados.price_id)
+    return CheckoutResposta(
+        client_secret=res["client_secret"],
+        checkout_url=res.get("checkout_url")
+    )
 
 
 @router.get("/status", response_model=AssinaturaStatusResposta)

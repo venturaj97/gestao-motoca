@@ -9,7 +9,8 @@ class CriarCheckoutEntrada(BaseModel):
 
 
 class CheckoutResposta(BaseModel):
-    checkout_url: str
+    client_secret: str
+    checkout_url: Optional[str] = None
 
 
 class AssinaturaStatusResposta(BaseModel):

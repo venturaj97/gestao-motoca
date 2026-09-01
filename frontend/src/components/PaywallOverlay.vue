@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { loadStripe, type StripeEmbeddedCheckout } from '@stripe/stripe-js'
 import { criarCheckoutStripe, obterPrecosAssinatura } from '@/api/assinaturas'
 import type { PrecosAssinaturaResposta } from '@/types'
 
@@ -15,6 +16,9 @@ const carregando = ref(false)
 const erro = ref('')
 const periodoSelecionado = ref<'mensal' | 'anual'>('mensal')
 const precos = ref<PrecosAssinaturaResposta | null>(null)
+const modoEmbedded = ref(false)
+
+let embeddedCheckoutInstance: StripeEmbeddedCheckout | null = null
 
 onMounted(async () => {
   try {
@@ -23,6 +27,27 @@ onMounted(async () => {
     console.error('Erro ao carregar preços:', e)
   }
 })
+
+onUnmounted(() => {
+  destruirCheckout()
+})
+
+function destruirCheckout() {
+  if (embeddedCheckoutInstance) {
+    try {
+      embeddedCheckoutInstance.destroy()
+    } catch (e) {
+      console.error('Erro ao destruir checkout:', e)
+    }
+    embeddedCheckoutInstance = null
+  }
+}
+
+function voltarParaPlanos() {
+  destruirCheckout()
+  modoEmbedded.value = false
+  erro.value = ''
+}
 
 async function assinar() {
   try {
@@ -33,16 +58,42 @@ async function assinar() {
       ? precos.value?.anual.price_id 
       : precos.value?.mensal.price_id
 
-    if (!priceId) {
+    const publishableKey = precos.value?.stripe_publishable_key
+
+    if (!priceId || !publishableKey) {
       erro.value = 'Configuração de pagamento indisponível no momento.'
       return
     }
 
-    const url = await criarCheckoutStripe(priceId)
-    // Redireciona para o Checkout hospedado do Stripe (com Google/Apple Pay e Pix embarcados)
-    window.location.href = url
+    const { client_secret, checkout_url } = await criarCheckoutStripe(priceId)
+
+    if (client_secret) {
+      modoEmbedded.value = true
+      await nextTick()
+
+      const stripe = await loadStripe(publishableKey)
+      if (!stripe) {
+        erro.value = 'Não foi possível carregar a integração com o Stripe.'
+        modoEmbedded.value = false
+        return
+      }
+
+      destruirCheckout()
+
+      const checkout = await (stripe as any).initEmbeddedCheckout({ clientSecret: client_secret })
+      embeddedCheckoutInstance = checkout
+      if (embeddedCheckoutInstance) {
+        embeddedCheckoutInstance.mount('#stripe-checkout-mount')
+      }
+    } else if (checkout_url) {
+      window.location.href = checkout_url
+    } else {
+      erro.value = 'Erro ao gerar sessão de pagamento.'
+    }
   } catch (err: any) {
-    erro.value = err?.response?.data?.detail || 'Erro ao iniciar checkout. Tente novamente.'
+    console.error('Erro no checkout:', err)
+    erro.value = err?.response?.data?.detail || err?.message || 'Erro ao iniciar checkout. Tente novamente.'
+    modoEmbedded.value = false
   } finally {
     carregando.value = false
   }
@@ -50,12 +101,38 @@ async function assinar() {
 </script>
 
 <template>
-  <div class="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/90 to-slate-950 p-6 shadow-2xl backdrop-blur-xl md:p-8">
+  <div class="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/90 to-slate-950 p-4 md:p-8 shadow-2xl backdrop-blur-xl">
     <!-- Efeito de brilho em segundo plano -->
     <div class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl"></div>
     <div class="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-yellow-500/10 blur-3xl"></div>
 
-    <div class="relative z-10 flex flex-col items-center text-center">
+    <!-- MODO EMBEDDED CHECKOUT (Formulário Incorporado) -->
+    <div v-if="modoEmbedded" class="relative z-10 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <button
+          type="button"
+          @click="voltarParaPlanos"
+          class="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition-all"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Voltar para escolha de plano
+        </button>
+
+        <span class="rounded-full bg-amber-500/20 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300 border border-amber-500/30">
+          {{ periodoSelecionado === 'anual' ? 'Plano Anual' : 'Plano Mensal' }}
+        </span>
+      </div>
+
+      <!-- Container do Stripe Checkout Incorporado -->
+      <div class="min-h-[450px] w-full rounded-2xl bg-white p-2 md:p-4 shadow-inner overflow-hidden">
+        <div id="stripe-checkout-mount"></div>
+      </div>
+    </div>
+
+    <!-- MODO APRESENTAÇÃO / SELEÇÃO DE PLANO -->
+    <div v-else class="relative z-10 flex flex-col items-center text-center">
       <!-- Badge PRO -->
       <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/20 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 shadow-lg shadow-amber-500/10">
         <span>⭐</span>
@@ -152,7 +229,7 @@ async function assinar() {
           <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Google Pay & Apple Pay
+          Pix, Google Pay & Apple Pay
         </span>
         <span>•</span>
         <span class="flex items-center gap-1">

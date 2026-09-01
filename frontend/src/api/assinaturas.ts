@@ -11,11 +11,11 @@ export async function obterPrecosAssinatura(): Promise<PrecosAssinaturaResposta>
   return res.data
 }
 
-export async function criarCheckoutStripe(priceId: string): Promise<string> {
-  const res = await api.post<{ checkout_url: string }>('/assinaturas/checkout', {
+export async function criarCheckoutStripe(priceId: string): Promise<{ client_secret: string; checkout_url?: string }> {
+  const res = await api.post<{ client_secret: string; checkout_url?: string }>('/assinaturas/checkout', {
     price_id: priceId,
   })
-  return res.data.checkout_url
+  return res.data
 }
 
 export async function cancelarAssinaturaStripe(): Promise<{ mensagem: string }> {

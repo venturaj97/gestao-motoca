@@ -27,24 +27,26 @@ def _obter_ou_criar_customer(db: Session, usuario: Usuario) -> str:
     return customer.id
 
 
-def criar_checkout_session(db: Session, usuario: Usuario, price_id: str) -> str:
-    """Cria uma Stripe Checkout Session e retorna a URL."""
+def criar_checkout_session(db: Session, usuario: Usuario, price_id: str) -> dict:
+    """Cria uma Stripe Embedded Checkout Session e retorna client_secret."""
     customer_id = _obter_ou_criar_customer(db, usuario)
 
     session = stripe.checkout.Session.create(
         customer=customer_id,
-        payment_method_types=["card"],
+        ui_mode="embedded",
         mode="subscription",
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{settings.frontend_url}/configuracoes?assinatura=sucesso",
-        cancel_url=f"{settings.frontend_url}/configuracoes?assinatura=cancelado",
+        return_url=f"{settings.frontend_url}/configuracoes?assinatura=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
         subscription_data={
             "metadata": {"usuario_id": str(usuario.id)},
         },
         allow_promotion_codes=True,
     )
 
-    return session.url
+    return {
+        "client_secret": session.client_secret,
+        "checkout_url": session.url
+    }
 
 
 def processar_webhook_event(payload: bytes, sig_header: str) -> dict:
