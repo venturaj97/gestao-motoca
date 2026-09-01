@@ -54,14 +54,30 @@ async function assinar() {
     carregando.value = true
     erro.value = ''
     
+    // Tenta carregar os preços caso a busca no onMounted tenha falhado ou ainda não finalizou
+    if (!precos.value) {
+      try {
+        precos.value = await obterPrecosAssinatura()
+      } catch (e: any) {
+        console.error('Erro ao carregar preços no checkout:', e)
+        erro.value = e?.response?.data?.detail || 'Não foi possível carregar as informações de pagamento do servidor. Tente novamente.'
+        return
+      }
+    }
+
     const priceId = periodoSelecionado.value === 'anual' 
-      ? precos.value?.anual.price_id 
-      : precos.value?.mensal.price_id
+      ? precos.value?.anual?.price_id 
+      : precos.value?.mensal?.price_id
 
     const publishableKey = precos.value?.stripe_publishable_key
 
-    if (!priceId || !publishableKey) {
-      erro.value = 'Configuração de pagamento indisponível no momento.'
+    if (!publishableKey) {
+      erro.value = 'A chave pública do Stripe (STRIPE_PUBLISHABLE_KEY) não está configurada no servidor.'
+      return
+    }
+
+    if (!priceId) {
+      erro.value = `O ID do plano (${periodoSelecionado.value === 'anual' ? 'STRIPE_PRICE_ANUAL' : 'STRIPE_PRICE_MENSAL'}) não está configurado no servidor.`
       return
     }
 
@@ -73,7 +89,7 @@ async function assinar() {
 
       const stripe = await loadStripe(publishableKey)
       if (!stripe) {
-        erro.value = 'Não foi possível carregar a integração com o Stripe.'
+        erro.value = 'Não foi possível carregar a integração com o Stripe. Verifique a chave de integração.'
         modoEmbedded.value = false
         return
       }
