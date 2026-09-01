@@ -44,7 +44,7 @@ def criar_checkout_session(db: Session, usuario: Usuario, price_id: str, origin:
 
     params = {
         "customer": customer_id,
-        "ui_mode": "embedded",
+        "ui_mode": "embedded" if is_recurring else "embedded_page",
         "mode": "subscription" if is_recurring else "payment",
         "line_items": [{"price": price_id, "quantity": 1}],
         "return_url": f"{base_url}/configuracoes?assinatura=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
@@ -58,7 +58,7 @@ def criar_checkout_session(db: Session, usuario: Usuario, price_id: str, origin:
         params["metadata"] = {"usuario_id": str(usuario.id), "price_id": price_id}
 
     pm_config = settings.stripe_payment_method_configuration.strip()
-    if pm_config and (pm_config.startswith("cpmt_") or pm_config.startswith("pmc_")):
+    if pm_config and pm_config.startswith("pmc_"):
         params["payment_method_configuration"] = pm_config
 
     try:

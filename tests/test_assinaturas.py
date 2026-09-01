@@ -75,7 +75,7 @@ async def test_criar_checkout_origem_dinamica_mobile(client):
     headers["Origin"] = "https://minha-aplicacao.trycloudflare.com"
 
     settings.stripe_price_mensal = "price_mensal_test_123"
-    settings.stripe_payment_method_configuration = "cpmt_1UAiLg1dGg7KORlkEfIT9bIz"
+    settings.stripe_payment_method_configuration = "pmc_test_123"
 
     mock_customer = MagicMock()
     mock_customer.id = "cus_test_mobile"
@@ -95,7 +95,7 @@ async def test_criar_checkout_origem_dinamica_mobile(client):
         assert resposta.status_code == 200
         call_kwargs = mock_create_session.call_args.kwargs
         assert "https://minha-aplicacao.trycloudflare.com/configuracoes" in call_kwargs["return_url"]
-        assert call_kwargs["payment_method_configuration"] == "cpmt_1UAiLg1dGg7KORlkEfIT9bIz"
+        assert call_kwargs["payment_method_configuration"] == "pmc_test_123"
 
 
 @pytest.mark.anyio
