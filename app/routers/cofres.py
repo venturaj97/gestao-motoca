@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.dependencies import get_usuario_logado
+from app.dependencies import requer_plano_pro
 from app.models.usuario import Usuario
 from app.schemas.cofre import CofreCriar, CofreAtualizar, CofreAporte, CofreResposta
 from app.services.cofre_service import (
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/cofres", tags=["Cofres"])
 @router.get("", response_model=list[CofreResposta])
 def api_listar_cofres(
     db: Session = Depends(get_db),
-    usuario_atual: Usuario = Depends(get_usuario_logado),
+    usuario_atual: Usuario = Depends(requer_plano_pro),
 ):
     return listar_cofres(db, usuario_atual.id)
 
@@ -28,7 +28,7 @@ def api_listar_cofres(
 def api_criar_cofre(
     dados: CofreCriar,
     db: Session = Depends(get_db),
-    usuario_atual: Usuario = Depends(get_usuario_logado),
+    usuario_atual: Usuario = Depends(requer_plano_pro),
 ):
     try:
         return criar_cofre(db, usuario_atual.id, dados)
@@ -41,7 +41,7 @@ def api_atualizar_cofre(
     cofre_id: int,
     dados: CofreAtualizar,
     db: Session = Depends(get_db),
-    usuario_atual: Usuario = Depends(get_usuario_logado),
+    usuario_atual: Usuario = Depends(requer_plano_pro),
 ):
     try:
         return atualizar_cofre(db, cofre_id, usuario_atual.id, dados)
@@ -54,7 +54,7 @@ def api_aportar_cofre(
     cofre_id: int,
     dados: CofreAporte,
     db: Session = Depends(get_db),
-    usuario_atual: Usuario = Depends(get_usuario_logado),
+    usuario_atual: Usuario = Depends(requer_plano_pro),
 ):
     try:
         return aportar_saldo_cofre(db, cofre_id, usuario_atual.id, dados)
@@ -66,7 +66,7 @@ def api_aportar_cofre(
 def api_excluir_cofre(
     cofre_id: int,
     db: Session = Depends(get_db),
-    usuario_atual: Usuario = Depends(get_usuario_logado),
+    usuario_atual: Usuario = Depends(requer_plano_pro),
 ):
     try:
         excluir_cofre(db, cofre_id, usuario_atual.id)

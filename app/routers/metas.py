@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.dependencies import get_usuario_logado
+from app.dependencies import requer_plano_pro
 from app.models.usuario import Usuario
 from app.routers._errors import raise_mapped_error
 from app.schemas.meta import MetaAlertaResposta, MetaAtualizar, MetaCriar, MetaResposta
@@ -30,7 +30,7 @@ def _tratar_erro_meta(e: ValueError) -> None:
 def rota_criar_meta(
     dados: MetaCriar,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_logado),
+    usuario: Usuario = Depends(requer_plano_pro),
 ):
     try:
         return criar_meta(db, usuario.id, dados)
@@ -42,7 +42,7 @@ def rota_criar_meta(
 def rota_listar_metas(
     apenas_ativas: bool | None = Query(default=None),
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_logado),
+    usuario: Usuario = Depends(requer_plano_pro),
 ):
     return listar_metas(db, usuario.id, apenas_ativas)
 
@@ -52,7 +52,7 @@ def rota_atualizar_meta(
     meta_id: int,
     dados: MetaAtualizar,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_logado),
+    usuario: Usuario = Depends(requer_plano_pro),
 ):
     try:
         return atualizar_meta(db, usuario.id, meta_id, dados)
@@ -64,7 +64,7 @@ def rota_atualizar_meta(
 def rota_excluir_meta(
     meta_id: int,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_logado),
+    usuario: Usuario = Depends(requer_plano_pro),
 ):
     try:
         excluir_meta(db, usuario.id, meta_id)
@@ -75,6 +75,6 @@ def rota_excluir_meta(
 @router.get("/alertas", response_model=list[MetaAlertaResposta])
 def rota_alertas_meta(
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_logado),
+    usuario: Usuario = Depends(requer_plano_pro),
 ):
     return listar_alertas_metas(db, usuario.id)

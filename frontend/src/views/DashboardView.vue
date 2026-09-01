@@ -7,6 +7,7 @@ import { obterVisaoMes } from '@/api/visaoMes'
 import type { VisaoMesResposta } from '@/types'
 import AppDateInput from '@/components/AppDateInput.vue'
 import ConfirmarEmailBanner from '@/components/ConfirmarEmailBanner.vue'
+import NotificacaoUsuarioFreeBanner from '@/components/NotificacaoUsuarioFreeBanner.vue'
 import AtualizarKmModal from '@/components/AtualizarKmModal.vue'
 import AppLayout from '@/components/AppLayout.vue'
 
@@ -392,6 +393,9 @@ onMounted(() => {
         </div>
 
       </div>
+
+      <!-- Notificação de Vantagens para Usuário Free (No final da página de início) -->
+      <NotificacaoUsuarioFreeBanner />
     </div>
   </AppLayout>
 </template>

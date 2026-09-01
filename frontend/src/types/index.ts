@@ -21,6 +21,8 @@ export interface UsuarioLogadoResposta {
   nome: string
   email: string
   email_confirmado: boolean
+  plano: 'FREE' | 'PRO'
+  plano_expira_em: string | null
 }
 
 export interface UsuarioResposta {
@@ -28,6 +30,29 @@ export interface UsuarioResposta {
   nome: string
   email: string
   email_confirmado: boolean
+  plano: 'FREE' | 'PRO'
+  plano_expira_em: string | null
+}
+
+// === ASSINATURA / STRIPE ===
+export interface AssinaturaStatusResposta {
+  plano: 'FREE' | 'PRO'
+  plano_expira_em: string | null
+  stripe_subscription_id: string | null
+  em_trial: boolean
+  dias_trial_restantes: number
+  stripe_publishable_key: string
+}
+
+export interface PrecoPlano {
+  price_id: string
+  valor: string
+}
+
+export interface PrecosAssinaturaResposta {
+  mensal: PrecoPlano
+  anual: PrecoPlano
+  stripe_publishable_key: string
 }
 
 // === MOTO ===
