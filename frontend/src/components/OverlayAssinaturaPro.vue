@@ -14,7 +14,7 @@ const emit = defineEmits(['fechar'])
 
 const carregando = ref(false)
 const erro = ref('')
-const periodoSelecionado = ref<'mensal' | 'anual'>('mensal')
+const periodoSelecionado = ref<'mensal' | 'anual' | 'pix_avulso'>('pix_avulso')
 const precos = ref<PrecosAssinaturaResposta | null>(null)
 const modoEmbedded = ref(false)
 
@@ -65,9 +65,14 @@ async function assinar() {
       }
     }
 
-    const priceId = periodoSelecionado.value === 'anual' 
-      ? precos.value?.anual?.price_id 
-      : precos.value?.mensal?.price_id
+    let priceId = ''
+    if (periodoSelecionado.value === 'anual') {
+      priceId = precos.value?.anual?.price_id || ''
+    } else if (periodoSelecionado.value === 'pix_avulso') {
+      priceId = precos.value?.pix_avulso?.price_id || precos.value?.mensal?.price_id || ''
+    } else {
+      priceId = precos.value?.mensal?.price_id || ''
+    }
 
     const publishableKey = precos.value?.stripe_publishable_key
 
@@ -77,7 +82,7 @@ async function assinar() {
     }
 
     if (!priceId) {
-      erro.value = `O ID do plano (${periodoSelecionado.value === 'anual' ? 'STRIPE_PRICE_ANUAL' : 'STRIPE_PRICE_MENSAL'}) não está configurado no servidor.`
+      erro.value = 'O ID do preço não está configurado no servidor.'
       return
     }
 
@@ -140,7 +145,7 @@ async function assinar() {
         </button>
 
         <span class="rounded-full bg-amber-500/20 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300 border border-amber-500/30">
-          {{ periodoSelecionado === 'anual' ? 'Plano Anual' : 'Plano Mensal' }}
+          {{ periodoSelecionado === 'anual' ? 'Plano Anual' : periodoSelecionado === 'pix_avulso' ? 'Pix Avulso (30 dias)' : 'Plano Mensal' }}
         </span>
       </div>
 
@@ -187,12 +192,24 @@ async function assinar() {
       </div>
 
       <!-- Seletor de Plano -->
-      <div class="mb-6 flex w-full max-w-xs rounded-xl bg-slate-900/80 p-1 border border-slate-800">
+      <div class="mb-6 flex w-full max-w-md flex-col gap-2 sm:flex-row rounded-xl bg-slate-900/80 p-1 border border-slate-800">
+        <button
+          type="button"
+          @click="periodoSelecionado = 'pix_avulso'"
+          :class="[
+            'flex-1 rounded-lg py-2.5 px-2 text-xs font-semibold transition-all duration-200 relative',
+            periodoSelecionado === 'pix_avulso'
+              ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-bold shadow'
+              : 'text-slate-400 hover:text-white'
+          ]"
+        >
+          ⚡ Pix Avulso (R$ 9,99)
+        </button>
         <button
           type="button"
           @click="periodoSelecionado = 'mensal'"
           :class="[
-            'flex-1 rounded-lg py-2 text-xs font-semibold transition-all duration-200',
+            'flex-1 rounded-lg py-2.5 px-2 text-xs font-semibold transition-all duration-200',
             periodoSelecionado === 'mensal'
               ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-bold shadow'
               : 'text-slate-400 hover:text-white'
@@ -204,7 +221,7 @@ async function assinar() {
           type="button"
           @click="periodoSelecionado = 'anual'"
           :class="[
-            'flex-1 rounded-lg py-2 text-xs font-semibold transition-all duration-200 relative',
+            'flex-1 rounded-lg py-2.5 px-2 text-xs font-semibold transition-all duration-200 relative',
             periodoSelecionado === 'anual'
               ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-bold shadow'
               : 'text-slate-400 hover:text-white'
@@ -237,8 +254,9 @@ async function assinar() {
           Iniciando Pagamento...
         </span>
         <span v-else class="flex items-center justify-center gap-2">
-          <span>Quero Ser PRO Agora</span>
-          <span>🚀</span>
+          <span v-if="periodoSelecionado === 'pix_avulso'">Pagar R$ 9,99 com Pix ⚡</span>
+          <span v-else-if="periodoSelecionado === 'anual'">Assinar Plano Anual 🚀</span>
+          <span v-else>Quero Ser PRO Agora 🚀</span>
         </span>
       </button>
 

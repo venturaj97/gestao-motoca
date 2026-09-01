@@ -26,15 +26,29 @@ router = APIRouter(prefix="/assinaturas", tags=["assinaturas"])
 @router.post("/checkout", response_model=CheckoutResposta)
 def rota_criar_checkout(
     dados: CriarCheckoutEntrada,
+    request: Request,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_usuario_logado),
 ):
     """Cria uma sessão de checkout do Stripe e retorna a URL."""
-    prices_validos = [settings.stripe_price_mensal, settings.stripe_price_anual]
+    prices_validos = [
+        settings.stripe_price_mensal,
+        settings.stripe_price_anual,
+        settings.stripe_price_pix_avulso,
+    ]
+    prices_validos = [p for p in prices_validos if p]
     if dados.price_id not in prices_validos:
         raise HTTPException(status_code=400, detail="Plano invalido")
 
-    res = criar_checkout_session(db, usuario, dados.price_id)
+    # Extrair origem real da requisição (necessário para celular via IP local ou túnel Cloudflare)
+    origin_header = request.headers.get("origin") or request.headers.get("referer")
+    request_origin = None
+    if origin_header:
+        from urllib.parse import urlparse
+        parsed = urlparse(origin_header)
+        request_origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    res = criar_checkout_session(db, usuario, dados.price_id, origin=request_origin)
     return CheckoutResposta(
         client_secret=res["client_secret"],
         checkout_url=res.get("checkout_url")
@@ -83,6 +97,7 @@ def rota_cancelar_assinatura(
 @router.get("/precos")
 def rota_listar_precos():
     """Retorna os IDs de preço do Stripe para o frontend."""
+    pix_price = settings.stripe_price_pix_avulso or settings.stripe_price_mensal
     return {
         "mensal": {
             "price_id": settings.stripe_price_mensal,
@@ -91,6 +106,10 @@ def rota_listar_precos():
         "anual": {
             "price_id": settings.stripe_price_anual,
             "valor": "R$ 89,90/ano (~R$ 7,49/mês)",
+        },
+        "pix_avulso": {
+            "price_id": pix_price,
+            "valor": "R$ 9,99 (30 dias via Pix)",
         },
         "stripe_publishable_key": settings.stripe_publishable_key,
     }
@@ -116,7 +135,7 @@ async def rota_stripe_webhook(
     if event_type == "checkout.session.completed":
         subscription_id = data_obj.get("subscription")
         if subscription_id:
-            # Buscar a subscription para pegar metadados e periodo
+            # Assinatura Recorrente
             import stripe as stripe_lib
             sub = stripe_lib.Subscription.retrieve(subscription_id)
             usuario_id = obter_usuario_id_de_subscription(sub)
@@ -129,6 +148,27 @@ async def rota_stripe_webhook(
 
             if usuario_id:
                 ativar_plano_pro(db, usuario_id, subscription_id, sub["current_period_end"])
+        else:
+            # Pagamento Avulso (Pix, PicPay, Cartão Avulso)
+            metadata = data_obj.get("metadata", {})
+            usuario_id = metadata.get("usuario_id")
+            if not usuario_id:
+                customer_id = data_obj.get("customer")
+                u = obter_usuario_por_customer_id(db, customer_id)
+                if u:
+                    usuario_id = u.id
+            else:
+                try:
+                    usuario_id = int(usuario_id)
+                except (ValueError, TypeError):
+                    usuario_id = None
+
+            if usuario_id:
+                from datetime import timedelta
+                price_id = metadata.get("price_id")
+                dias = 365 if price_id == settings.stripe_price_anual else 30
+                expira_em_ts = int((datetime.now(timezone.utc) + timedelta(days=dias)).timestamp())
+                ativar_plano_pro(db, usuario_id, None, expira_em_ts)
 
     elif event_type == "invoice.payment_succeeded":
         subscription_id = data_obj.get("subscription")

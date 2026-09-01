@@ -27,24 +27,39 @@ def _obter_ou_criar_customer(db: Session, usuario: Usuario) -> str:
     return customer.id
 
 
-def criar_checkout_session(db: Session, usuario: Usuario, price_id: str) -> dict:
-    """Cria uma Stripe Embedded Checkout Session e retorna client_secret."""
+def criar_checkout_session(db: Session, usuario: Usuario, price_id: str, origin: str | None = None) -> dict:
+    """Cria uma Stripe Embedded Checkout Session (suporta assinatura recorrente e pagamento avulso/Pix)."""
     customer_id = _obter_ou_criar_customer(db, usuario)
+
+    base_url = (origin or settings.frontend_url).rstrip("/")
+
+    # Verificar o tipo de preço no Stripe (recorrente ou avulso)
+    is_recurring = True
+    try:
+        price_obj = stripe.Price.retrieve(price_id)
+        if price_obj.get("type") == "one_time":
+            is_recurring = False
+    except Exception:
+        pass
 
     params = {
         "customer": customer_id,
         "ui_mode": "embedded",
-        "mode": "subscription",
+        "mode": "subscription" if is_recurring else "payment",
         "line_items": [{"price": price_id, "quantity": 1}],
-        "return_url": f"{settings.frontend_url}/configuracoes?assinatura=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
-        "subscription_data": {
-            "metadata": {"usuario_id": str(usuario.id)},
-        },
+        "return_url": f"{base_url}/configuracoes?assinatura=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
         "allow_promotion_codes": True,
     }
 
-    if settings.stripe_payment_method_configuration and settings.stripe_payment_method_configuration.strip().startswith("pmc_"):
-        params["payment_method_configuration"] = settings.stripe_payment_method_configuration.strip()
+    if is_recurring:
+        params["subscription_data"] = {"metadata": {"usuario_id": str(usuario.id)}}
+    else:
+        params["payment_intent_data"] = {"metadata": {"usuario_id": str(usuario.id), "price_id": price_id}}
+        params["metadata"] = {"usuario_id": str(usuario.id), "price_id": price_id}
+
+    pm_config = settings.stripe_payment_method_configuration.strip()
+    if pm_config and (pm_config.startswith("cpmt_") or pm_config.startswith("pmc_")):
+        params["payment_method_configuration"] = pm_config
 
     try:
         session = stripe.checkout.Session.create(**params)

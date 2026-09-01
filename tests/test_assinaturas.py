@@ -70,6 +70,35 @@ async def test_criar_checkout_session_embedded_com_sucesso(client):
 
 
 @pytest.mark.anyio
+async def test_criar_checkout_origem_dinamica_mobile(client):
+    headers = await _criar_usuario_logado(client, email="checkout_mobile@test.com")
+    headers["Origin"] = "https://minha-aplicacao.trycloudflare.com"
+
+    settings.stripe_price_mensal = "price_mensal_test_123"
+    settings.stripe_payment_method_configuration = "cpmt_1UAiLg1dGg7KORlkEfIT9bIz"
+
+    mock_customer = MagicMock()
+    mock_customer.id = "cus_test_mobile"
+
+    mock_session = MagicMock()
+    mock_session.client_secret = "cs_test_secret_mobile"
+    mock_session.url = "https://minha-aplicacao.trycloudflare.com/embedded"
+
+    with patch("stripe.Customer.create", return_value=mock_customer), \
+         patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create_session:
+        resposta = await client.post(
+            "/assinaturas/checkout",
+            headers=headers,
+            json={"price_id": "price_mensal_test_123"},
+        )
+
+        assert resposta.status_code == 200
+        call_kwargs = mock_create_session.call_args.kwargs
+        assert "https://minha-aplicacao.trycloudflare.com/configuracoes" in call_kwargs["return_url"]
+        assert call_kwargs["payment_method_configuration"] == "cpmt_1UAiLg1dGg7KORlkEfIT9bIz"
+
+
+@pytest.mark.anyio
 async def test_criar_checkout_preco_invalido_retorna_400(client):
     headers = await _criar_usuario_logado(client, email="checkout_invalid@test.com")
     resposta = await client.post(

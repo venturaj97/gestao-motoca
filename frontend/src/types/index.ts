@@ -52,6 +52,7 @@ export interface PrecoPlano {
 export interface PrecosAssinaturaResposta {
   mensal: PrecoPlano
   anual: PrecoPlano
+  pix_avulso?: PrecoPlano
   stripe_publishable_key: string
 }
 

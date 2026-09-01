@@ -38,7 +38,7 @@ app.add_middleware(
         "https://gestaomoto.netlify.app", # Substitua pelo SEU link exato do Netlify
         "https://motoca.atlasdacopa.com",
     ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|.*\.atlasdacopa\.com|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?",
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|.*\.atlasdacopa\.com|.*\.trycloudflare\.com|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
