@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
-import PaywallOverlay from '@/components/PaywallOverlay.vue'
+import OverlayAssinaturaPro from '@/components/OverlayAssinaturaPro.vue'
 import { useAuthStore } from '@/stores/auth'
 import { listarAlertasMetas, listarMetas, criarMeta, atualizarMeta, excluirMeta } from '@/api/metas'
 import { listarCofres, criarCofre, atualizarCofre, aportarCofre, excluirCofre } from '@/api/cofres'
@@ -393,7 +393,7 @@ onMounted(carregar)
 
       <!-- Paywall para usuários não-PRO -->
       <div v-if="!authStore.ehPro" class="py-4">
-        <PaywallOverlay
+        <OverlayAssinaturaPro
           titulo="Desbloqueie Metas & Cofres"
           descricao="Defina metas diárias/semanais de faturamento, teto de despesas e crie cofres automáticos para manutenção e licenciamento."
         />

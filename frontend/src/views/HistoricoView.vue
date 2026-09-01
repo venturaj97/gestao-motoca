@@ -6,7 +6,7 @@ import { obterHistoricoKm, excluirHistoricoKm } from '@/api/motos'
 import { obterInteligenciaResumo } from '@/api/inteligencia'
 import { useMotoStore } from '@/stores/moto'
 import { useAuthStore } from '@/stores/auth'
-import PaywallOverlay from '@/components/PaywallOverlay.vue'
+import OverlayAssinaturaPro from '@/components/OverlayAssinaturaPro.vue'
 import type {
   LancamentoResposta, TipoLancamento,
   MotoHistoricoKmResumo,
@@ -844,7 +844,7 @@ onMounted(async () => {
 
         <!-- Paywall para não-PRO -->
         <div v-if="!authStore.ehPro" class="py-4">
-          <PaywallOverlay
+          <OverlayAssinaturaPro
             titulo="Relatórios Inteligentes Exclusivos PRO"
             descricao="Veja o faturamento vs mês anterior, rendimento médio por KM rodado, análise de custos e comparativos em tempo real."
           />

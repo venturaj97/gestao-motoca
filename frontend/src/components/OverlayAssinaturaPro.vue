@@ -80,7 +80,8 @@ async function assinar() {
 
       destruirCheckout()
 
-      const checkout = await (stripe as any).initEmbeddedCheckout({ clientSecret: client_secret })
+      const initEmbedded = (stripe as any).createEmbeddedCheckoutPage || (stripe as any).initEmbeddedCheckout
+      const checkout = await initEmbedded.call(stripe, { clientSecret: client_secret })
       embeddedCheckoutInstance = checkout
       if (embeddedCheckoutInstance) {
         embeddedCheckoutInstance.mount('#stripe-checkout-mount')

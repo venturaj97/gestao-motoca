@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
 import { useAuthStore } from '@/stores/auth'
-import PaywallOverlay from '@/components/PaywallOverlay.vue'
+import OverlayAssinaturaPro from '@/components/OverlayAssinaturaPro.vue'
 import { cancelarAssinaturaStripe } from '@/api/assinaturas'
 import { atualizarMoto } from '@/api/motos'
 import { listarCategorias, criarCategoria, atualizarCategoria, excluirCategoria } from '@/api/categorias'
@@ -904,7 +904,7 @@ onMounted(async () => {
 
         <!-- Se o Usuário for FREE -->
         <div v-else>
-          <PaywallOverlay />
+          <OverlayAssinaturaPro />
         </div>
       </section>
     </main>
