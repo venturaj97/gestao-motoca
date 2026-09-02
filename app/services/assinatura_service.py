@@ -226,11 +226,19 @@ def processar_webhook_infinitepay(db: Session, payload: dict) -> dict:
         return {"success": False, "message": "Pedido não encontrado"}
 
     from datetime import timedelta
+    import logging
+    logger = logging.getLogger("app.services.assinatura_service")
+
     dias = 365 if amount >= 8900 else 30
     expira_em_ts = int((datetime.now(timezone.utc) + timedelta(days=dias)).timestamp())
 
     ativar_plano_pro(db, usuario_id, f"infinitepay_{transaction_nsu}", expira_em_ts)
+    msg_log = f"[WEBHOOK INFINITEPAY RECEBIDO & PROCESSADO] usuario_id={usuario_id}, tx_nsu={transaction_nsu}, order_nsu={order_nsu}, amount={amount}, dias={dias}"
+    logger.info(msg_log)
+    print(msg_log)
+
     return {"success": True, "message": None}
+
 
 
 def gerar_pix_direto(db: Session, usuario: Usuario, plano: str, origin: str | None = None) -> dict:
@@ -311,9 +319,12 @@ def checar_status_pix(db: Session, usuario: Usuario, order_nsu: str) -> dict:
     return {"pago": False, "plano": u.plano}
 
 
-def confirmar_retorno_infinitepay(db: Session, usuario: Usuario, order_nsu: str | None = None, transaction_nsu: str | None = None) -> dict:
+def confirmar_retorno_infinitepay(db: Session, usuario: Usuario, order_nsu: str | None = None, transaction_nsu: str | None = None, plano: str | None = None) -> dict:
     """Confirma a ativacao do plano PRO quando o usuario retorna do checkout da InfinitePay."""
     from datetime import timedelta
+    import logging
+
+    logger = logging.getLogger("app.services.assinatura_service")
 
     target_user_id = usuario.id
     if order_nsu and order_nsu.startswith("user_"):
@@ -324,10 +335,18 @@ def confirmar_retorno_infinitepay(db: Session, usuario: Usuario, order_nsu: str 
             except ValueError:
                 pass
 
-    expira_em_ts = int((datetime.now(timezone.utc) + timedelta(days=365)).timestamp())
+    dias = 365 if (plano == "anual" or (order_nsu and "anual" in order_nsu)) else 30
+    expira_em_ts = int((datetime.now(timezone.utc) + timedelta(days=dias)).timestamp())
     tx_id = transaction_nsu or order_nsu or "return_infinitepay"
+
     ativar_plano_pro(db, target_user_id, f"infinitepay_{tx_id}", expira_em_ts)
-    return {"sucesso": True, "plano": "PRO"}
+
+    msg_log = f"[PAGAMENTO REGISTRADO - INFINITEPAY] usuario_id={target_user_id}, tx_id={tx_id}, order_nsu={order_nsu}, dias={dias}, expira_em_ts={expira_em_ts}"
+    logger.info(msg_log)
+    print(msg_log)
+
+    return {"sucesso": True, "plano": "PRO", "dias": dias}
+
 
 
 

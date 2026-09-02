@@ -18,10 +18,22 @@ const emit = defineEmits(['fechar'])
 
 const carregando = ref(false)
 const erro = ref('')
-const periodoSelecionado = ref<'mensal' | 'anual'>('mensal')
+const periodoSelecionado = ref<'mensal' | 'anual' | 'pix_avulso'>('mensal')
 const gatewaySelecionado = ref<'infinitepay' | 'stripe'>('infinitepay')
 const precos = ref<PrecosAssinaturaResposta | null>(null)
 const modoEmbedded = ref(false)
+const exibindoPix = ref(false)
+const pixAprovado = ref(false)
+const dadosPix = ref<any>(null)
+const copiado = ref(false)
+
+function copiarCodigoPix() {
+  if (!dadosPix.value?.qr_code_text) return
+  navigator.clipboard.writeText(dadosPix.value.qr_code_text)
+  copiado.value = true
+  setTimeout(() => { copiado.value = false }, 2000)
+}
+
 
 let embeddedCheckoutInstance: StripeEmbeddedCheckout | null = null
 
