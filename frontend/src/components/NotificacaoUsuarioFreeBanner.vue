@@ -20,7 +20,7 @@ function irParaPlanos() {
 </script>
 
 <template>
-  <div v-if="authStore.usuario && !authStore.ehPro && !fechado" class="mt-6 mb-2">
+  <div v-if="authStore.usuario && !authStore.ehPro && !fechado" class="mb-4">
     <div
       class="relative overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-slate-950 p-3.5 sm:p-4 shadow-lg backdrop-blur-md"
     >

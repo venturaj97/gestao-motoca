@@ -77,10 +77,24 @@ const router = createRouter({
       meta: { semMoto: true }, // pode acessar sem ter moto
     },
 
-    // Redireciona qualquer rota desconhecida para home
+    // === Rotas de Erro ===
+    {
+      path: '/404',
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
+      meta: { isError: true },
+    },
+    {
+      path: '/erro',
+      name: 'erro',
+      component: () => import('@/views/ErrorView.vue'),
+      meta: { isError: true },
+    },
+
+    // Redireciona qualquer rota desconhecida para 404
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/',
+      redirect: { name: 'not-found' },
     },
   ],
 })
@@ -88,6 +102,9 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
   const motoStore = useMotoStore()
+
+  // 0. Rotas de erro: permite acesso livre para usuários logados ou visitantes
+  if (to.meta.isError) return
 
   // 1. Rotas públicas: redireciona logados para home
   if (to.meta.publica) {

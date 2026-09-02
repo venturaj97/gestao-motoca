@@ -411,6 +411,15 @@ function logout() {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  padding-top: 4rem;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 1024px) {
+  .main-area {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
 }
 
 /* ─── Topbar Mobile ──────────────────────────────────────── */
@@ -422,8 +431,10 @@ function logout() {
   height: 4rem;
   background: rgb(var(--color-background));
   border-bottom: 1px solid rgb(var(--color-outline-variant) / 0.3);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
 }
 
@@ -461,6 +472,7 @@ function logout() {
   right: 0;
   z-index: 50;
   height: 5rem;
+  padding-bottom: env(safe-area-inset-bottom);
   background: rgb(var(--color-surface));
   border-top: 1px solid rgb(var(--color-outline-variant));
   display: grid;
