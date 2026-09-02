@@ -63,27 +63,28 @@ function fecharModal() {
   <!-- Exibe apenas se o usuário estiver logado e email_confirmado for false -->
   <div v-if="authStore.usuario && !authStore.usuario.email_confirmado" class="mb-6">
     <div
-      class="bg-amber-500/10 dark:bg-amber-500/15 border-l-4 border-amber-500 px-4 py-3 sm:px-6 sm:py-4
-             flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-r-lg shadow-sm"
+      class="bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 px-4 py-3 sm:px-6 sm:py-4
+             flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl shadow-sm"
     >
       <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-2xl flex-shrink-0">mark_email_unread</span>
+        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-2xl flex-shrink-0" aria-hidden="true">mark_email_unread</span>
         <div>
           <p class="font-headline font-bold text-sm text-amber-900 dark:text-amber-300 uppercase tracking-wide">
             E-mail Não Confirmado
           </p>
-          <p class="font-body text-xs text-amber-950/80 dark:text-amber-200/80 font-medium">
+          <p class="font-body text-xs text-amber-950 dark:text-amber-100 font-medium">
             Confirme seu e-mail para garantir a recuperação da sua conta se precisar trocar de celular ou senha.
           </p>
         </div>
       </div>
 
       <button
-        class="bg-amber-500 hover:bg-amber-600 dark:hover:bg-amber-400 text-slate-950 font-headline font-black text-xs
-               px-4 py-2 uppercase tracking-widest transition-colors flex items-center gap-1.5 flex-shrink-0 rounded"
+        aria-label="Abrir modal para confirmar e-mail"
+        class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-headline font-extrabold text-xs
+               px-4 py-2.5 uppercase tracking-widest transition-colors flex items-center gap-1.5 flex-shrink-0 rounded-lg min-h-[44px]"
         @click="mostrarModal = true"
       >
-        <span class="material-symbols-outlined text-base">verified</span>
+        <span class="material-symbols-outlined text-base" aria-hidden="true">verified</span>
         CONFIRMAR AGORA
       </button>
     </div>

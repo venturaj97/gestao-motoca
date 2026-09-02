@@ -451,11 +451,11 @@ onMounted(async () => {
           @click="abaAtiva = 'SEGURANCA'"
         >SENHA</button>
         <button
-          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border truncate px-1 flex items-center justify-center gap-0.5"
-          :class="abaAtiva === 'PLANO' ? 'bg-amber-500 text-slate-950 border-amber-400 font-black' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'"
+          class="h-10 font-label text-[9px] font-bold tracking-widest uppercase border truncate px-1 flex items-center justify-center gap-0.5 min-h-[44px]"
+          :class="abaAtiva === 'PLANO' ? 'bg-amber-400 text-amber-950 border-amber-300 font-black' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'"
           @click="abaAtiva = 'PLANO'"
         >
-          <span>⭐</span>
+          <span aria-hidden="true">⭐</span>
           <span>PLANO</span>
         </button>
       </div>
@@ -478,7 +478,7 @@ onMounted(async () => {
             MOTO ATIVA
           </p>
 
-          <div class="bg-surface-container-low p-4 relative border-l-4 border-primary-container overflow-hidden">
+          <div class="bg-surface-container-low p-4 relative rounded-xl border border-primary-container/30 overflow-hidden">
             <span class="material-symbols-outlined absolute right-4 top-4 text-5xl text-primary-container opacity-10">two_wheeler</span>
 
             <div class="space-y-3">
@@ -507,7 +507,7 @@ onMounted(async () => {
         <div v-if="erroMoto" class="bg-error-container text-on-error-container text-xs px-3 py-2">{{ erroMoto }}</div>
         <div v-if="sucessoMoto" class="bg-primary-container/20 text-primary-container text-xs px-3 py-2">{{ sucessoMoto }}</div>
 
-        <div v-if="editandoMoto && moto" class="bg-surface-container-low border-l-4 border-outline-variant p-4 space-y-3">
+        <div v-if="editandoMoto && moto" class="bg-surface-container-low rounded-xl border border-outline-variant/30 p-4 space-y-3">
           <p class="font-label text-[9px] font-bold tracking-[0.25em] text-primary-container uppercase">ATUALIZAR DADOS DA MOTO</p>
           <div class="grid grid-cols-2 gap-2 bg-surface-container p-2 border border-outline-variant">
             <div>
@@ -741,7 +741,7 @@ onMounted(async () => {
       </section>
 
       <section v-if="abaAtiva === 'SEGURANCA'" class="space-y-4">
-        <div class="bg-surface-container-low p-5 border-l-4 border-primary-container space-y-4">
+        <div class="bg-surface-container-low p-5 rounded-xl border border-primary-container/30 space-y-4">
           <div>
             <p class="font-label text-[9px] font-bold tracking-[0.25em] text-on-surface-variant uppercase mb-1">SEGURANÇA E CONTA</p>
             <h3 class="font-headline font-black text-xl text-on-surface uppercase">ALTERAR MINHA SENHA</h3>

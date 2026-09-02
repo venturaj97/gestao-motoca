@@ -464,7 +464,8 @@ onMounted(() => {
   justify-content: space-between;
   background: rgb(var(--color-surface-container));
   padding: 0.75rem 1rem;
-  border-left: 4px solid rgb(var(--color-primary-container));
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--color-primary-container) / 0.3);
   margin-top: 0.75rem;
   gap: 1rem;
 }
@@ -474,6 +475,14 @@ onMounted(() => {
     margin-top: 0;
     min-width: 280px;
   }
+}
+
+/* ─── Alertas ────────────────────────────────────────────── */
+.alerts-card {
+  background: rgb(var(--color-surface-container-lowest));
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--color-secondary) / 0.3);
 }
 
 .btn-km {
@@ -747,6 +756,7 @@ onMounted(() => {
 .alerts-card {
   background: rgb(var(--color-surface-container-lowest));
   padding: 1.25rem;
-  border-left: 4px solid rgb(var(--color-secondary));
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--color-secondary) / 0.3);
 }
 </style>

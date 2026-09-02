@@ -1338,7 +1338,8 @@ onMounted(carregar)
 
 .progress-bar__fill {
   height: 100%;
-  transition: width 0.6s ease;
+  transform-origin: left;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .progress-bar__fill--ganho {
@@ -1369,6 +1370,8 @@ onMounted(carregar)
   padding: 0.5rem 0.75rem;
   font-size: 11px;
   font-weight: 600;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
 }
 
 .meta-card__status-text {
@@ -1379,31 +1382,31 @@ onMounted(carregar)
 .status-atingida {
   background: rgb(var(--color-primary-container) / 0.12);
   color: rgb(var(--color-primary-container));
-  border-left: 3px solid rgb(var(--color-primary-container));
+  border-color: rgb(var(--color-primary-container) / 0.3);
 }
 
 .status-em-andamento {
   background: rgb(var(--color-surface-container-high) / 0.5);
   color: rgb(var(--color-on-surface-variant));
-  border-left: 3px solid rgb(var(--color-on-surface-variant));
+  border-color: rgb(var(--color-outline-variant) / 0.3);
 }
 
 .status-estourada {
   background: rgb(var(--color-error-container));
   color: rgb(var(--color-on-error-container));
-  border-left: 3px solid rgb(var(--color-error));
+  border-color: rgb(var(--color-error) / 0.3);
 }
 
 .status-atencao {
   background: rgb(var(--color-secondary) / 0.1);
   color: rgb(var(--color-secondary));
-  border-left: 3px solid rgb(var(--color-secondary));
+  border-color: rgb(var(--color-secondary) / 0.3);
 }
 
 .status-dentro-meta {
   background: rgb(var(--color-primary-container) / 0.08);
   color: rgb(var(--color-primary-container));
-  border-left: 3px solid rgb(var(--color-primary-container) / 0.5);
+  border-color: rgb(var(--color-primary-container) / 0.2);
 }
 
 /* ─── Ritmo diário ───────────────────────────────────────────── */

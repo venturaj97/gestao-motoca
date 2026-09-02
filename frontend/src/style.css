@@ -167,10 +167,9 @@
     padding-right: max(4.75rem, env(safe-area-inset-right));
   }
 
-  /* Background grid tático (pontilhado) */
+  /* Background tático limpo */
   .tactical-grid {
-    background-image: radial-gradient(circle, rgb(var(--color-surface-container-high)) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background-color: rgb(var(--color-background));
   }
 
   /* Gradiente tático verde-limão */

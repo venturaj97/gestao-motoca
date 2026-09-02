@@ -41,7 +41,7 @@ const recursos = [
             <h1 class="font-headline font-black text-primary-container text-lg tracking-wider uppercase leading-none">
               GESTÃO MOTOCA
             </h1>
-            <p class="font-label text-[9px] tracking-[0.25em] text-on-surface-variant uppercase mt-1">
+            <p class="font-label text-[11px] tracking-[0.25em] text-on-surface-variant uppercase mt-1">
               Controle real da sua jornada
             </p>
           </div>
@@ -59,8 +59,8 @@ const recursos = [
 
       <div class="relative z-10 px-6 py-12 sm:py-20 max-w-6xl mx-auto w-full">
         <div class="max-w-2xl space-y-6">
-          <div class="inline-flex items-center gap-2.5 px-3 py-1 bg-primary-container/10 border-l-4 border-primary-container">
-            <span class="font-label text-[10px] font-black tracking-[0.2em] text-primary-container uppercase">
+          <div class="inline-flex items-center gap-2.5 px-3 py-1.5 bg-primary-container/10 border border-primary-container/30 rounded-full">
+            <span class="font-label text-[11px] font-black tracking-[0.2em] text-primary-container uppercase">
               PLATAFORMA PARA PILOTOS E ENTREGADORES
             </span>
           </div>
@@ -104,11 +104,11 @@ const recursos = [
         <article
           v-for="recurso in recursos"
           :key="recurso.titulo"
-          class="bg-surface-container p-6 border-t-4 border-primary-container shadow-sm flex flex-col justify-between"
+          class="bg-surface-container p-6 rounded-2xl border border-primary-container/30 shadow-sm flex flex-col justify-between"
         >
           <div>
-            <div class="w-12 h-12 bg-primary-container/15 text-primary-container flex items-center justify-center mb-4">
-              <span class="material-symbols-outlined text-2xl">{{ recurso.icon }}</span>
+            <div class="w-12 h-12 rounded-xl bg-primary-container/15 text-primary-container flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true">{{ recurso.icon }}</span>
             </div>
             <h3 class="font-headline text-lg font-black tracking-wide text-on-surface uppercase mb-2">
               {{ recurso.titulo }}

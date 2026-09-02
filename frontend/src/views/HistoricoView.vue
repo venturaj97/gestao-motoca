@@ -859,11 +859,11 @@ onMounted(async () => {
 
         <template v-else>
 
-          <!-- Banner Premium (Roxo/Violeta Inteligência) -->
-          <div class="flex items-center justify-between bg-gradient-to-r from-purple-500/15 via-indigo-500/10 to-purple-600/5 border border-purple-500/30 px-3 py-2">
+          <!-- Banner Premium (Inteligência Financeira) -->
+          <div class="flex items-center justify-between bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-600/5 border border-emerald-500/30 px-3 py-2 rounded-xl">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-purple-400 text-base">workspace_premium</span>
-              <span class="font-label text-[9px] font-bold tracking-widest text-purple-600 dark:text-purple-300 uppercase">PAINEL DE INTELIGÊNCIA PREMIUM</span>
+              <span class="material-symbols-outlined text-emerald-400 text-base" aria-hidden="true">workspace_premium</span>
+              <span class="font-label text-[9px] font-bold tracking-widest text-emerald-600 dark:text-emerald-300 uppercase">PAINEL DE INTELIGÊNCIA PREMIUM</span>
             </div>
           </div>
 

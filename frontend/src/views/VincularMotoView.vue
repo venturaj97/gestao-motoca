@@ -183,14 +183,15 @@ function voltar() {
   <div class="bg-background text-on-background font-body min-h-screen flex flex-col">
 
     <!-- TopBar -->
-    <header class="bg-background flex justify-between items-center w-full px-6 py-4 h-16 sticky top-0 z-50 border-l-4 border-primary-container">
+    <header class="bg-background flex justify-between items-center w-full px-6 py-4 h-16 sticky top-0 z-50 border-b border-outline-variant/30">
       <div class="flex items-center gap-3">
         <button
           v-if="etapa !== 'digitar'"
-          class="text-on-surface-variant hover:text-on-surface transition-colors p-1 mr-1"
+          aria-label="Voltar etapa"
+          class="text-on-surface-variant hover:text-on-surface transition-colors p-1 mr-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
           @click="voltar"
         >
-          <span class="material-symbols-outlined">arrow_back</span>
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
         </button>
         <span class="text-primary-container font-headline font-bold text-xl tracking-wider uppercase">
           GESTÃO MOTOCA
@@ -424,7 +425,7 @@ function voltar() {
         </div>
 
         <!-- Card de dados do veículo -->
-        <div class="w-full bg-surface-container-low border-l-4 border-primary-container p-6 mb-6 relative">
+        <div class="w-full bg-surface-container-low rounded-2xl border border-primary-container/30 p-6 mb-6 relative shadow-sm">
           <div class="absolute top-4 right-4">
             <span class="material-symbols-outlined text-primary-container text-3xl">
               verified

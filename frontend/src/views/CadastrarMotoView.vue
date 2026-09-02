@@ -132,12 +132,13 @@ async function salvar() {
   <div class="bg-background text-on-surface font-body min-h-screen flex flex-col">
 
     <!-- TopBar compacta -->
-    <header class="flex items-center gap-3 px-5 h-14 border-l-4 border-primary-container bg-background sticky top-0 z-10">
+    <header class="flex items-center gap-3 px-5 h-14 border-b border-outline-variant/30 bg-background sticky top-0 z-10">
       <button
-        class="text-on-surface-variant hover:text-on-surface transition-colors p-1"
+        aria-label="Voltar para vincular moto"
+        class="text-on-surface-variant hover:text-on-surface transition-colors p-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
         @click="router.push({ name: 'vincular-moto' })"
       >
-        <span class="material-symbols-outlined">arrow_back</span>
+        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
       </button>
       <div>
         <p class="font-label text-[9px] tracking-[0.25em] text-primary-container uppercase">CADASTRO MANUAL</p>

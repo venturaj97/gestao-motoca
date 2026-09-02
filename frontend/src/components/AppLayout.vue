@@ -189,7 +189,7 @@ function logout() {
           </button>
           <button
             v-else
-            class="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black text-slate-950 uppercase shadow-sm whitespace-nowrap"
+            class="rounded-full bg-amber-400 px-2.5 py-1 text-[9px] font-black text-amber-950 uppercase shadow-sm whitespace-nowrap min-h-[32px] flex items-center justify-center"
             title="Assinar Gestão Motoca PRO"
             @click="router.push('/configuracoes')"
           >
@@ -321,7 +321,8 @@ function logout() {
   margin: 0 1rem 1rem;
   padding: 0.5rem 0.75rem;
   background: rgb(var(--color-primary-container) / 0.08);
-  border-left: 3px solid rgb(var(--color-primary-container));
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--color-primary-container) / 0.3);
   color: rgb(var(--color-primary-container));
 }
 
@@ -343,7 +344,7 @@ function logout() {
   align-items: center;
   gap: 0.875rem;
   padding: 0.75rem 0.875rem;
-  border-radius: 0;
+  border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.15s ease;
   color: rgb(var(--color-on-surface-variant));
@@ -351,7 +352,6 @@ function logout() {
   border: none;
   width: 100%;
   text-align: left;
-  border-left: 3px solid transparent;
 }
 
 .sidebar-nav-item:hover {
@@ -362,7 +362,6 @@ function logout() {
 .sidebar-nav-item--active {
   background: rgb(var(--color-primary-container) / 0.12);
   color: rgb(var(--color-primary-container));
-  border-left-color: rgb(var(--color-primary-container));
   font-weight: 700;
 }
 
@@ -422,7 +421,7 @@ function logout() {
   padding: 0 1.25rem;
   height: 4rem;
   background: rgb(var(--color-background));
-  border-left: 4px solid rgb(var(--color-primary-container));
+  border-bottom: 1px solid rgb(var(--color-outline-variant) / 0.3);
   position: sticky;
   top: 0;
   z-index: 50;

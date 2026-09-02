@@ -235,15 +235,15 @@ onMounted(carregar)
 
         <!-- Erro -->
         <div v-if="erro"
-          class="flex items-start gap-3 bg-error-container text-on-error-container text-sm font-label px-4 py-3 border-l-4 border-error">
-          <span class="material-symbols-outlined text-base mt-0.5 flex-shrink-0">error</span>
+          class="flex items-start gap-3 bg-error-container text-on-error-container text-sm font-label px-4 py-3 rounded-xl border border-error/30">
+          <span class="material-symbols-outlined text-base mt-0.5 flex-shrink-0" aria-hidden="true">error</span>
           {{ erro }}
         </div>
 
         <!-- Sucesso -->
         <div v-if="sucesso"
-          class="flex items-center gap-3 bg-primary-container/20 text-primary-container text-sm font-label px-4 py-3 border-l-4 border-primary-container">
-          <span class="material-symbols-outlined text-base flex-shrink-0">check_circle</span>
+          class="flex items-center gap-3 bg-primary-container/20 text-primary-container text-sm font-label px-4 py-3 rounded-xl border border-primary-container/30">
+          <span class="material-symbols-outlined text-base flex-shrink-0" aria-hidden="true">check_circle</span>
           Abastecimento registrado! Redirecionando…
         </div>
 

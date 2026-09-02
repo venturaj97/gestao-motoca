@@ -115,7 +115,7 @@ async function handleSalvar() {
         </div>
 
         <!-- Erro Banner -->
-        <div v-if="erroMsg" class="bg-error-container text-on-error-container p-3 text-xs font-medium border-l-4 border-error">
+        <div v-if="erroMsg" class="bg-error-container text-on-error-container p-3 text-xs font-medium rounded-lg border border-error/30">
           {{ erroMsg }}
         </div>
 

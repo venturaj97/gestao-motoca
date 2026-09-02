@@ -80,8 +80,8 @@ async function handleCadastro() {
       <div class="w-full max-w-md">
 
         <!-- Header -->
-        <div class="mb-12 border-l-4 border-primary-container pl-6">
-          <h2 class="font-headline font-black text-primary-container text-xs tracking-[0.3em] mb-2">
+        <div class="mb-12">
+          <h2 class="font-headline font-black text-primary-container text-xs tracking-[0.3em] mb-2 uppercase">
             SISTEMA OPERACIONAL
           </h2>
           <h1 class="font-headline font-bold text-5xl sm:text-6xl text-on-background leading-none tracking-tighter">

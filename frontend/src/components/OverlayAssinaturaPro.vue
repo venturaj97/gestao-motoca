@@ -125,10 +125,14 @@ async function assinar() {
 </script>
 
 <template>
-  <div class="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/90 to-slate-950 p-4 md:p-8 shadow-2xl backdrop-blur-xl">
-    <!-- Efeito de brilho em segundo plano -->
+  <div
+    role="region"
+    aria-label="Plano Gestão Motoca PRO"
+    class="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-slate-900/95 to-slate-950 p-5 md:p-8 shadow-2xl backdrop-blur-xl"
+  >
+    <!-- Efeito de iluminação sutil de fundo -->
     <div class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl"></div>
-    <div class="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-yellow-500/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"></div>
 
     <!-- MODO EMBEDDED CHECKOUT (Formulário Incorporado) -->
     <div v-if="modoEmbedded" class="relative z-10 space-y-4">
@@ -136,15 +140,16 @@ async function assinar() {
         <button
           type="button"
           @click="voltarParaPlanos"
-          class="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition-all"
+          aria-label="Voltar para a escolha de planos"
+          class="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
           Voltar para escolha de plano
         </button>
 
-        <span class="rounded-full bg-amber-500/20 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300 border border-amber-500/30">
+        <span class="rounded-full bg-amber-500/20 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-300 border border-amber-500/30">
           {{ periodoSelecionado === 'anual' ? 'Plano Anual' : periodoSelecionado === 'pix_avulso' ? 'Pix Avulso (30 dias)' : 'Plano Mensal' }}
         </span>
       </div>
@@ -158,84 +163,90 @@ async function assinar() {
     <!-- MODO APRESENTAÇÃO / SELEÇÃO DE PLANO -->
     <div v-else class="relative z-10 flex flex-col items-center text-center">
       <!-- Badge PRO -->
-      <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/20 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 shadow-lg shadow-amber-500/10">
-        <span>⭐</span>
+      <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 shadow-md">
+        <span aria-hidden="true">⭐</span>
         <span>Recurso Exclusivo Gestão Motoca PRO</span>
       </div>
 
-      <h2 class="text-2xl font-black tracking-tight text-white md:text-3xl">
+      <h2 class="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
         {{ titulo || 'Desbloqueie o Máximo Potencial do Seu Dia a Dia' }}
       </h2>
       
-      <p class="mt-2 max-w-lg text-sm text-slate-300 md:text-base">
+      <p class="mt-2 max-w-lg text-sm text-slate-300 md:text-base leading-relaxed">
         {{ descricao || 'Tenha acesso total a Relatórios Inteligentes, Metas Semanais/Mensais e Cofres de Economia para acelerar seus resultados.' }}
       </p>
 
       <!-- Benefícios PRO -->
       <div class="my-6 grid w-full max-w-md grid-cols-1 gap-3 text-left sm:grid-cols-2">
-        <div class="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-200 backdrop-blur-sm">
-          <span class="text-base">📊</span>
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-900/70 p-3.5 text-xs text-slate-200 backdrop-blur-sm shadow-sm">
+          <span class="text-base" aria-hidden="true">📊</span>
           <span>Relatórios de Rendimento e Custo por KM</span>
         </div>
-        <div class="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-200 backdrop-blur-sm">
-          <span class="text-base">🎯</span>
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-900/70 p-3.5 text-xs text-slate-200 backdrop-blur-sm shadow-sm">
+          <span class="text-base" aria-hidden="true">🎯</span>
           <span>Metas Semanais e Alertas de Progresso</span>
         </div>
-        <div class="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-200 backdrop-blur-sm">
-          <span class="text-base">🏦</span>
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-900/70 p-3.5 text-xs text-slate-200 backdrop-blur-sm shadow-sm">
+          <span class="text-base" aria-hidden="true">🏦</span>
           <span>Cofres para Manutenção e IPVA</span>
         </div>
-        <div class="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-200 backdrop-blur-sm">
-          <span class="text-base">💡</span>
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-900/70 p-3.5 text-xs text-slate-200 backdrop-blur-sm shadow-sm">
+          <span class="text-base" aria-hidden="true">💡</span>
           <span>Recomendações Inteligentes</span>
         </div>
       </div>
 
       <!-- Seletor de Plano -->
-      <div class="mb-6 flex w-full max-w-md flex-col gap-2 sm:flex-row rounded-xl bg-slate-900/80 p-1 border border-slate-800">
+      <div class="mb-6 flex w-full max-w-md flex-col gap-2 sm:flex-row rounded-xl bg-slate-950/80 p-1.5 border border-slate-800" role="radiogroup" aria-label="Selecione o plano de assinatura">
         <button
           type="button"
+          role="radio"
+          :aria-checked="periodoSelecionado === 'pix_avulso'"
           @click="periodoSelecionado = 'pix_avulso'"
           :class="[
-            'flex-1 rounded-lg py-2.5 px-2 text-xs font-semibold transition-all duration-200 relative',
+            'flex-1 min-h-[44px] rounded-lg py-2.5 px-3 text-xs font-black transition-all duration-200 relative flex items-center justify-center',
             periodoSelecionado === 'pix_avulso'
-              ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-bold shadow'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-emerald-500 text-emerald-950 shadow-md ring-1 ring-emerald-400'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
           ]"
         >
           ⚡ Pix Avulso (R$ 9,99)
         </button>
         <button
           type="button"
+          role="radio"
+          :aria-checked="periodoSelecionado === 'mensal'"
           @click="periodoSelecionado = 'mensal'"
           :class="[
-            'flex-1 rounded-lg py-2.5 px-2 text-xs font-semibold transition-all duration-200',
+            'flex-1 min-h-[44px] rounded-lg py-2.5 px-3 text-xs font-black transition-all duration-200 flex items-center justify-center',
             periodoSelecionado === 'mensal'
-              ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-bold shadow'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-amber-400 text-amber-950 shadow-md ring-1 ring-amber-300'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
           ]"
         >
           Mensal (R$ 9,90/mês)
         </button>
         <button
           type="button"
+          role="radio"
+          :aria-checked="periodoSelecionado === 'anual'"
           @click="periodoSelecionado = 'anual'"
           :class="[
-            'flex-1 rounded-lg py-2.5 px-2 text-xs font-semibold transition-all duration-200 relative',
+            'flex-1 min-h-[44px] rounded-lg py-2.5 px-3 text-xs font-black transition-all duration-200 relative flex items-center justify-center',
             periodoSelecionado === 'anual'
-              ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-bold shadow'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-amber-400 text-amber-950 shadow-md ring-1 ring-amber-300'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
           ]"
         >
           Anual (R$ 89,90)
-          <span class="absolute -top-2 -right-1 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[9px] font-black uppercase text-slate-950">
+          <span class="absolute -top-2.5 -right-1 rounded-full bg-emerald-400 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-950 border border-emerald-950/20 shadow">
             -24%
           </span>
         </button>
       </div>
 
       <!-- Mensagem de Erro -->
-      <div v-if="erro" class="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+      <div v-if="erro" class="mb-4 w-full max-w-md rounded-xl border border-red-500/40 bg-red-500/15 p-3 text-xs font-medium text-red-300">
         {{ erro }}
       </div>
 
@@ -244,10 +255,10 @@ async function assinar() {
         type="button"
         @click="assinar"
         :disabled="carregando"
-        class="w-full max-w-xs rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-6 py-3.5 text-sm font-extrabold text-slate-950 shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] hover:from-amber-300 hover:to-yellow-400 active:scale-95 disabled:opacity-50"
+        class="w-full max-w-xs min-h-[48px] rounded-xl bg-amber-400 px-6 py-3.5 text-sm font-black text-amber-950 shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-300 active:scale-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-amber-300"
       >
         <span v-if="carregando" class="flex items-center justify-center gap-2">
-          <svg class="h-4 w-4 animate-spin text-slate-950" fill="none" viewBox="0 0 24 24">
+          <svg class="h-4 w-4 animate-spin text-amber-950" fill="none" viewBox="0 0 24 24" aria-hidden="true">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
@@ -261,23 +272,23 @@ async function assinar() {
       </button>
 
       <!-- Métodos de Pagamento Aceitos -->
-      <div class="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-400">
-        <span class="flex items-center gap-1">
-          <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="mt-5 flex flex-wrap items-center justify-center gap-3 text-[11px] font-medium text-slate-400">
+        <span class="flex items-center gap-1.5">
+          <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           Pix, Google Pay & Apple Pay
         </span>
-        <span>•</span>
-        <span class="flex items-center gap-1">
-          <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <span aria-hidden="true">•</span>
+        <span class="flex items-center gap-1.5">
+          <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           Cartão de Crédito
         </span>
-        <span>•</span>
-        <span class="flex items-center gap-1">
-          <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <span aria-hidden="true">•</span>
+        <span class="flex items-center gap-1.5">
+          <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           Cancela quando quiser
