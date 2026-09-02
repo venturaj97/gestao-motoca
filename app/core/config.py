@@ -55,6 +55,16 @@ class Settings(BaseSettings):
     stripe_price_anual: str = Field(default="", validation_alias="STRIPE_PRICE_ANUAL")
     stripe_price_pix_avulso: str = Field(default="", validation_alias="STRIPE_PRICE_PIX_AVULSO")
     stripe_payment_method_configuration: str = Field(default="", validation_alias="STRIPE_PAYMENT_METHOD_CONFIGURATION")
+    # ── InfinitePay ──
+    infinitepay_handle: str = Field(default="joao-victor-ventura97", validation_alias="INFINITEPAY_HANDLE")
+    infinitepay_checkout_url: str = Field(
+        default="https://checkout.infinitepay.io/joao-victor-ventura97/69bJcVJrkb",
+        validation_alias="INFINITEPAY_CHECKOUT_URL",
+    )
+    infinitepay_api_url: str = Field(
+        default="https://api.checkout.infinitepay.io",
+        validation_alias="INFINITEPAY_API_URL",
+    )
     frontend_url: str = Field(default="http://localhost:5173", validation_alias="FRONTEND_URL")
 
     @property

@@ -54,7 +54,10 @@ export interface PrecosAssinaturaResposta {
   anual: PrecoPlano
   pix_avulso?: PrecoPlano
   stripe_publishable_key: string
+  infinitepay_checkout_url?: string
+  infinitepay_handle?: string
 }
+
 
 // === MOTO ===
 export interface MotoUsuarioResposta {

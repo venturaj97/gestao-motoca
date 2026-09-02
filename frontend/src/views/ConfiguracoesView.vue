@@ -4,7 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useMotoStore } from '@/stores/moto'
 import { useAuthStore } from '@/stores/auth'
 import OverlayAssinaturaPro from '@/components/OverlayAssinaturaPro.vue'
-import { cancelarAssinaturaStripe } from '@/api/assinaturas'
+import { cancelarAssinaturaStripe, confirmarRetornoAssinatura } from '@/api/assinaturas'
+
 import { atualizarMoto } from '@/api/motos'
 import { listarCategorias, criarCategoria, atualizarCategoria, excluirCategoria } from '@/api/categorias'
 import { listarLancamentos, atualizarLancamento, excluirLancamento } from '@/api/lancamentos'
@@ -410,9 +411,22 @@ onMounted(async () => {
   }
   if (route.query.assinatura === 'sucesso') {
     abaAtiva.value = 'PLANO'
-    avisoAssinatura.value = '🎉 Pagamento confirmado! Sua conta agora é Gestão Motoca PRO.'
+    try {
+      await confirmarRetornoAssinatura({
+        order_nsu: (route.query.order_nsu as string) || undefined,
+        transaction_nsu: (route.query.transaction_nsu as string) || (route.query.slug as string) || undefined,
+      })
+    } catch (e) {
+      console.error('Erro ao confirmar retorno da assinatura:', e)
+    }
+    if (route.query.gateway === 'infinitepay') {
+      avisoAssinatura.value = '🎉 Pagamento via InfinitePay recebido com sucesso! Sua conta agora é Gestão Motoca PRO.'
+    } else {
+      avisoAssinatura.value = '🎉 Pagamento confirmado! Sua conta agora é Gestão Motoca PRO.'
+    }
     await authStore.carregarUsuario()
   } else if (route.query.assinatura === 'cancelado') {
+
     abaAtiva.value = 'PLANO'
     avisoAssinatura.value = 'O pagamento não foi concluído. Se precisar de ajuda, entre em contato.'
   }

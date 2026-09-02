@@ -134,3 +134,90 @@ async def test_cancelar_assinatura_com_sucesso(client, db_session):
         assert resposta.status_code == 200
         assert "Assinatura sera cancelada" in resposta.json()["mensagem"]
         mock_modify.assert_called_once_with("sub_test_999", cancel_at_period_end=True)
+
+
+@pytest.mark.anyio
+async def test_criar_checkout_infinitepay(client):
+    headers = await _criar_usuario_logado(client, email="infinitepay_checkout@test.com")
+    resposta = await client.post(
+        "/assinaturas/checkout/infinitepay",
+        headers=headers,
+        json={"plano": "pix_avulso"},
+    )
+    assert resposta.status_code == 200
+    data = resposta.json()
+    assert "checkout_url" in data
+    assert "order_nsu" in data
+
+
+@pytest.mark.anyio
+async def test_webhook_infinitepay_ativa_plano_pro(client, db_session):
+    headers = await _criar_usuario_logado(client, email="webhook_infpay@test.com")
+    from app.models.usuario import Usuario
+    user = db_session.query(Usuario).filter_by(email="webhook_infpay@test.com").first()
+    assert user.plano == "FREE"
+
+    order_nsu = f"user_{user.id}_12345678"
+    payload = {
+        "invoice_slug": "inv_test_123",
+        "amount": 990,
+        "paid_amount": 990,
+        "capture_method": "pix",
+        "transaction_nsu": "tx_test_999",
+        "order_nsu": order_nsu,
+    }
+
+    resposta = await client.post("/assinaturas/webhook/infinitepay", json=payload)
+    assert resposta.status_code == 200
+    assert resposta.json() == {"success": True, "message": None}
+
+    db_session.refresh(user)
+    assert user.plano == "PRO"
+    assert user.plano_expira_em is not None
+
+
+@pytest.mark.anyio
+async def test_gerar_pix_direto(client):
+    headers = await _criar_usuario_logado(client, email="pix_direto@test.com")
+    resposta = await client.post(
+        "/assinaturas/pix/gerar",
+        headers=headers,
+        json={"plano": "pix_avulso"},
+    )
+    assert resposta.status_code == 200
+    data = resposta.json()
+    assert "qr_code_text" in data
+    assert "qr_code_url" in data
+    assert "order_nsu" in data
+    assert data["valor_formatado"] == "R$ 9,99"
+
+
+@pytest.mark.anyio
+async def test_checar_pix_status(client, db_session):
+    headers = await _criar_usuario_logado(client, email="pix_check@test.com")
+    from app.models.usuario import Usuario
+    user = db_session.query(Usuario).filter_by(email="pix_check@test.com").first()
+
+    # Primeiro checagem em conta FREE
+    resp1 = await client.post(
+        "/assinaturas/pix/checar",
+        headers=headers,
+        json={"order_nsu": f"user_{user.id}_9999"},
+    )
+    assert resp1.status_code == 200
+    assert resp1.json()["pago"] is False
+
+    # Simular ativação PRO
+    user.plano = "PRO"
+    db_session.commit()
+
+    resp2 = await client.post(
+        "/assinaturas/pix/checar",
+        headers=headers,
+        json={"order_nsu": f"user_{user.id}_9999"},
+    )
+    assert resp2.status_code == 200
+    assert resp2.json()["pago"] is True
+    assert resp2.json()["plano"] == "PRO"
+
+

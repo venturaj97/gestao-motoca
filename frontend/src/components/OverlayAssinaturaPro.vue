@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { loadStripe, type StripeEmbeddedCheckout } from '@stripe/stripe-js'
-import { criarCheckoutStripe, obterPrecosAssinatura } from '@/api/assinaturas'
+import {
+  criarCheckoutStripe,
+  criarCheckoutInfinitePay,
+  obterPrecosAssinatura,
+} from '@/api/assinaturas'
 import type { PrecosAssinaturaResposta } from '@/types'
 
 const props = defineProps<{
@@ -14,7 +18,8 @@ const emit = defineEmits(['fechar'])
 
 const carregando = ref(false)
 const erro = ref('')
-const periodoSelecionado = ref<'mensal' | 'anual' | 'pix_avulso'>('pix_avulso')
+const periodoSelecionado = ref<'mensal' | 'anual'>('mensal')
+const gatewaySelecionado = ref<'infinitepay' | 'stripe'>('infinitepay')
 const precos = ref<PrecosAssinaturaResposta | null>(null)
 const modoEmbedded = ref(false)
 
@@ -49,40 +54,47 @@ function voltarParaPlanos() {
   erro.value = ''
 }
 
-async function assinar() {
+async function assinarInfinitePay() {
   try {
     carregando.value = true
     erro.value = ''
-    
-    // Tenta carregar os preços caso a busca no onMounted tenha falhado ou ainda não finalizou
+
+    const res = await criarCheckoutInfinitePay(periodoSelecionado.value)
+    if (res.checkout_url) {
+      window.location.href = res.checkout_url
+    } else {
+      erro.value = 'Não foi possível gerar o link de checkout da InfinitePay. Tente novamente.'
+    }
+  } catch (err: any) {
+    console.error('Erro no checkout InfinitePay:', err)
+    erro.value = err?.response?.data?.detail || err?.message || 'Erro ao gerar checkout da InfinitePay. Tente novamente.'
+  } finally {
+    carregando.value = false
+  }
+}
+
+async function assinarStripe() {
+  try {
+    carregando.value = true
+    erro.value = ''
+
     if (!precos.value) {
       try {
         precos.value = await obterPrecosAssinatura()
       } catch (e: any) {
-        console.error('Erro ao carregar preços no checkout:', e)
-        erro.value = e?.response?.data?.detail || 'Não foi possível carregar as informações de pagamento do servidor. Tente novamente.'
+        erro.value = 'Não foi possível carregar as informações de pagamento do servidor.'
         return
       }
     }
 
-    let priceId = ''
-    if (periodoSelecionado.value === 'anual') {
-      priceId = precos.value?.anual?.price_id || ''
-    } else if (periodoSelecionado.value === 'pix_avulso') {
-      priceId = precos.value?.pix_avulso?.price_id || precos.value?.mensal?.price_id || ''
-    } else {
-      priceId = precos.value?.mensal?.price_id || ''
-    }
+    const priceId = periodoSelecionado.value === 'anual'
+      ? precos.value?.anual?.price_id || ''
+      : precos.value?.mensal?.price_id || ''
 
     const publishableKey = precos.value?.stripe_publishable_key
 
-    if (!publishableKey) {
-      erro.value = 'A chave pública do Stripe (STRIPE_PUBLISHABLE_KEY) não está configurada no servidor.'
-      return
-    }
-
-    if (!priceId) {
-      erro.value = 'O ID do preço não está configurado no servidor.'
+    if (!publishableKey || !priceId) {
+      erro.value = 'Configuração do Stripe ausente no servidor.'
       return
     }
 
@@ -94,7 +106,7 @@ async function assinar() {
 
       const stripe = await loadStripe(publishableKey)
       if (!stripe) {
-        erro.value = 'Não foi possível carregar a integração com o Stripe. Verifique a chave de integração.'
+        erro.value = 'Erro ao carregar Stripe.'
         modoEmbedded.value = false
         return
       }
@@ -111,17 +123,25 @@ async function assinar() {
       }
     } else if (checkout_url) {
       window.location.href = checkout_url
-    } else {
-      erro.value = 'Erro ao gerar sessão de pagamento.'
     }
   } catch (err: any) {
-    console.error('Erro no checkout:', err)
-    erro.value = err?.response?.data?.detail || err?.message || 'Erro ao iniciar checkout. Tente novamente.'
+    console.error('Erro no checkout Stripe:', err)
+    erro.value = err?.response?.data?.detail || err?.message || 'Erro ao iniciar checkout.'
     modoEmbedded.value = false
   } finally {
     carregando.value = false
   }
 }
+
+async function assinar() {
+  if (gatewaySelecionado.value === 'infinitepay') {
+    await assinarInfinitePay()
+  } else {
+    await assinarStripe()
+  }
+}
+
+
 </script>
 
 <template>
@@ -134,7 +154,7 @@ async function assinar() {
     <div class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl"></div>
     <div class="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"></div>
 
-    <!-- MODO EMBEDDED CHECKOUT (Formulário Incorporado) -->
+    <!-- MODO EMBEDDED CHECKOUT (Stripe Incorporado) -->
     <div v-if="modoEmbedded" class="relative z-10 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <button
@@ -158,6 +178,99 @@ async function assinar() {
       <div class="min-h-[450px] w-full rounded-2xl bg-slate-900/90 border border-slate-800/80 p-3 md:p-5 shadow-2xl overflow-hidden backdrop-blur-md">
         <div id="stripe-checkout-mount"></div>
       </div>
+    </div>
+
+    <!-- MODO PIX DIRETO NA TELA (QR CODE & COPIA E COLA) -->
+    <div v-else-if="exibindoPix" class="relative z-10 space-y-5 text-center">
+      <!-- MODO PIX APROVADO (CELEBRAÇÃO) -->
+      <div v-if="pixAprovado" class="py-6 space-y-4 animate-fade-in">
+        <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/20 text-4xl text-emerald-400 border border-emerald-400/40 shadow-xl animate-bounce">
+          🎉
+        </div>
+        <div>
+          <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-black uppercase text-emerald-300 border border-emerald-500/30">
+            PAGAMENTO CONFIRMADO
+          </span>
+          <h3 class="mt-2 text-2xl font-black text-white md:text-3xl">Seja Bem-Vindo ao Gestão Motoca PRO!</h3>
+          <p class="mt-1 text-sm text-slate-300 max-w-md mx-auto">
+            Sua conta foi atualizada com sucesso. Agora você tem acesso ilimitado a relatórios, metas e cofres!
+          </p>
+        </div>
+        <button
+          type="button"
+          @click="voltarParaPlanos"
+          class="w-full max-w-xs min-h-[48px] rounded-xl bg-emerald-400 px-6 py-3.5 text-sm font-black text-emerald-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-300 active:scale-95"
+        >
+          Aproveitar Recursos PRO 🚀
+        </button>
+      </div>
+
+      <!-- MODO PIX AGUARDANDO PAGAMENTO -->
+      <template v-else>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <button
+            type="button"
+            @click="voltarParaPlanos"
+            class="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Trocar forma de pagamento
+          </button>
+
+          <span class="rounded-full bg-emerald-500/20 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-emerald-300 border border-emerald-500/30">
+            {{ dadosPix?.valor_formatado }}
+          </span>
+        </div>
+
+        <div class="space-y-4 max-w-md mx-auto">
+          <div>
+            <h3 class="text-xl font-extrabold text-white">Escaneie o QR Code no seu Banco</h3>
+            <p class="text-xs text-slate-300 mt-1">Abra o app do seu banco e escolha a opção <strong>Pagar via Pix</strong>.</p>
+          </div>
+
+          <!-- Imagem do QR Code Pix -->
+          <div class="flex flex-col items-center justify-center p-3 bg-white rounded-2xl border-4 border-slate-800 shadow-2xl w-56 h-56 mx-auto">
+            <img
+              v-if="dadosPix?.qr_code_url"
+              :src="dadosPix.qr_code_url"
+              alt="QR Code Pix"
+              class="w-full h-full object-contain rounded-lg"
+            />
+          </div>
+
+          <!-- Caixas Pix Copia e Cola -->
+          <div class="space-y-2 text-left">
+            <label class="block text-[10px] font-bold tracking-widest text-slate-400 uppercase">OU COPIE O CÓDIGO PIX</label>
+            <div class="relative flex items-center">
+              <input
+                type="text"
+                readonly
+                :value="dadosPix?.qr_code_text"
+                class="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 pr-24 text-xs font-mono text-slate-300 outline-none truncate"
+              />
+              <button
+                type="button"
+                @click="copiarCodigoPix"
+                class="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-[36px] rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-black text-emerald-950 hover:bg-emerald-400 transition-all flex items-center gap-1 shadow"
+              >
+                <span v-if="copiado">✓ Copiado!</span>
+                <span v-else>📋 Copiar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Indicador de Status em Tempo Real -->
+          <div class="flex items-center justify-center gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs font-bold text-amber-300 animate-pulse">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <span>Aguardando confirmação do seu pagamento em tempo real...</span>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- MODO APRESENTAÇÃO / SELEÇÃO DE PLANO -->
@@ -197,21 +310,7 @@ async function assinar() {
       </div>
 
       <!-- Seletor de Plano -->
-      <div class="mb-6 flex w-full max-w-md flex-col gap-2 sm:flex-row rounded-xl bg-slate-950/80 p-1.5 border border-slate-800" role="radiogroup" aria-label="Selecione o plano de assinatura">
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="periodoSelecionado === 'pix_avulso'"
-          @click="periodoSelecionado = 'pix_avulso'"
-          :class="[
-            'flex-1 min-h-[44px] rounded-lg py-2.5 px-3 text-xs font-black transition-all duration-200 relative flex items-center justify-center',
-            periodoSelecionado === 'pix_avulso'
-              ? 'bg-emerald-500 text-emerald-950 shadow-md ring-1 ring-emerald-400'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          ]"
-        >
-          ⚡ Pix Avulso (R$ 9,99)
-        </button>
+      <div class="mb-6 flex w-full max-w-md gap-2 rounded-xl bg-slate-950/80 p-1.5 border border-slate-800" role="radiogroup" aria-label="Selecione o plano de assinatura">
         <button
           type="button"
           role="radio"
@@ -245,6 +344,34 @@ async function assinar() {
         </button>
       </div>
 
+      <!-- Seletor de Gateway de Pagamento -->
+      <div class="mb-5 flex w-full max-w-md items-center justify-center gap-2 rounded-xl bg-slate-900/90 p-1 border border-slate-800">
+        <button
+          type="button"
+          @click="gatewaySelecionado = 'infinitepay'"
+          :class="[
+            'flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5',
+            gatewaySelecionado === 'infinitepay'
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          ]"
+        >
+          <span>⚡ InfinitePay (Pix / Crédito)</span>
+        </button>
+        <button
+          type="button"
+          @click="gatewaySelecionado = 'stripe'"
+          :class="[
+            'flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5',
+            gatewaySelecionado === 'stripe'
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          ]"
+        >
+          <span>💳 Cartão (Stripe)</span>
+        </button>
+      </div>
+
       <!-- Mensagem de Erro -->
       <div v-if="erro" class="mb-4 w-full max-w-md rounded-xl border border-red-500/40 bg-red-500/15 p-3 text-xs font-medium text-red-300">
         {{ erro }}
@@ -262,10 +389,12 @@ async function assinar() {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          Iniciando Pagamento...
+          Redirecionando...
         </span>
         <span v-else class="flex items-center justify-center gap-2">
-          <span v-if="periodoSelecionado === 'pix_avulso'">Pagar R$ 9,99 com Pix ⚡</span>
+          <span v-if="gatewaySelecionado === 'infinitepay'">
+            Pagar {{ periodoSelecionado === 'anual' ? 'R$ 89,90' : 'R$ 9,90' }} via InfinitePay 🚀
+          </span>
           <span v-else-if="periodoSelecionado === 'anual'">Assinar Plano Anual 🚀</span>
           <span v-else>Quero Ser PRO Agora 🚀</span>
         </span>
@@ -277,23 +406,18 @@ async function assinar() {
           <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Pix, Google Pay & Apple Pay
+          Pix, Crédito Parcelado, Google Pay & Apple Pay
         </span>
         <span aria-hidden="true">•</span>
         <span class="flex items-center gap-1.5">
           <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Cartão de Crédito
-        </span>
-        <span aria-hidden="true">•</span>
-        <span class="flex items-center gap-1.5">
-          <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Cancela quando quiser
+          Sem taxa de entrega / endereço
         </span>
       </div>
     </div>
   </div>
 </template>
+
+

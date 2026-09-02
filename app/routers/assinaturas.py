@@ -9,16 +9,33 @@ from app.core.config import settings
 from app.database.session import get_db
 from app.dependencies import get_usuario_logado
 from app.models.usuario import Usuario
-from app.schemas.assinatura import AssinaturaStatusResposta, CheckoutResposta, CriarCheckoutEntrada
+from app.schemas.assinatura import (
+    AssinaturaStatusResposta,
+    ChecarPixEntrada,
+    ChecarPixResposta,
+    CheckoutInfinitepayResposta,
+    CheckoutResposta,
+    CriarCheckoutEntrada,
+    CriarCheckoutInfinitepayEntrada,
+    CriarPixDiretoEntrada,
+    PixDiretoResposta,
+)
 from app.services.assinatura_service import (
     ativar_plano_pro,
     cancelar_assinatura_stripe,
+    checar_status_pix,
+    confirmar_retorno_infinitepay,
+    criar_checkout_infinitepay,
     criar_checkout_session,
     desativar_plano_pro,
+    gerar_pix_direto,
     obter_usuario_id_de_subscription,
     obter_usuario_por_customer_id,
     processar_webhook_event,
+    processar_webhook_infinitepay,
 )
+
+
 
 router = APIRouter(prefix="/assinaturas", tags=["assinaturas"])
 
@@ -100,9 +117,31 @@ def rota_cancelar_assinatura(
     return {"mensagem": "Assinatura sera cancelada ao final do periodo atual."}
 
 
+@router.post("/checkout/infinitepay", response_model=CheckoutInfinitepayResposta)
+def rota_criar_checkout_infinitepay(
+    dados: CriarCheckoutInfinitepayEntrada,
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    """Cria um link de checkout da InfinitePay (Pix / Cartão)."""
+    origin_header = request.headers.get("origin") or request.headers.get("referer")
+    request_origin = None
+    if origin_header:
+        from urllib.parse import urlparse
+        parsed = urlparse(origin_header)
+        request_origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    res = criar_checkout_infinitepay(db, usuario, dados.plano, origin=request_origin)
+    return CheckoutInfinitepayResposta(
+        checkout_url=res["checkout_url"],
+        order_nsu=res.get("order_nsu"),
+    )
+
+
 @router.get("/precos")
 def rota_listar_precos():
-    """Retorna os IDs de preço do Stripe para o frontend."""
+    """Retorna os IDs de preço e links de checkout para o frontend."""
     pix_price = settings.stripe_price_pix_avulso or settings.stripe_price_mensal
     return {
         "mensal": {
@@ -118,7 +157,10 @@ def rota_listar_precos():
             "valor": "R$ 9,99 (30 dias via Pix)",
         },
         "stripe_publishable_key": settings.stripe_publishable_key,
+        "infinitepay_checkout_url": settings.infinitepay_checkout_url,
+        "infinitepay_handle": settings.infinitepay_handle,
     }
+
 
 
 @router.post("/webhook")
@@ -209,3 +251,85 @@ async def rota_stripe_webhook(
             desativar_plano_pro(db, usuario_id)
 
     return {"status": "ok"}
+
+
+@router.post("/webhook/infinitepay")
+async def rota_infinitepay_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Recebe notificações de pagamento da InfinitePay via Webhook."""
+    from fastapi.responses import JSONResponse
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "message": "Payload JSON inválido"},
+        )
+
+    res = processar_webhook_infinitepay(db, payload)
+    if not res.get("success"):
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "message": res.get("message", "Erro ao processar webhook")},
+        )
+
+    return {"success": True, "message": None}
+
+
+@router.post("/pix/gerar", response_model=PixDiretoResposta)
+def rota_gerar_pix_direto(
+    dados: CriarPixDiretoEntrada,
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    """Gera dados do QR Code e código Copia e Cola do Pix para exibição nativa no app."""
+    origin_header = request.headers.get("origin") or request.headers.get("referer")
+    request_origin = None
+    if origin_header:
+        from urllib.parse import urlparse
+        parsed = urlparse(origin_header)
+        request_origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    res = gerar_pix_direto(db, usuario, dados.plano, origin=request_origin)
+    return PixDiretoResposta(
+        qr_code_text=res["qr_code_text"],
+        qr_code_url=res["qr_code_url"],
+        order_nsu=res["order_nsu"],
+        valor_formatado=res["valor_formatado"],
+        expires_at=res.get("expires_at"),
+        checkout_url_fallback=res.get("checkout_url_fallback"),
+    )
+
+
+@router.post("/pix/checar", response_model=ChecarPixResposta)
+def rota_checar_pix(
+    dados: ChecarPixEntrada,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    """Checa o status de pagamento do Pix para o order_nsu."""
+    res = checar_status_pix(db, usuario, dados.order_nsu)
+    return ChecarPixResposta(
+        pago=res["pago"],
+        plano=res["plano"],
+    )
+
+
+@router.post("/confirmar-retorno")
+def rota_confirmar_retorno(
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_logado),
+):
+    """Confirma a ativacao do plano PRO quando o usuario retorna do checkout."""
+    order_nsu = request.query_params.get("order_nsu")
+    transaction_nsu = request.query_params.get("transaction_nsu") or request.query_params.get("slug")
+    res = confirmar_retorno_infinitepay(db, usuario, order_nsu=order_nsu, transaction_nsu=transaction_nsu)
+    return res
+
+
+
